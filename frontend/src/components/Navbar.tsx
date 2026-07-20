@@ -157,7 +157,7 @@ const Navbar: React.FC<NavbarProps> = ({ onBookClick, onAssessmentClick, onLogin
               className="flex items-center justify-center bg-main text-intel-dark rounded-full transition-all duration-300 shadow-lg active:scale-95 px-3 md:px-4 lg:px-6 py-2 md:py-2.5 lg:py-3 font-black text-[9px] lg:text-[10px] uppercase tracking-widest hover:bg-white"
             >
               <div className="items-center gap-1.5 whitespace-nowrap hidden sm:flex">
-                Login <LogIn size={13} className="hidden lg:block" />
+                Student Portal <LogIn size={13} className="hidden lg:block" />
               </div>
               <span className="sm:hidden">
                 <LogIn size={16} />
@@ -247,7 +247,7 @@ const Navbar: React.FC<NavbarProps> = ({ onBookClick, onAssessmentClick, onLogin
                   onClick={() => { onLoginClick?.(); setIsMenuOpen(false); }}
                   className="w-full py-5 bg-main text-intel-dark rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg flex items-center justify-center gap-2"
                 >
-                  Login <LogIn size={18} />
+                  Student Portal <LogIn size={18} />
                 </button>
               )}
             </div>
