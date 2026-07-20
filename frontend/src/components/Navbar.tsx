@@ -83,6 +83,7 @@ const Navbar: React.FC<NavbarProps> = ({ onBookClick, onAssessmentClick, onLogin
   ];
 
   return (
+    <>
     <nav className={`fixed z-[100] pointer-events-auto ${
       isPill
         ? 'top-3 sm:top-5 left-1/2 -translate-x-1/2 w-[90%] max-w-5xl rounded-full bg-zinc-900 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.6)] border border-white/10'
@@ -212,62 +213,63 @@ const Navbar: React.FC<NavbarProps> = ({ onBookClick, onAssessmentClick, onLogin
           100% { transform: scale(1) rotate(0deg); opacity: 1; }
         }
       `}</style>
+    </nav>
 
-      {/* Mobile Menu Overlay */}
-      {isMenuOpen && (
-        <div className="fixed inset-0 bg-intel-dark z-[110] flex flex-col p-8 animate-in fade-in slide-in-from-top-4 duration-500 pointer-events-auto">
-          <div className="flex justify-between items-center mb-10">
-            <div className="flex items-center">
-              <img src="/assets/imgs/logo_full.png" alt="Intel Counselling" className="h-10 w-auto object-contain" />
-            </div>
-            <button onClick={() => setIsMenuOpen(false)} className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-full text-white">
-              <X size={24} />
-            </button>
+    {/* Mobile Menu Overlay */}
+    {isMenuOpen && (
+      <div className="fixed inset-0 bg-intel-dark z-[110] flex flex-col p-8 animate-in fade-in slide-in-from-top-4 duration-500 pointer-events-auto">
+        <div className="flex justify-between items-center mb-10">
+          <div className="flex items-center">
+            <img src="/assets/imgs/logo_full.png" alt="Intel Counselling" className="h-10 w-auto object-contain" />
           </div>
+          <button onClick={() => setIsMenuOpen(false)} className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-full text-white">
+            <X size={24} />
+          </button>
+        </div>
+        
+        <div className="flex flex-col gap-6 overflow-y-auto">
+          {navLinks.map((link) => (
+             <a 
+              key={link.id} 
+              href={`#${link.id}`} 
+              onClick={(e) => handleNavClick(e, link.id)}
+              className="text-3xl font-black text-white serif border-b border-white/5 pb-5 flex items-center justify-between group"
+            >
+              <div className="flex items-center gap-4">
+                <span className="text-white/40 group-hover:text-white transition-colors">{link.icon}</span>
+                {link.label}
+              </div>
+              <ArrowRight size={20} className="opacity-20" />
+            </a>
+          ))}
           
-          <div className="flex flex-col gap-6 overflow-y-auto">
-            {navLinks.map((link) => (
-               <a 
-                key={link.id} 
-                href={`#${link.id}`} 
-                onClick={(e) => handleNavClick(e, link.id)}
-                className="text-3xl font-black text-white serif border-b border-white/5 pb-5 flex items-center justify-between group"
-              >
-                <div className="flex items-center gap-4">
-                  <span className="text-white/40 group-hover:text-white transition-colors">{link.icon}</span>
-                  {link.label}
-                </div>
-                <ArrowRight size={20} className="opacity-20" />
-              </a>
-            ))}
-            
-            <div className="flex flex-col gap-4 mt-8">
+          <div className="flex flex-col gap-4 mt-8">
+            <button 
+              onClick={() => { onBookClick(); setIsMenuOpen(false); }}
+              className="w-full py-5 bg-serene-green text-white rounded-2xl font-bold text-base shadow-xl"
+            >
+              Book Appointment
+            </button>
+            {user ? (
               <button 
-                onClick={() => { onBookClick(); setIsMenuOpen(false); }}
-                className="w-full py-5 bg-serene-green text-white rounded-2xl font-bold text-base shadow-xl"
+                onClick={() => { handleLogout(); setIsMenuOpen(false); }}
+                className="w-full py-5 bg-terracotta text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg flex items-center justify-center gap-2"
               >
-                Book Appointment
+                Logout ({user.name}) <LogIn size={18} />
               </button>
-              {user ? (
-                <button 
-                  onClick={() => { handleLogout(); setIsMenuOpen(false); }}
-                  className="w-full py-5 bg-terracotta text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg flex items-center justify-center gap-2"
-                >
-                  Logout ({user.name}) <LogIn size={18} />
-                </button>
-              ) : (
-                <button 
-                  onClick={() => { onLoginClick?.(); setIsMenuOpen(false); }}
-                  className="w-full py-5 bg-main text-intel-dark rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg flex items-center justify-center gap-2"
-                >
-                  Student Portal <LogIn size={18} />
-                </button>
-              )}
-            </div>
+            ) : (
+              <button 
+                onClick={() => { onLoginClick?.(); setIsMenuOpen(false); }}
+                className="w-full py-5 bg-main text-intel-dark rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg flex items-center justify-center gap-2"
+              >
+                Student Portal <LogIn size={18} />
+              </button>
+            )}
           </div>
         </div>
-      )}
-    </nav>
+      </div>
+    )}
+    </>
   );
 };
 
