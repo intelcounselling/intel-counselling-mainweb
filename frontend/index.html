@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intel Counselling | Healing Begins with Understanding</title>
+    <link rel="icon" type="image/png" href="/assets/imgs/logo_small.png" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --color-bg: #F4EFE6;
+            --color-emerald: #1C3F39;
+            --color-brass: #C19B6C;
+            --color-charcoal: #1A1A1A;
+            --easing-editorial: cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--color-bg);
+            color: var(--color-charcoal); 
+            overflow-x: hidden;
+            overscroll-behavior: none;
+        }
+        h1, h2, h3, .serif {
+            font-family: 'Playfair Display', serif;
+            font-weight: 900; 
+            letter-spacing: -0.02em;
+        }
+        
+        .bg-main { background-color: var(--color-bg); }
+        .text-serene-green { color: var(--color-emerald); }
+        .bg-serene-green { background-color: var(--color-emerald); }
+        .text-intel-dark { color: var(--color-charcoal); }
+        .bg-intel-dark { background-color: var(--color-charcoal); }
+        .text-terracotta { color: var(--color-brass); }
+        .bg-terracotta { background-color: var(--color-brass); }
+        .border-terracotta { border-color: var(--color-brass); }
+        .scroll-mt-nav { scroll-margin-top: 5rem; }
+
+        /* Premium Button Hover Sweep */
+        .btn-premium {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.6s var(--easing-editorial);
+        }
+        .btn-premium::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255,255,255,0.1);
+            transform: translateY(100%);
+            transition: transform 0.6s var(--easing-editorial);
+        }
+        .btn-premium:hover::after {
+            transform: translateY(0);
+        }
+        .btn-premium:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        /* Reverted Reveal Pacing */
+        .reveal {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+            will-change: opacity, transform;
+        }
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @keyframes editorialFadeUp {
+            from { transform: translateY(30px); opacity: 0; filter: blur(4px); }
+            to { transform: translateY(0); opacity: 1; filter: blur(0); }
+        }
+        @keyframes spotlight {
+            0% {
+              opacity: 0;
+              transform: translate(-72%, -62%) scale(0.6);
+            }
+            100% {
+              opacity: 1;
+              transform: translate(-50%,-40%) scale(1);
+            }
+        }
+        .animate-fade-in { animation: editorialFadeUp 1.5s var(--easing-editorial) forwards; }
+        .animate-slide-up { animation: editorialFadeUp 1.2s var(--easing-editorial) forwards; }
+        .animate-spotlight { animation: spotlight 2s cubic-bezier(0.16, 1, 0.3, 1) .2s 1 forwards; }
+        
+        .delay-100 { animation-delay: 100ms; }
+        .delay-200 { animation-delay: 200ms; }
+        .delay-300 { animation-delay: 300ms; }
+        .delay-400 { animation-delay: 400ms; }
+
+        html {
+            scroll-behavior: smooth;
+            overscroll-behavior: none;
+        }
+
+        .stacking-section {
+            position: sticky;
+            top: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: inherit;
+            will-change: opacity, transform;
+            transition: opacity 1s cubic-bezier(0.16, 1, 0.3, 1), transform 1s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes tilt-momentary {
+            0% { transform: rotate(0deg); }
+            50% { transform: rotate(15deg); }
+            100% { transform: rotate(0deg); }
+        }
+        .icon-tilt {
+            animation: tilt-momentary 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes heartbeat {
+            0%, 100% { transform: scale(1); }
+            10% { transform: scale(1.1); }
+            20% { transform: scale(1); }
+            30% { transform: scale(1.05); }
+            40% { transform: scale(1); }
+        }
+        .animate-heartbeat {
+            animation: heartbeat 5s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+            transform-origin: center;
+        }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "lucide-react": "https://esm.sh/lucide-react@^0.563.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "react": "https://esm.sh/react@^19.2.4",
+    "@google/genai": "https://esm.sh/@google/genai@^1.40.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/src/index.css">
+</head>
+<body>
+    <div id="root"></div>
+<script type="module" src="/src/index.tsx"></script>
+</body>
+</html>

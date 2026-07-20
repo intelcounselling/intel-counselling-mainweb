@@ -1,0 +1,231 @@
+// Prisma Schema — Intell Student Success System™
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────────────────────
+
+enum Role {
+  SUPER_ADMIN
+  SCHOOL_ADMIN
+  PSYCHIATRIST
+  PARENT
+  STUDENT
+}
+
+enum ApptStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum AlertStatus {
+  UNREAD
+  READ
+  ACTIONED
+}
+
+enum ConcernStatus {
+  RECEIVED
+  REVIEWED
+}
+
+// Which ISSS package a school or family has purchased
+enum Package {
+  SCHOOL_INSIGHT           // Package 1 — School management analytics
+  PARENT_INSIGHT           // Package 2 — Parent/child comparison
+  PREMIUM_TRANSFORMATION   // Package 3 — Full assessment + counselling + tracking
+}
+
+// ─────────────────────────────────────────────────────────────
+// MODELS
+// ─────────────────────────────────────────────────────────────
+
+model School {
+  id           String   @id @default(uuid())
+  name         String
+  address      String?
+  contactEmail String
+  contactPhone String?
+  logoUrl      String?
+  accessCode   String   @unique
+  isActive     Boolean  @default(true)
+  package      Package  @default(SCHOOL_INSIGHT)
+  createdAt    DateTime @default(now())
+
+  users         User[]
+  families      Family[]
+  classes       Class[]
+  psychiatrists User[]   @relation("PsychiatristSchools")
+}
+
+// Class/Section within a school (Package 1)
+model Class {
+  id       String  @id @default(uuid())
+  schoolId String
+  school   School  @relation(fields: [schoolId], references: [id])
+  name     String  // e.g. "Grade 6A"
+  grade    String  // e.g. "6"
+  section  String? // e.g. "A"
+
+  students User[] @relation("ClassStudents")
+}
+
+model Family {
+  id        String   @id @default(uuid())
+  schoolId  String
+  school    School   @relation(fields: [schoolId], references: [id])
+  package   Package  @default(PARENT_INSIGHT)
+  createdAt DateTime @default(now())
+
+  students User[] @relation("FamilyStudents")
+  parents  User[] @relation("FamilyParents")
+}
+
+model User {
+  id                String   @id @default(uuid())
+  email             String   @unique
+  passwordHash      String
+  role              Role
+  firstName         String
+  lastName          String
+  phone             String?
+  avatarUrl         String?
+  schoolId          String?
+  school            School?  @relation(fields: [schoolId], references: [id])
+  classId           String?
+  class             Class?   @relation("ClassStudents", fields: [classId], references: [id])
+  familyAsStudent   Family?  @relation("FamilyStudents", fields: [familyStudentId], references: [id])
+  familyStudentId   String?
+  familyAsParent    Family?  @relation("FamilyParents", fields: [familyParentId], references: [id])
+  familyParentId    String?
+  grade             String?
+  dateOfBirth       DateTime?
+  isActive          Boolean  @default(true)
+  mustResetPassword Boolean  @default(true)
+  otpCode           String?
+  otpExpiresAt      DateTime?
+  createdAt         DateTime @default(now())
+
+  // Psychiatrist ↔ School many-to-many
+  assignedSchools School[] @relation("PsychiatristSchools")
+
+  testResults              TestResult[]
+  appointments             Appointment[] @relation("PatientAppointments")
+  managedAppointments      Appointment[] @relation("PsychiatristAppointments")
+  alerts                   Alert[]
+  concerns                 Concern[]
+  refreshTokens            RefreshToken[]
+  counsellingNotesWritten  CounsellingNote[] @relation("CounsellorNotes")
+}
+
+model Test {
+  id               String   @id @default(uuid())
+  name             String
+  description      String
+  category         String   // e.g. "LearningPattern", "StudyBehaviour", "EmotionalWellness"
+  questions        Json
+  thresholds       Json
+  estimatedMinutes Int      @default(5)
+  isActive         Boolean  @default(true)
+  isSensitive      Boolean  @default(false)  // Sensitive: emotional wellness — restrict individual data
+  createdAt        DateTime @default(now())
+
+  results TestResult[]
+}
+
+model TestResult {
+  id                  String   @id @default(uuid())
+  studentId           String
+  student             User     @relation(fields: [studentId], references: [id])
+  testId              String
+  test                Test     @relation(fields: [testId], references: [id])
+  score               Int
+  maxScore            Int
+  severity            String
+  // For Learning Pattern: store sub-scores per dimension
+  subScores           Json?    // e.g. { "Visual": 18, "Auditory": 12, "Kinesthetic": 10 }
+  answers             Json
+  isLow               Boolean  @default(false)
+  sharedWithTherapist Boolean  @default(false)
+  // For Package 2: flag if this result is from parent's perspective
+  isParentPerspective Boolean  @default(false)
+  parentId            String?  // which parent submitted this
+  takenAt             DateTime @default(now())
+
+  appointments    Appointment[]
+  CounsellingNote CounsellingNote[]
+}
+
+model Appointment {
+  id             String     @id @default(uuid())
+  patientId      String
+  patient        User       @relation("PatientAppointments", fields: [patientId], references: [id])
+  psychiatristId String
+  psychiatrist   User       @relation("PsychiatristAppointments", fields: [psychiatristId], references: [id])
+  slot           DateTime
+  status         ApptStatus @default(PENDING)
+  notes          String?
+  meetingLink    String?
+  createdAt      DateTime   @default(now())
+
+  results         TestResult[]
+  counsellingNotes CounsellingNote[]
+}
+
+// Counsellor session notes (Package 3)
+model CounsellingNote {
+  id             String      @id @default(uuid())
+  appointmentId  String?
+  appointment    Appointment? @relation(fields: [appointmentId], references: [id])
+  resultId       String?
+  result         TestResult?  @relation(fields: [resultId], references: [id])
+  counsellorId   String
+  counsellor     User         @relation("CounsellorNotes", fields: [counsellorId], references: [id])
+  patientId      String       // denormalized for easy querying
+  sessionDate    DateTime
+  summary        String
+  goals          String?
+  nextSteps      String?
+  isConfidential Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+}
+
+model Alert {
+  id        String      @id @default(uuid())
+  studentId String
+  student   User        @relation(fields: [studentId], references: [id])
+  resultId  String
+  severity  String
+  message   String
+  status    AlertStatus @default(UNREAD)
+  firedAt   DateTime    @default(now())
+}
+
+model Concern {
+  id        String        @id @default(uuid())
+  studentId String
+  student   User          @relation(fields: [studentId], references: [id])
+  message   String
+  status    ConcernStatus @default(RECEIVED)
+  createdAt DateTime      @default(now())
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
