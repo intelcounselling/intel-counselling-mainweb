@@ -79,17 +79,25 @@ const CashfreePaymentStep: React.FC<{
 
       cashfree.checkout(checkoutOptions).then((result: any) => {
         if (result.error) {
-          setError(result.error.message || "Payment has failed.");
+          setError(result.error.message || "Payment has failed or was cancelled.");
           setIsProcessing(false);
         } else if (result.redirect) {
           console.log("Payment will be redirected");
-          setIsProcessing(false);
-          onSuccess('');
         } else if (result.paymentDetails) {
           console.log("Payment completed via modal", result.paymentDetails);
           setIsProcessing(false);
           onSuccess('');
+        } else {
+          console.log("Unknown result from cashfree", result);
+          // If cashfree resolves without error, assume success or at least reset state to prevent infinite load
+          setIsProcessing(false);
+          if (result && Object.keys(result).length > 0) {
+             onSuccess('');
+          }
         }
+      }).catch((err: any) => {
+        setError(err.message || "Payment encountered an error.");
+        setIsProcessing(false);
       });
     } catch (err: any) {
       setError(err.message || "Failed to start Cashfree checkout.");
