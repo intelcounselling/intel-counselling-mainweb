@@ -401,7 +401,9 @@ export default async function handler(req, res) {
     let attachmentBase64 = null;
     try {
       if (fullDetails) {
+        console.log('Generating intake PDF...');
         attachmentBase64 = await createPdfBufferBase64(fullDetails);
+        console.log('Intake PDF generated. Length:', attachmentBase64.length);
       }
     } catch (pdfErr) {
       console.error('Failed to generate PDF:', pdfErr);
@@ -459,25 +461,27 @@ export default async function handler(req, res) {
       attachment: []
     };
 
+    const safeName = (toName || 'Patient').replace(/[^a-zA-Z0-9]/g, '_');
+
     // Append PDF attachments if successfully generated
     if (attachmentBase64) {
       adminPayload.attachment.push({
         content: attachmentBase64,
-        name: `${toName.replace(/\s+/g, '_')}_Intake_Form.pdf`
+        name: `${safeName}_Intake_Form.pdf`
       });
     }
 
     if (careerPdfBase64) {
       adminPayload.attachment.push({
         content: careerPdfBase64,
-        name: `${toName.replace(/\s+/g, '_')}_Career_Guidance_Report.pdf`
+        name: `${safeName}_Career_Guidance_Report.pdf`
       });
     }
 
     if (clinicalPdfBase64) {
       adminPayload.attachment.push({
         content: clinicalPdfBase64,
-        name: `${toName.replace(/\s+/g, '_')}_${clinicalResult.title.replace(/\s+/g, '_')}_Report.pdf`
+        name: `${safeName}_${clinicalResult.title.replace(/[^a-zA-Z0-9]/g, '_')}_Report.pdf`
       });
     }
 
