@@ -85,6 +85,10 @@ const CashfreePaymentStep: React.FC<{
           console.log("Payment will be redirected");
           setIsProcessing(false);
           onSuccess('');
+        } else if (result.paymentDetails) {
+          console.log("Payment completed via modal", result.paymentDetails);
+          setIsProcessing(false);
+          onSuccess('');
         }
       });
     } catch (err: any) {
