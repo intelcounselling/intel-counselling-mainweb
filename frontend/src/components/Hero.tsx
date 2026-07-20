@@ -50,7 +50,7 @@ const Hero: React.FC<HeroProps> = ({ onStartTest, onStartCareerTest, onLearnMore
     <section
       id="hero"
       ref={containerRef}
-      className="relative w-full overflow-hidden bg-[#F4EFE6] flex flex-col"
+      className="relative w-full overflow-hidden bg-[#F7EBD3] flex flex-col"
       style={{ minHeight: '100svh' }}
     >
       {/* Background */}
