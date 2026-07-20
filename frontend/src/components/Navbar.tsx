@@ -116,7 +116,7 @@ const Navbar: React.FC<NavbarProps> = ({ onBookClick, onAssessmentClick, onLogin
               className="relative flex items-center justify-center transition-all duration-300 group px-1.5 sm:px-3 py-2 rounded-full hover:bg-white/5"
             >
               {isPill ? (
-                <span className="text-white/70 group-hover:text-white" title={link.label}>
+                <span className="text-white/70 group-hover:text-white inline-block origin-center animate-[bouncyTurn_0.6s_cubic-bezier(0.175,0.885,0.32,1.275)_both]" title={link.label}>
                   {React.cloneElement(link.icon as React.ReactElement, { size: 20 })}
                 </span>
               ) : (
@@ -205,6 +205,11 @@ const Navbar: React.FC<NavbarProps> = ({ onBookClick, onAssessmentClick, onLogin
         @keyframes navWave {
           0% { transform: translateX(0); }
           100% { transform: translateX(-50%); }
+        }
+        @keyframes bouncyTurn {
+          0% { transform: scale(0.5) rotate(-180deg); opacity: 0; }
+          60% { transform: scale(1.1) rotate(15deg); opacity: 1; }
+          100% { transform: scale(1) rotate(0deg); opacity: 1; }
         }
       `}</style>
 
