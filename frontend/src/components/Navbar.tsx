@@ -115,12 +115,20 @@ const Navbar: React.FC<NavbarProps> = ({ onBookClick, onAssessmentClick, onLogin
               onClick={(e) => handleNavClick(e, link.id)}
               className="relative flex items-center justify-center transition-all duration-300 group px-1.5 sm:px-3 py-2 rounded-full hover:bg-white/5"
             >
-              <span className="text-[11px] lg:text-sm font-bold tracking-tight whitespace-nowrap opacity-80 group-hover:text-white group-hover:opacity-100 text-white hidden md:block">
-                {link.label}
-              </span>
-              <span className="text-white/70 group-hover:text-white md:hidden">
-                {React.cloneElement(link.icon as React.ReactElement, { size: 16 })}
-              </span>
+              {isPill ? (
+                <span className="text-white/70 group-hover:text-white" title={link.label}>
+                  {React.cloneElement(link.icon as React.ReactElement, { size: 20 })}
+                </span>
+              ) : (
+                <>
+                  <span className="text-[11px] lg:text-sm font-bold tracking-tight whitespace-nowrap opacity-80 group-hover:text-white group-hover:opacity-100 text-white hidden md:block">
+                    {link.label}
+                  </span>
+                  <span className="text-white/70 group-hover:text-white md:hidden">
+                    {React.cloneElement(link.icon as React.ReactElement, { size: 16 })}
+                  </span>
+                </>
+              )}
             </a>
           ))}
         </div>
