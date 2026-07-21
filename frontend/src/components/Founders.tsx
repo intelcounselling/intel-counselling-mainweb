@@ -27,7 +27,7 @@ const Founders: React.FC<FoundersProps> = ({ onExpandChange }) => {
       title: "COUNSELING PSYCHOLOGIST & SENIOR STUDENT COUNSELOR",
       desc: "Founder of Intel Counselling with 10+ years of experience, Priyanka supports students with a calm presence.",
       img: "/assets/imgs/pfp_priyanka.png",
-      detailedBio: "With over 10 years of dedicated clinical experience, Priyanka R. is the founder of Intell Counselling. She currently serves as a Senior Student Counselor at Rajalakshmi Engineering College. Her calm presence and deep listening make people feel safe, seen, and supported, allowing for genuine emotional breakthroughs.",
+      detailedBio: "With over 10 years of dedicated clinical experience, Priyanka R. is the founder of Intel Counselling. She currently serves as a Senior Student Counselor at Rajalakshmi Engineering College. Her calm presence and deep listening make people feel safe, seen, and supported, allowing for genuine emotional breakthroughs.",
       specialties: ["Anxiety", "Depression", "Academic Stress", "Addiction"],
       philosophy: "To help people feel lighter, think clearer, and live fuller.",
       socials: [
@@ -39,9 +39,9 @@ const Founders: React.FC<FoundersProps> = ({ onExpandChange }) => {
     {
       name: "Gayathri Gokulakrishnan",
       title: "CO-FOUNDER & OPERATIONS MANAGER",
-      desc: "Gayathri Gokulakrishnan drives the strategic vision and operational excellence of Intell Counselling.",
+      desc: "Gayathri Gokulakrishnan drives the strategic vision and operational excellence of Intel Counselling.",
       img: "/assets/imgs/pfp_gayathri.png",
-      detailedBio: "As Co-Founder, Gayathri Gokulakrishnan drives the strategic vision and operational excellence of Intell Counselling. She oversees the organization's digital infrastructure and marketing outreach. Her role ensures that professional mental healthcare remains accessible and secure.",
+      detailedBio: "As Co-Founder, Gayathri Gokulakrishnan drives the strategic vision and operational excellence of Intel Counselling. She oversees the organization's digital infrastructure and marketing outreach. Her role ensures that professional mental healthcare remains accessible and secure.",
       specialties: ["Oversees daily operations", "Managing administrative processes", "Strategic growth"],
       philosophy: "Her structured approach and commitment to efficiency help maintain a supportive, well-organized environment that enables the center to deliver quality counselling services.",
       socials: [

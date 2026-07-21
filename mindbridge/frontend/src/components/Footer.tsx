@@ -80,7 +80,7 @@ const Footer: React.FC = () => {
           <div className="mb-6 sm:mb-8">
             <h5 className="font-bold text-white/60 uppercase tracking-widest text-[9px] sm:text-[10px] mb-3 sm:mb-4">Disclaimer</h5>
             <p className="leading-relaxed text-xs sm:text-sm">
-              All assessments provided by Intell Counselling are screening and guidance tools designed to enhance self-understanding
+              All assessments provided by Intel Counselling are screening and guidance tools designed to enhance self-understanding
               and developmental planning. They are not diagnostic instruments and do not replace clinical evaluation or standardized
               psychological testing. Always seek the advice of your physician or other qualified health provider.
               <br /><br />

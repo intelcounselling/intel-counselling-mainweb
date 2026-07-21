@@ -68,7 +68,7 @@ export default function StudentDashboard() {
         <div className="relative z-10">
           <p className="text-primary-200 text-sm mb-1">Welcome back 👋</p>
           <h2 className="text-3xl font-bold text-white mb-2">{user?.firstName} {user?.lastName}</h2>
-          <p className="text-primary-200">Grade {user?.grade || '—'} · Intell Student Success System™</p>
+          <p className="text-primary-200">Grade {user?.grade || '—'} · Intel Student Success System™</p>
           {/* ISSS Progress */}
           <div className="mt-5">
             <div className="flex items-center justify-between mb-2">

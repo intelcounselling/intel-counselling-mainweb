@@ -1,4 +1,4 @@
-// Prisma Schema — Intell Student Success System™
+// Prisma Schema — Intel Student Success System™
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {

@@ -6,7 +6,7 @@ async function main() {
 
   const tests = [
     {
-      name: 'Intell Learning Pattern Tool',
+      name: 'Intel Learning Pattern Tool',
       description: 'To identify student\'s learning preference.',
       category: 'LearningPattern',
       isSensitive: false,
@@ -34,7 +34,7 @@ async function main() {
       })
     },
     {
-      name: 'Intell Study Behaviour Scale',
+      name: 'Intel Study Behaviour Scale',
       description: 'Understand study habits, focus, planning and consistency.',
       category: 'StudyBehaviour',
       isSensitive: false,
@@ -63,7 +63,7 @@ async function main() {
       })
     },
     {
-      name: 'Intell Emotional Wellness Checklist',
+      name: 'Intel Emotional Wellness Checklist',
       description: 'Understand stress level, emotional balance, mood and coping.',
       category: 'EmotionalWellness',
       isSensitive: true,
@@ -92,7 +92,7 @@ async function main() {
       })
     },
     {
-      name: 'Intell Internet Usage Awareness',
+      name: 'Intel Internet Usage Awareness',
       description: 'Understand mobile, internet, gaming and social media impact.',
       category: 'InternetUsage',
       isSensitive: false,
@@ -121,7 +121,7 @@ async function main() {
       })
     },
     {
-      name: 'Intell Personality Dimensions',
+      name: 'Intel Personality Dimensions',
       description: 'Understand responsibility, confidence, emotional balance, adaptability and social interaction.',
       category: 'PersonalityDimensions',
       isSensitive: true,

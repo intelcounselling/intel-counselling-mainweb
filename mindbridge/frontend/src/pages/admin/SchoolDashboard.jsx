@@ -15,21 +15,21 @@ import useAuthStore from '../../store/authStore';
 // ── Constants ─────────────────────────────────────────────────
 const TOOL_META = {
   LearningPattern: {
-    label: 'Intell Learning Pattern Tool™',
+    label: 'Intel Learning Pattern Tool™',
     icon: Brain,
     color: 'from-indigo-500 to-indigo-700',
     iconBg: 'bg-indigo-100 text-indigo-700',
     desc: 'Visual, Auditory, Kinesthetic & Multi-Modal distribution',
   },
   StudyBehaviour: {
-    label: 'Intell Study Behaviour Scale™',
+    label: 'Intel Study Behaviour Scale™',
     icon: BookOpen,
     color: 'from-emerald-500 to-emerald-700',
     iconBg: 'bg-emerald-100 text-emerald-700',
     desc: 'Study habits, time management & academic discipline',
   },
   EmotionalWellness: {
-    label: 'Intell Emotional Wellness Checklist™',
+    label: 'Intel Emotional Wellness Checklist™',
     icon: Heart,
     color: 'from-rose-500 to-rose-700',
     iconBg: 'bg-rose-100 text-rose-700',
@@ -37,14 +37,14 @@ const TOOL_META = {
     sensitive: true,
   },
   InternetUsage: {
-    label: 'Intell Internet Usage Awareness™',
+    label: 'Intel Internet Usage Awareness™',
     icon: Wifi,
     color: 'from-amber-500 to-amber-700',
     iconBg: 'bg-amber-100 text-amber-700',
     desc: 'Digital balance and screen time habits',
   },
   PersonalityDimensions: {
-    label: 'Intell Personality Dimensions™',
+    label: 'Intel Personality Dimensions™',
     icon: User,
     color: 'from-purple-500 to-purple-700',
     iconBg: 'bg-purple-100 text-purple-700',
@@ -206,7 +206,7 @@ export default function SchoolDashboard() {
             </span>
           </div>
           <h2 className="text-2xl font-bold text-surface-900">{school?.name} — Analytics Dashboard</h2>
-          <p className="text-surface-500 text-sm mt-0.5">Intell Student Success System™ — Group-level assessment insights</p>
+          <p className="text-surface-500 text-sm mt-0.5">Intel Student Success System™ — Group-level assessment insights</p>
         </div>
         <Link to={`/admin/schools/${schoolId}/classes`}>
           <Button variant="outline" size="sm" icon={<Users className="w-4 h-4" />}>Manage Classes</Button>

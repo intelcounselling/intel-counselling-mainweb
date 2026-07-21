@@ -1,4 +1,4 @@
-// prisma/seed-isss.js — Intell Student Success System™ Assessment Tools
+// prisma/seed-isss.js — Intel Student Success System™ Assessment Tools
 // Run: node prisma/seed-isss.js
 // Seeds all 5 ISSS assessment tools into the Test table
 
@@ -30,7 +30,7 @@ const AGREE_5 = [
   { label: 'Strongly Agree', value: 4 },
 ];
 
-// ─── Tool 1: Intell Learning Pattern Tool™ ───────────────────
+// ─── Tool 1: Intel Learning Pattern Tool™ ───────────────────
 // 20 questions across 4 learning modes: Visual, Auditory, Kinesthetic, Mixed
 // Each question tagged with a dimension for sub-score analysis
 const LEARNING_PATTERN_QUESTIONS = [
@@ -68,7 +68,7 @@ const LEARNING_PATTERN_THRESHOLDS = [
   { min: 61, max: 80, label: 'Strong Strategic Learner', severity: 'low',    desc: 'You have a clear understanding of how you learn best and apply multiple strategies effectively.' },
 ];
 
-// ─── Tool 2: Intell Study Behaviour Scale™ ───────────────────
+// ─── Tool 2: Intel Study Behaviour Scale™ ───────────────────
 // 20 questions on study habits, time management, focus
 const STUDY_BEHAVIOUR_QUESTIONS = [
   { id: 1,  text: 'I follow a consistent daily study schedule.', options: LIKERT_5 },
@@ -100,7 +100,7 @@ const STUDY_BEHAVIOUR_THRESHOLDS = [
   { min: 54, max: 80, label: 'Strong Study Habits',      severity: 'low',      desc: 'Excellent! You demonstrate well-developed study skills and self-discipline. Continue refining your strategies.' },
 ];
 
-// ─── Tool 3: Intell Emotional Wellness Checklist™ ────────────
+// ─── Tool 3: Intel Emotional Wellness Checklist™ ────────────
 // 15 questions — SENSITIVE (group data only for school management)
 const EMOTIONAL_WELLNESS_QUESTIONS = [
   { id: 1,  text: 'I feel happy and positive about my life most of the time.', options: AGREE_5 },
@@ -127,7 +127,7 @@ const EMOTIONAL_WELLNESS_THRESHOLDS = [
   { min: 41, max: 60, label: 'Emotionally Balanced', severity: 'low',    desc: 'You demonstrate good emotional wellness. Continue nurturing your wellbeing through healthy habits and strong relationships.' },
 ];
 
-// ─── Tool 4: Intell Internet Usage Awareness™ ────────────────
+// ─── Tool 4: Intel Internet Usage Awareness™ ────────────────
 // 15 questions on digital habits and balance
 const INTERNET_USAGE_QUESTIONS = [
   { id: 1,  text: 'I use my phone or computer for entertainment (games, videos, social media) for more than 4 hours daily.', options: FREQ_OPTIONS },
@@ -154,7 +154,7 @@ const INTERNET_USAGE_THRESHOLDS = [
   { min: 41, max: 60, label: 'Digital Overuse Risk',    severity: 'severe',   desc: 'Your responses indicate significant digital overuse. Speaking with a counsellor and setting structured digital boundaries is strongly recommended.' },
 ];
 
-// ─── Tool 5: Intell Personality Dimensions™ ──────────────────
+// ─── Tool 5: Intel Personality Dimensions™ ──────────────────
 // 20 questions across 5 dimensions: Confidence, Adaptability, Responsibility, Emotional Growth, Social Awareness
 const PERSONALITY_QUESTIONS = [
   // Confidence
@@ -197,7 +197,7 @@ async function main() {
 
   const tools = [
     {
-      name: 'Intell Learning Pattern Tool™',
+      name: 'Intel Learning Pattern Tool™',
       description: 'Identifies your natural learning style across Visual, Auditory, Kinesthetic, and Mixed dimensions to help you study more effectively.',
       category: 'LearningPattern',
       estimatedMinutes: 10,
@@ -207,7 +207,7 @@ async function main() {
       thresholds: LEARNING_PATTERN_THRESHOLDS,
     },
     {
-      name: 'Intell Study Behaviour Scale™',
+      name: 'Intel Study Behaviour Scale™',
       description: 'Evaluates your study habits, time management skills, and academic self-discipline to identify areas of strength and growth.',
       category: 'StudyBehaviour',
       estimatedMinutes: 10,
@@ -217,7 +217,7 @@ async function main() {
       thresholds: STUDY_BEHAVIOUR_THRESHOLDS,
     },
     {
-      name: 'Intell Emotional Wellness Checklist™',
+      name: 'Intel Emotional Wellness Checklist™',
       description: 'A self-awareness tool to help you understand your emotional health, resilience, and support needs.',
       category: 'EmotionalWellness',
       estimatedMinutes: 8,
@@ -227,7 +227,7 @@ async function main() {
       thresholds: EMOTIONAL_WELLNESS_THRESHOLDS,
     },
     {
-      name: 'Intell Internet Usage Awareness™',
+      name: 'Intel Internet Usage Awareness™',
       description: 'Evaluates your digital habits and screen time patterns to promote healthier and more balanced technology use.',
       category: 'InternetUsage',
       estimatedMinutes: 8,
@@ -237,7 +237,7 @@ async function main() {
       thresholds: INTERNET_USAGE_THRESHOLDS,
     },
     {
-      name: 'Intell Personality Dimensions™',
+      name: 'Intel Personality Dimensions™',
       description: 'Maps your character strengths across five key dimensions: Confidence, Adaptability, Responsibility, Emotional Growth, and Social Awareness.',
       category: 'PersonalityDimensions',
       estimatedMinutes: 10,
