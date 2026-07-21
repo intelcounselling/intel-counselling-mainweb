@@ -14,7 +14,7 @@ const validateLogin = [
     .trim()
     .isEmail()
     .withMessage('Must be a valid email address')
-    .normalizeEmail(),
+    .normalizeEmail({ gmail_remove_dots: false }),
   body('password')
     .isString()
     .notEmpty()
@@ -65,7 +65,7 @@ const validateCreateSchool = [
     .trim()
     .isEmail()
     .withMessage('Must be a valid admin email address')
-    .normalizeEmail(),
+    .normalizeEmail({ gmail_remove_dots: false }),
   body('adminPhone')
     .optional()
     .trim()
@@ -91,7 +91,7 @@ const validateForgotPassword = [
     .trim()
     .isEmail()
     .withMessage('Must be a valid email address')
-    .normalizeEmail(),
+    .normalizeEmail({ gmail_remove_dots: false }),
   validateResult,
 ];
 
@@ -100,7 +100,7 @@ const validateVerifyOTP = [
     .trim()
     .isEmail()
     .withMessage('Must be a valid email address')
-    .normalizeEmail(),
+    .normalizeEmail({ gmail_remove_dots: false }),
   body('otp')
     .trim()
     .isLength({ min: 6, max: 6 })
