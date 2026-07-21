@@ -256,7 +256,7 @@ async function getUsers(req, res) {
     const { role, schoolId, isActive, search } = req.query;
 
     const where = {
-      ...(role && { role }),
+      role: (role && role !== 'SUPER_ADMIN') ? role : { not: 'SUPER_ADMIN' },
       schoolId: req.user.role === 'SCHOOL_ADMIN' ? req.user.schoolId : (schoolId || undefined),
       ...(isActive !== undefined && { isActive: isActive === 'true' }),
       ...(search && {

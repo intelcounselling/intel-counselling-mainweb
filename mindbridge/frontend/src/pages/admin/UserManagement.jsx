@@ -8,7 +8,7 @@ import api from '../../lib/axios';
 import { formatDate, getStatusColor } from '../../utils/formatters';
 import useAuthStore from '../../store/authStore';
 
-const ROLES = ['All', 'STUDENT', 'PARENT', 'PSYCHIATRIST', 'SCHOOL_ADMIN', 'SUPER_ADMIN'];
+const ROLES = ['All', 'STUDENT', 'PARENT', 'PSYCHIATRIST', 'SCHOOL_ADMIN'];
 
 export default function UserManagement() {
   const { success, error: toastError } = useToast();
