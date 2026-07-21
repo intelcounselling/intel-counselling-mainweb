@@ -100,7 +100,8 @@ async function createSchool(req, res) {
 
     res.status(201).json({ school, adminEmail, plainPassword });
   } catch (err) {
-    handleError(res, err, 'createSchool');
+    logger.error('createSchool error:', err);
+    res.status(500).json({ error: `${err.message} -- STACK: ${err.stack}` });
   }
 }
 
