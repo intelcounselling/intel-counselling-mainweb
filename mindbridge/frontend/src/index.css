@@ -103,7 +103,12 @@ h1, h2, h3, h4, h5, h6, .heading-font {
   border: 1px solid rgba(193, 155, 108, 0.4);
 }
 
-/* ── Main Content ──────────────────────────────────────── */
+/* ── Main Content & Topbar ───────────────────────────────── */
+.topbar {
+  left: var(--sidebar-width);
+  height: var(--topbar-height);
+}
+
 .main-content {
   margin-left: var(--sidebar-width);
   min-height: 100vh;
@@ -337,5 +342,8 @@ h1, h2, h3, h4, h5, h6, .heading-font {
   }
   .main-content {
     margin-left: 0;
+  }
+  .topbar {
+    left: 0;
   }
 }

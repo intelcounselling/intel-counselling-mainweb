@@ -39,8 +39,7 @@ export default function Topbar({ onMenuClick, alertCount = 0 }) {
 
   return (
     <header
-      className="fixed top-0 right-0 z-20 bg-white/80 backdrop-blur-md border-b border-surface-100"
-      style={{ left: 'var(--sidebar-width)', height: 'var(--topbar-height)' }}
+      className="topbar fixed top-0 right-0 z-20 bg-white/80 backdrop-blur-md border-b border-surface-100"
     >
       <div className="flex items-center justify-between h-full px-6">
         <div className="flex items-center gap-4">
