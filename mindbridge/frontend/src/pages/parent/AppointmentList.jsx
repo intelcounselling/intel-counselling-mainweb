@@ -14,7 +14,7 @@ export default function AppointmentList() {
   const appointments = data?.appointments || [];
 
   const handleDownloadReport = (apptId) => {
-    window.open(`${import.meta.env.VITE_API_URL || ''}/api/appointments/${apptId}/report`, '_blank');
+    window.open(`${import.meta.env.VITE_API_URL || ''}/api/portal/api/appointments/${apptId}/report`, '_blank');
   };
 
   if (isLoading) return <div className="flex justify-center pt-20"><Spinner size="xl" /></div>;
