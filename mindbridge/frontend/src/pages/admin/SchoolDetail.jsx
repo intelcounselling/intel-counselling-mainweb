@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
-import { Users, Plus, Download, School, ArrowLeft, Key, Trash2 } from 'lucide-react';
+import { Users, Plus, Download, School, ArrowLeft, Key, Trash2, Mail, Phone, Hash, MoreVertical, LayoutDashboard } from 'lucide-react';
 import { Card, Button, Spinner, EmptyState, Badge, Modal } from '../../components/ui';
 import SeverityBadge from '../../components/charts/SeverityBadge';
 import { useToast } from '../../components/ui/Toast';
@@ -49,103 +49,151 @@ export default function SchoolDetail() {
   if (isLoading) return <div className="flex justify-center pt-20"><Spinner size="xl" /></div>;
 
   return (
-    <div className="space-y-6 animate-slide-up">
-      <div className="flex items-center gap-4">
-        <Link to="/admin/schools" className="p-2 hover:bg-surface-200 rounded-xl text-surface-600">
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-        <div className="flex-1">
-          <h2 className="text-2xl font-bold text-surface-900">{school?.name || 'School Detail'}</h2>
-          <p className="text-surface-500 mt-0.5">{school?.address}</p>
+    <div className="space-y-8 animate-slide-up max-w-7xl">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Link to="/admin/schools" className="p-2.5 bg-white border border-surface-200 hover:border-primary-300 hover:bg-primary-50 hover:text-primary-600 rounded-xl text-surface-600 transition-all shadow-sm">
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+          <div>
+            <div className="flex items-center gap-3">
+              <h2 className="text-3xl font-bold text-surface-900 tracking-tight">{school?.name || 'School Detail'}</h2>
+              {!school?.isActive && <Badge variant="danger">Inactive</Badge>}
+            </div>
+            <p className="text-surface-500 mt-1 flex items-center gap-2">
+              <School className="w-4 h-4" /> {school?.address || 'No address provided'}
+            </p>
+          </div>
+        </div>
+        
+        <div className="flex gap-3">
+          <Link to={`/admin/schools/${id}/dashboard`}>
+            <Button variant="primary" icon={<LayoutDashboard className="w-4 h-4" />} className="shadow-sm">Analytics</Button>
+          </Link>
         </div>
       </div>
 
-      {/* School info card */}
+      {/* Stats Cards */}
       {school && (
-        <Card>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {[
-              { label: 'Email', value: school.contactEmail },
-              { label: 'Phone', value: school.contactPhone || '—' },
-              { label: 'Access Code', value: school.accessCode },
-              { label: 'Students', value: school._count?.users || 0 },
-            ].map(i => (
-              <div key={i.label}>
-                <p className="text-xs text-surface-400 uppercase tracking-wide">{i.label}</p>
-                <p className="font-semibold text-surface-800 mt-0.5 font-mono">{i.value}</p>
-              </div>
-            ))}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white rounded-2xl border border-surface-200 p-5 shadow-sm flex items-start gap-4">
+            <div className="p-3 bg-blue-50 text-blue-600 rounded-xl"><Mail className="w-5 h-5" /></div>
+            <div>
+              <p className="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-1">Contact Email</p>
+              <p className="font-medium text-surface-900 truncate">{school.contactEmail}</p>
+            </div>
           </div>
-        </Card>
+          
+          <div className="bg-white rounded-2xl border border-surface-200 p-5 shadow-sm flex items-start gap-4">
+            <div className="p-3 bg-green-50 text-green-600 rounded-xl"><Phone className="w-5 h-5" /></div>
+            <div>
+              <p className="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-1">Phone</p>
+              <p className="font-medium text-surface-900 truncate">{school.contactPhone || '—'}</p>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-2xl border border-surface-200 p-5 shadow-sm flex items-start gap-4">
+            <div className="p-3 bg-purple-50 text-purple-600 rounded-xl"><Hash className="w-5 h-5" /></div>
+            <div>
+              <p className="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-1">Access Code</p>
+              <p className="font-mono font-bold text-lg text-surface-900">{school.accessCode}</p>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-2xl border border-surface-200 p-5 shadow-sm flex items-start gap-4">
+            <div className="p-3 bg-accent-50 text-accent-600 rounded-xl"><Users className="w-5 h-5" /></div>
+            <div>
+              <p className="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-1">Total Users</p>
+              <p className="font-bold text-lg text-surface-900">{school._count?.users || 0}</p>
+            </div>
+          </div>
+        </div>
       )}
 
-      {/* Actions */}
-      <div className="flex flex-wrap gap-3">
-        <Link to={`/admin/schools/${id}/dashboard`}>
-          <Button variant="primary" icon={<School className="w-4 h-4" />}>Analytics Dashboard</Button>
-        </Link>
-        <Link to={`/admin/schools/${id}/classes`}>
-          <Button variant="outline" icon={<Users className="w-4 h-4" />}>Manage Classes</Button>
-        </Link>
-        <Link to={`/admin/schools/${id}/create-family`}>
-          <Button variant="outline" icon={<Plus className="w-4 h-4" />}>Create Family</Button>
-        </Link>
-        <Link to={`/admin/schools/${id}/generate-credentials`}>
-          <Button variant="outline" icon={<Download className="w-4 h-4" />}>Bulk Upload CSV</Button>
-        </Link>
-      </div>
-
-      {/* Students table */}
-      <Card padding={false}>
-        <div className="px-6 py-4 border-b border-surface-100">
-          <h3 className="font-semibold text-surface-900">Students ({students.length})</h3>
+      {/* Students Data Grid */}
+      <Card padding={false} className="border-surface-200/50 shadow-sm overflow-hidden">
+        <div className="px-6 py-5 border-b border-surface-100 bg-surface-50/50 flex flex-wrap gap-4 items-center justify-between">
+          <h3 className="text-lg font-semibold text-surface-900 flex items-center gap-2">
+            <Users className="w-5 h-5 text-primary-500" />
+            School Roster
+            <Badge variant="primary" size="sm" className="ml-2">{students.length}</Badge>
+          </h3>
+          
+          <div className="flex gap-2">
+            <Link to={`/admin/schools/${id}/classes`}>
+              <Button variant="outline" size="sm" icon={<School className="w-4 h-4" />}>Classes</Button>
+            </Link>
+            <Link to={`/admin/schools/${id}/create-family`}>
+              <Button variant="outline" size="sm" icon={<Plus className="w-4 h-4" />}>Add Family</Button>
+            </Link>
+            <Link to={`/admin/schools/${id}/generate-credentials`}>
+              <Button variant="outline" size="sm" icon={<Download className="w-4 h-4" />}>Bulk Import</Button>
+            </Link>
+          </div>
         </div>
 
         {!students.length ? (
           <EmptyState icon="👥" title="No students yet"
-            description="Create a family to add students to this school." />
+            description="Create a family or use bulk import to add students to this school." className="py-16" />
         ) : (
           <div className="overflow-x-auto">
-            <table className="data-table">
+            <table className="w-full text-left border-collapse min-w-[800px]">
               <thead>
-                <tr>
-                  <th>Name</th><th>Grade</th><th>Last Test</th>
-                  <th>Score</th><th>Severity</th><th>Alerts</th><th>Actions</th>
+                <tr className="bg-surface-50/50 border-b border-surface-200 text-xs uppercase tracking-wider text-surface-500 font-semibold">
+                  <th className="px-6 py-4">Student</th>
+                  <th className="px-6 py-4">Grade</th>
+                  <th className="px-6 py-4">Last Assessment</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4">Alerts</th>
+                  <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-surface-100">
                 {students.map(student => {
                   const lastResult = student.testResults?.[0];
                   const alertCount = student._count?.alerts || 0;
                   return (
-                    <tr key={student.id} className={alertCount > 0 ? 'border-l-4 border-l-red-400' : ''}>
-                      <td>
-                        <div>
-                          <p className="font-medium text-surface-900">{student.firstName} {student.lastName}</p>
-                          <p className="text-xs text-surface-400">{student.email}</p>
+                    <tr key={student.id} className={`hover:bg-surface-50/50 transition-colors ${alertCount > 0 ? 'bg-red-50/30' : ''}`}>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-100 to-accent-100 text-primary-700 font-bold flex items-center justify-center flex-shrink-0">
+                            {student.firstName[0]}{student.lastName[0]}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-surface-900">{student.firstName} {student.lastName}</p>
+                            <p className="text-xs text-surface-500">{student.email}</p>
+                          </div>
                         </div>
                       </td>
-                      <td>{student.grade || '—'}</td>
-                      <td className="text-sm text-surface-500">{lastResult ? formatRelative(lastResult.takenAt) : '—'}</td>
-                      <td>{lastResult ? `${lastResult.score}/${lastResult.maxScore}` : '—'}</td>
-                      <td>{lastResult ? <SeverityBadge severity={lastResult.severity} /> : '—'}</td>
-                      <td>
+                      <td className="px-6 py-4 text-surface-700 font-medium">
+                        {student.grade ? `Grade ${student.grade}` : '—'}
+                      </td>
+                      <td className="px-6 py-4">
+                        {lastResult ? (
+                          <div>
+                            <p className="text-sm font-medium text-surface-900">{lastResult.test?.name || 'Assessment'}</p>
+                            <p className="text-xs text-surface-500">{formatRelative(lastResult.takenAt)}</p>
+                          </div>
+                        ) : (
+                          <span className="text-surface-400 text-sm italic">Never tested</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        {lastResult ? <SeverityBadge severity={lastResult.severity} /> : '—'}
+                      </td>
+                      <td className="px-6 py-4">
                         {alertCount > 0
-                          ? <Badge variant="danger">{alertCount} alert{alertCount > 1 ? 's' : ''}</Badge>
-                          : <span className="text-surface-400 text-xs">None</span>
+                          ? <Badge variant="danger" size="sm" className="animate-pulse">{alertCount} Active Alert{alertCount > 1 ? 's' : ''}</Badge>
+                          : <span className="text-surface-400 text-sm">None</span>
                         }
                       </td>
-                      <td>
-                        <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="xs">View</Button>
-                          <Button variant="ghost" size="xs" icon={<Key className="w-4 h-4" />}
-                            onClick={() => resetMutation.mutate(student.id)}>
-                            Reset PW
-                          </Button>
-                          <Button variant="ghost" size="xs" className="text-red-600 hover:text-red-700 hover:bg-red-50" icon={<Trash2 className="w-4 h-4" />}
-                            onClick={() => setDeleteUserModal(student)}>
-                            Delete
-                          </Button>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button variant="ghost" size="sm" className="text-surface-500 hover:text-primary-600 hover:bg-primary-50" icon={<Key className="w-4 h-4" />}
+                            onClick={() => resetMutation.mutate(student.id)} title="Reset Password" />
+                          <Button variant="ghost" size="sm" className="text-surface-500 hover:text-red-600 hover:bg-red-50" icon={<Trash2 className="w-4 h-4" />}
+                            onClick={() => setDeleteUserModal(student)} title="Delete Student" />
                         </div>
                       </td>
                     </tr>

@@ -34,13 +34,13 @@ function CreateSchoolPanel({ onClose, onSuccess }) {
     <>
       <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
         <div className="slide-over">
-          <div className="flex items-center justify-between p-6 border-b border-surface-100">
-            <h2 className="text-lg font-semibold">Add New School</h2>
-            <button onClick={onClose} className="p-2 hover:bg-surface-100 rounded-lg">
-              <X className="w-5 h-5" />
+          <div className="flex items-center justify-between p-6 border-b border-surface-100 bg-surface-50/50">
+            <h2 className="text-xl font-bold text-surface-900">Add New School</h2>
+            <button onClick={onClose} className="p-2 hover:bg-surface-200 rounded-full transition-colors">
+              <X className="w-5 h-5 text-surface-500" />
             </button>
           </div>
-          <div className="p-6 space-y-5">
+          <div className="p-6 space-y-6">
             <Input label="School Name" required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Greenfield Academy" />
             <Input label="Address" value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="123 Oak Street, Springfield" />
             <Input label="Contact Email" type="email" required value={form.contactEmail} onChange={e => setForm(f => ({ ...f, contactEmail: e.target.value }))} placeholder="admin@school.edu" />
@@ -48,15 +48,20 @@ function CreateSchoolPanel({ onClose, onSuccess }) {
 
             <div>
               <label className="block text-sm font-medium text-surface-700 mb-1.5">School Logo</label>
-              <label className="flex flex-col items-center gap-2 border-2 border-dashed border-surface-300 rounded-xl p-6 cursor-pointer hover:border-primary-400 hover:bg-primary-50 transition-colors">
-                <Upload className="w-6 h-6 text-surface-400" />
-                <span className="text-sm text-surface-500">{logoFile ? logoFile.name : 'Click to upload logo (PNG, JPG)'}</span>
+              <label className="flex flex-col items-center justify-center gap-3 border-2 border-dashed border-surface-200 rounded-2xl p-8 cursor-pointer hover:border-primary-400 hover:bg-primary-50/50 transition-all group">
+                <div className="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Upload className="w-6 h-6 text-primary-600" />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-semibold text-surface-900">{logoFile ? logoFile.name : 'Click to upload logo'}</p>
+                  <p className="text-xs text-surface-500 mt-1">PNG, JPG up to 5MB</p>
+                </div>
                 <input type="file" accept="image/*" className="hidden" onChange={e => setLogoFile(e.target.files[0])} />
               </label>
             </div>
 
-            <div className="pt-4">
-              <Button variant="primary" className="w-full" loading={mutation.isPending}
+            <div className="pt-6 border-t border-surface-100">
+              <Button variant="primary" className="w-full h-12 text-base" loading={mutation.isPending}
                 onClick={() => mutation.mutate()}>
                 Create School
               </Button>
@@ -110,35 +115,53 @@ export default function SchoolList() {
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center pt-12"><Spinner size="lg" /></div>
+        <div className="flex justify-center pt-20"><Spinner size="xl" /></div>
       ) : !schools.length ? (
         <EmptyState icon="🏫" title="No schools found" description={isSchoolAdmin ? "You haven't been assigned to a school yet." : "Add your first school to get started."} action={
           !isSchoolAdmin ? <Button variant="primary" onClick={() => setShowCreate(true)} icon={<Plus className="w-4 h-4" />}>Add School</Button> : null
-        } />
+        } className="py-20" />
       ) : (
-        <div className="grid gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {schools.map(school => (
-            <Link key={school.id} to={`/admin/schools/${school.id}`}>
-              <Card hover className="flex items-center gap-5">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center flex-shrink-0">
-                  {school.logoUrl
-                    ? <img src={school.logoUrl} alt={school.name} className="w-full h-full object-cover rounded-xl" />
-                    : <School className="w-6 h-6 text-white" />
-                  }
+            <Link key={school.id} to={`/admin/schools/${school.id}`} className="group block h-full">
+              <div className="h-full bg-white rounded-3xl border border-surface-200 p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col relative overflow-hidden">
+                {/* Decorative background element */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary-100 to-accent-100 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-50 group-hover:opacity-100 transition-opacity" />
+                
+                <div className="flex items-start justify-between mb-6 relative z-10">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-50 to-primary-100 border border-primary-100 flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden group-hover:scale-105 transition-transform">
+                    {school.logoUrl
+                      ? <img src={school.logoUrl} alt={school.name} className="w-full h-full object-cover" />
+                      : <School className="w-8 h-8 text-primary-500" />
+                    }
+                  </div>
+                  {!school.isActive && <Badge variant="danger" size="xs">Inactive</Badge>}
                 </div>
-                <div className="flex-1 min-w-0">
+                
+                <div className="flex-1 relative z-10">
+                  <h3 className="font-bold text-lg text-surface-900 group-hover:text-primary-600 transition-colors line-clamp-1">{school.name}</h3>
+                  <p className="text-sm text-surface-500 mt-1 line-clamp-2">{school.address || school.contactEmail}</p>
+                </div>
+                
+                <div className="mt-6 pt-5 border-t border-surface-100 flex items-center justify-between relative z-10">
                   <div className="flex items-center gap-2">
-                    <p className="font-semibold text-surface-900">{school.name}</p>
-                    {!school.isActive && <Badge variant="danger" size="xs">Inactive</Badge>}
+                    <div className="w-8 h-8 rounded-full bg-surface-100 flex items-center justify-center">
+                      <Users className="w-4 h-4 text-surface-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-surface-900">{school._count?.users || 0}</p>
+                      <p className="text-[10px] text-surface-500 uppercase tracking-wider">Users</p>
+                    </div>
                   </div>
-                  <p className="text-sm text-surface-500 truncate">{school.address || school.contactEmail}</p>
-                  <div className="flex items-center gap-4 mt-1">
-                    <span className="text-xs text-surface-400">{school._count?.users || 0} users</span>
-                    <span className="text-xs font-mono bg-surface-100 text-surface-600 px-2 py-0.5 rounded">{school.accessCode}</span>
+                  
+                  <div className="text-right">
+                    <p className="text-[10px] text-surface-500 uppercase tracking-wider mb-0.5">Access Code</p>
+                    <span className="text-xs font-mono font-bold bg-primary-50 text-primary-700 px-2.5 py-1 rounded-md border border-primary-100">
+                      {school.accessCode}
+                    </span>
                   </div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-surface-400 flex-shrink-0" />
-              </Card>
+              </div>
             </Link>
           ))}
         </div>
