@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Search, ToggleLeft, ToggleRight, Trash2, School, Users } from 'lucide-react';
 import { Card, Select, Badge, Button, Modal, Spinner, EmptyState } from '../../components/ui';
@@ -6,16 +6,26 @@ import SeverityBadge from '../../components/charts/SeverityBadge';
 import { useToast } from '../../components/ui/Toast';
 import api from '../../lib/axios';
 import { formatDate, getStatusColor } from '../../utils/formatters';
+import useAuthStore from '../../store/authStore';
 
 const ROLES = ['All', 'STUDENT', 'PARENT', 'PSYCHIATRIST', 'SCHOOL_ADMIN', 'SUPER_ADMIN'];
 
 export default function UserManagement() {
   const { success, error: toastError } = useToast();
   const qc = useQueryClient();
+  const currentUser = useAuthStore(s => s.user);
   const [search, setSearch] = useState('');
   const [role, setRole] = useState('');
   const [isActive, setIsActive] = useState('');
   const [deleteUserModal, setDeleteUserModal] = useState(null);
+  
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [batchDeleteModal, setBatchDeleteModal] = useState(false);
+
+  // Reset selections when query changes
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [search, role, isActive]);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-users', search, role, isActive],
@@ -39,7 +49,34 @@ export default function UserManagement() {
     onError: (err) => toastError(err.response?.data?.error || 'Failed to delete user'),
   });
 
+  const batchDeleteMutation = useMutation({
+    mutationFn: () => api.post('/admin/users/batch-delete', { ids: selectedIds }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-users'] });
+      success('Selected users deleted successfully');
+      setSelectedIds([]);
+      setBatchDeleteModal(false);
+    },
+    onError: (err) => toastError(err.response?.data?.error || 'Failed to delete selected users'),
+  });
+
   const users = data?.users || [];
+  
+  const deletableUsers = users.filter(u => u.id !== currentUser?.id && u.role !== 'SUPER_ADMIN');
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedIds(deletableUsers.map(u => u.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (id) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
 
   const roleBadge = (r) => {
     const colors = { STUDENT: 'info', PARENT: 'success', PSYCHIATRIST: 'primary', SUPER_ADMIN: 'warning', SCHOOL_ADMIN: 'warning' };
@@ -58,6 +95,18 @@ export default function UserManagement() {
           <span className="font-semibold text-surface-700">{data?.pagination?.total || 0} Total Users</span>
         </div>
       </div>
+
+      {selectedIds.length > 0 && (
+        <div className="flex items-center justify-between p-4 bg-red-50 border border-red-100 rounded-2xl animate-fade-in">
+          <span className="text-sm font-semibold text-red-900">
+            {selectedIds.length} user{selectedIds.length > 1 ? 's' : ''} selected for deletion
+          </span>
+          <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50" icon={<Trash2 className="w-4 h-4" />}
+            onClick={() => setBatchDeleteModal(true)}>
+            Delete Selected
+          </Button>
+        </div>
+      )}
 
       <Card padding={false} className="border-surface-200/50 shadow-sm overflow-visible">
         <div className="p-4 flex flex-col sm:flex-row gap-4 items-center bg-white rounded-2xl">
@@ -90,6 +139,11 @@ export default function UserManagement() {
             <table className="w-full text-left border-collapse min-w-[800px]">
               <thead>
                 <tr className="bg-surface-50/50 border-b border-surface-200 text-xs uppercase tracking-wider text-surface-500 font-semibold">
+                  <th className="px-6 py-4 w-12">
+                    <input type="checkbox" className="rounded border-surface-300 text-primary-600 focus:ring-primary-500 w-4 h-4 cursor-pointer"
+                      checked={deletableUsers.length > 0 && selectedIds.length === deletableUsers.length}
+                      onChange={handleSelectAll} />
+                  </th>
                   <th className="px-6 py-4">User</th>
                   <th className="px-6 py-4">Role</th>
                   <th className="px-6 py-4">Organization</th>
@@ -100,7 +154,16 @@ export default function UserManagement() {
               </thead>
               <tbody className="divide-y divide-surface-100">
                 {users.map(user => (
-                  <tr key={user.id} className={`hover:bg-surface-50/50 transition-colors ${!user.isActive ? 'opacity-75' : ''}`}>
+                  <tr key={user.id} className={`hover:bg-surface-50/50 transition-colors ${!user.isActive ? 'opacity-75' : ''} ${selectedIds.includes(user.id) ? 'bg-primary-50/30' : ''}`}>
+                    <td className="px-6 py-4 w-12">
+                      {currentUser?.id !== user.id && user.role !== 'SUPER_ADMIN' ? (
+                        <input type="checkbox" className="rounded border-surface-300 text-primary-600 focus:ring-primary-500 w-4 h-4 cursor-pointer"
+                          checked={selectedIds.includes(user.id)}
+                          onChange={() => handleSelectOne(user.id)} />
+                      ) : (
+                        <input type="checkbox" className="rounded border-surface-200 text-surface-300 w-4 h-4 cursor-not-allowed" disabled />
+                      )}
+                    </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-surface-100 to-surface-200 text-surface-700 font-bold flex items-center justify-center flex-shrink-0">
@@ -159,6 +222,25 @@ export default function UserManagement() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Batch Delete Modal */}
+      <Modal isOpen={batchDeleteModal} onClose={() => setBatchDeleteModal(false)} title="Confirm Batch Deletion">
+        <div className="space-y-4 pt-2">
+          <p className="text-surface-600">
+            Are you sure you want to delete the <span className="font-semibold text-surface-900">{selectedIds.length}</span> selected user accounts?
+          </p>
+          <div className="p-3.5 bg-red-50 border border-red-200 rounded-2xl text-xs text-red-700 leading-relaxed font-medium">
+            ⚠️ <strong>Warning:</strong> This will permanently delete these user accounts and all associated data. This action cannot be undone.
+          </div>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="outline" onClick={() => setBatchDeleteModal(false)}>Cancel</Button>
+            <Button variant="primary" className="bg-red-600 hover:bg-red-700 text-white border-transparent"
+              onClick={() => batchDeleteMutation.mutate()} loading={batchDeleteMutation.isPending}>
+              Yes, Delete Users
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

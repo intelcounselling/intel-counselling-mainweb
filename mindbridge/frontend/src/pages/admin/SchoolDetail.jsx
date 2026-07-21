@@ -7,12 +7,18 @@ import SeverityBadge from '../../components/charts/SeverityBadge';
 import { useToast } from '../../components/ui/Toast';
 import api from '../../lib/axios';
 import { formatDate, formatRelative } from '../../utils/formatters';
+import useAuthStore from '../../store/authStore';
+import { useNavigate } from 'react-router-dom';
 
 export default function SchoolDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const user = useAuthStore(s => s.user);
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
   const { success, error: toastError } = useToast();
   const qc = useQueryClient();
   const [deleteUserModal, setDeleteUserModal] = useState(null);
+  const [deleteSchoolModal, setDeleteSchoolModal] = useState(false);
 
   const deleteMutation = useMutation({
     mutationFn: (userId) => api.delete(`/admin/users/${userId}`),
@@ -22,6 +28,15 @@ export default function SchoolDetail() {
       setDeleteUserModal(null);
     },
     onError: (err) => toastError(err.response?.data?.error || 'Failed to delete student'),
+  });
+
+  const deleteSchoolMutation = useMutation({
+    mutationFn: () => api.delete(`/admin/schools/${id}`),
+    onSuccess: () => {
+      success('School and all associated data deleted successfully');
+      navigate('/admin/schools');
+    },
+    onError: (err) => toastError(err.response?.data?.error || 'Failed to delete school'),
   });
 
   const { data: studentsData, isLoading } = useQuery({
@@ -59,6 +74,12 @@ export default function SchoolDetail() {
         </div>
         
         <div className="flex gap-3">
+          {isSuperAdmin && (
+            <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50" icon={<Trash2 className="w-4 h-4" />}
+              onClick={() => setDeleteSchoolModal(true)}>
+              Delete School
+            </Button>
+          )}
           <Link to={`/admin/schools/${id}/dashboard`}>
             <Button variant="primary" icon={<LayoutDashboard className="w-4 h-4" />} className="shadow-sm">Analytics</Button>
           </Link>
@@ -189,21 +210,39 @@ export default function SchoolDetail() {
       {/* Delete Confirmation Modal */}
       <Modal isOpen={!!deleteUserModal} onClose={() => setDeleteUserModal(null)} title="Confirm Deletion">
         {deleteUserModal && (
-          <div className="space-y-4">
-            <p className="text-sm text-surface-600">
-              Are you sure you want to delete the student account for <strong>{deleteUserModal.firstName} {deleteUserModal.lastName}</strong> ({deleteUserModal.email})?
+          <div className="space-y-4 pt-2">
+            <p className="text-surface-600">
+              Are you sure you want to delete <span className="font-semibold text-surface-900">{deleteUserModal?.firstName} {deleteUserModal?.lastName}</span>? 
+              This action cannot be undone.
             </p>
-            <p className="text-xs text-red-500 font-semibold bg-red-50 p-3 rounded-lg">
-              ⚠️ Warning: This will permanently delete this student's account, test results, alerts, and counselling notes. This action cannot be undone.
-            </p>
-            <div className="flex justify-end gap-3">
+            <div className="flex justify-end gap-3 pt-4">
               <Button variant="outline" onClick={() => setDeleteUserModal(null)}>Cancel</Button>
-              <Button variant="danger" loading={deleteMutation.isPending} onClick={() => deleteMutation.mutate(deleteUserModal.id)}>
-                Delete Student
+              <Button variant="primary" className="bg-red-600 hover:bg-red-700 text-white border-transparent"
+                onClick={() => deleteMutation.mutate(deleteUserModal.id)} loading={deleteMutation.isPending}>
+                Yes, Delete Student
               </Button>
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Delete School Modal */}
+      <Modal isOpen={deleteSchoolModal} onClose={() => setDeleteSchoolModal(false)} title="Confirm School Deletion">
+        <div className="space-y-4 pt-2">
+          <p className="text-surface-600">
+            Are you sure you want to delete <span className="font-semibold text-surface-900">{school?.name}</span>?
+          </p>
+          <div className="p-3.5 bg-red-50 border border-red-200 rounded-2xl text-xs text-red-700 leading-relaxed font-medium">
+            ⚠️ <strong>CRITICAL WARNING:</strong> This action will permanently delete this school, all of its classes, all family groupings, and <strong>ALL user accounts</strong> (students, parents, and school admins) associated with it. This cannot be undone.
+          </div>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="outline" onClick={() => setDeleteSchoolModal(false)}>Cancel</Button>
+            <Button variant="primary" className="bg-red-600 hover:bg-red-700 text-white border-transparent"
+              onClick={() => deleteSchoolMutation.mutate()} loading={deleteSchoolMutation.isPending}>
+              Yes, Delete School
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

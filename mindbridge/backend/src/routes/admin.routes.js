@@ -22,6 +22,7 @@ router.get('/schools', ...admin, ctrl.getSchools);
 router.post('/schools', ...superAdmin, upload.single('logo'), validateCreateSchool, ctrl.createSchool);
 router.get('/schools/:id', ...admin, validateUUID('id'), ctrl.getSchoolDetail);
 router.put('/schools/:id', ...admin, upload.single('logo'), validateUUID('id'), ctrl.updateSchool);
+router.delete('/schools/:id', ...superAdmin, validateUUID('id'), ctrl.deleteSchool);
 router.get('/schools/:id/students', ...admin, validateUUID('id'), ctrl.getSchoolStudents);
 router.post('/schools/:id/family', ...admin, validateUUID('id'), ctrl.createFamily);
 router.post('/schools/:id/generate-credentials', ...admin, validateUUID('id'), upload.single('csv'), ctrl.generateBulkCredentials);
@@ -38,6 +39,7 @@ router.post('/schools/:id/classes/:classId/assign', ...admin, ctrl.assignStudent
 
 // Users
 router.get('/users', ...admin, ctrl.getUsers);
+router.post('/users/batch-delete', ...admin, ctrl.batchDeleteUsers);
 router.put('/users/:id/toggle-active', ...admin, validateUUID('id'), ctrl.toggleUserActive);
 router.post('/users/:id/reset-password', ...admin, validateUUID('id'), ctrl.resetUserPassword);
 router.delete('/users/:id', ...admin, validateUUID('id'), ctrl.deleteUser);
