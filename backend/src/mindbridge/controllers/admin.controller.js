@@ -87,7 +87,7 @@ async function createSchool(req, res) {
           firstName: adminFirstName,
           lastName: adminLastName,
           phone: adminPhone || null,
-          schoolId: sch.id,
+          school: { connect: { id: sch.id } },
           mustResetPassword: true,
           isOnboarded: false,
         }
@@ -100,8 +100,7 @@ async function createSchool(req, res) {
 
     res.status(201).json({ school, adminEmail, plainPassword });
   } catch (err) {
-    logger.error('createSchool error:', err);
-    res.status(500).json({ error: `${err.message} -- STACK: ${err.stack}` });
+    handleError(res, err, 'createSchool');
   }
 }
 
