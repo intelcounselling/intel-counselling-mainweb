@@ -33,6 +33,7 @@ export default function SchoolDetail() {
   const deleteSchoolMutation = useMutation({
     mutationFn: () => api.delete(`/admin/schools/${id}`),
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-schools'] });
       success('School and all associated data deleted successfully');
       navigate('/admin/schools');
     },
