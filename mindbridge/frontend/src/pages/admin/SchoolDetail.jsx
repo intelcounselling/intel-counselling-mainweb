@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, Fragment } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
-import { Users, Plus, Download, School, ArrowLeft, Trash2, Mail, Phone, MoreVertical, LayoutDashboard } from 'lucide-react';
+import { Users, Plus, Download, School, ArrowLeft, Trash2, Mail, Phone, MoreVertical, LayoutDashboard, ChevronDown, ChevronRight } from 'lucide-react';
 import { Card, Button, Spinner, EmptyState, Badge, Modal } from '../../components/ui';
 import SeverityBadge from '../../components/charts/SeverityBadge';
 import { useToast } from '../../components/ui/Toast';
@@ -19,6 +19,11 @@ export default function SchoolDetail() {
   const qc = useQueryClient();
   const [deleteUserModal, setDeleteUserModal] = useState(null);
   const [deleteSchoolModal, setDeleteSchoolModal] = useState(false);
+  const [expandedClasses, setExpandedClasses] = useState({});
+
+  const toggleClass = (className) => {
+    setExpandedClasses(prev => ({ ...prev, [className]: !prev[className] }));
+  };
 
   const deleteMutation = useMutation({
     mutationFn: (userId) => api.delete(`/admin/users/${userId}`),
@@ -52,6 +57,14 @@ export default function SchoolDetail() {
 
   const school = schoolsData?.schools?.find(s => s.id === id);
   const students = studentsData?.students || [];
+
+  const groupedStudents = students.reduce((acc, student) => {
+    // If the student has a class name, group by that; otherwise check grade, otherwise Unassigned
+    const className = student.class?.name || (student.grade ? `Grade ${student.grade}` : 'Unassigned');
+    if (!acc[className]) acc[className] = [];
+    acc[className].push(student);
+    return acc;
+  }, {});
 
   if (isLoading) return <div className="flex justify-center pt-20"><Spinner size="xl" /></div>;
 
@@ -155,51 +168,69 @@ export default function SchoolDetail() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-100">
-                {students.map(student => {
-                  const lastResult = student.testResults?.[0];
-                  const alertCount = student._count?.alerts || 0;
+                {Object.entries(groupedStudents).map(([className, classStudents]) => {
+                  const isExpanded = expandedClasses[className] !== false; // expanded by default
                   return (
-                    <tr key={student.id} className={`hover:bg-surface-50/50 transition-colors ${alertCount > 0 ? 'bg-red-50/30' : ''}`}>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-100 to-accent-100 text-primary-700 font-bold flex items-center justify-center flex-shrink-0">
-                            {student.firstName[0]}{student.lastName[0]}
+                    <Fragment key={className}>
+                      <tr 
+                        className="bg-surface-50 cursor-pointer hover:bg-surface-100 transition-colors border-y border-surface-200"
+                        onClick={() => toggleClass(className)}
+                      >
+                        <td colSpan="6" className="px-6 py-3 font-semibold text-surface-700 select-none">
+                          <div className="flex items-center gap-2">
+                            {isExpanded ? <ChevronDown className="w-4 h-4 text-surface-400" /> : <ChevronRight className="w-4 h-4 text-surface-400" />}
+                            {className} <Badge variant="primary" size="xs" className="ml-2">{classStudents.length}</Badge>
                           </div>
-                          <div>
-                            <p className="font-semibold text-surface-900">{student.firstName} {student.lastName}</p>
-                            <p className="text-xs text-surface-500">{student.email}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-surface-700 font-medium">
-                        {student.grade ? `Grade ${student.grade}` : '—'}
-                      </td>
-                      <td className="px-6 py-4">
-                        {lastResult ? (
-                          <div>
-                            <p className="text-sm font-medium text-surface-900">{lastResult.test?.name || 'Assessment'}</p>
-                            <p className="text-xs text-surface-500">{formatRelative(lastResult.takenAt)}</p>
-                          </div>
-                        ) : (
-                          <span className="text-surface-400 text-sm italic">Never tested</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        {lastResult ? <SeverityBadge severity={lastResult.severity} /> : '—'}
-                      </td>
-                      <td className="px-6 py-4">
-                        {alertCount > 0
-                          ? <Badge variant="danger" size="sm" className="animate-pulse">{alertCount} Active Alert{alertCount > 1 ? 's' : ''}</Badge>
-                          : <span className="text-surface-400 text-sm">None</span>
-                        }
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="sm" className="text-surface-500 hover:text-red-600 hover:bg-red-50" icon={<Trash2 className="w-4 h-4" />}
-                            onClick={() => setDeleteUserModal(student)} title="Delete Student" />
-                        </div>
-                      </td>
-                    </tr>
+                        </td>
+                      </tr>
+                      {isExpanded && classStudents.map(student => {
+                        const lastResult = student.testResults?.[0];
+                        const alertCount = student._count?.alerts || 0;
+                        return (
+                          <tr key={student.id} className={`hover:bg-surface-50/50 transition-colors ${alertCount > 0 ? 'bg-red-50/30' : ''}`}>
+                            <td className="px-6 py-4 pl-12">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-100 to-accent-100 text-primary-700 font-bold flex items-center justify-center flex-shrink-0">
+                                  {student.firstName[0]}{student.lastName[0]}
+                                </div>
+                                <div>
+                                  <p className="font-semibold text-surface-900">{student.firstName} {student.lastName}</p>
+                                  <p className="text-xs text-surface-500">{student.email}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-surface-700 font-medium">
+                              {student.grade ? `Grade ${student.grade}` : '—'}
+                            </td>
+                            <td className="px-6 py-4">
+                              {lastResult ? (
+                                <div>
+                                  <p className="text-sm font-medium text-surface-900">{lastResult.test?.name || 'Assessment'}</p>
+                                  <p className="text-xs text-surface-500">{formatRelative(lastResult.takenAt)}</p>
+                                </div>
+                              ) : (
+                                <span className="text-surface-400 text-sm italic">Never tested</span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4">
+                              {lastResult ? <SeverityBadge severity={lastResult.severity} /> : '—'}
+                            </td>
+                            <td className="px-6 py-4">
+                              {alertCount > 0
+                                ? <Badge variant="danger" size="sm" className="animate-pulse">{alertCount} Active Alert{alertCount > 1 ? 's' : ''}</Badge>
+                                : <span className="text-surface-400 text-sm">None</span>
+                              }
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center justify-end gap-2">
+                                <Button variant="ghost" size="sm" className="text-surface-500 hover:text-red-600 hover:bg-red-50" icon={<Trash2 className="w-4 h-4" />}
+                                  onClick={() => setDeleteUserModal(student)} title="Delete Student" />
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </Fragment>
                   );
                 })}
               </tbody>

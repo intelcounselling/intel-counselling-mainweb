@@ -166,6 +166,7 @@ async function getSchoolStudents(req, res) {
             include: { test: { select: { name: true } } },
           },
           _count: { select: { alerts: true } },
+          class: true,
         },
       }),
       prisma.user.count({ where: { schoolId: id, role: 'STUDENT' } }),
