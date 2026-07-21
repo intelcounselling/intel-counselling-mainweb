@@ -88,8 +88,7 @@ async function createSchool(req, res) {
           lastName: adminLastName,
           phone: adminPhone || null,
           school: { connect: { id: sch.id } },
-          mustResetPassword: true,
-          isOnboarded: false,
+          mustResetPassword: true
         }
       });
 

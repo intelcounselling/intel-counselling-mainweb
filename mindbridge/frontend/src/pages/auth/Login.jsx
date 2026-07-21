@@ -8,6 +8,10 @@ import useAuthStore from '../../store/authStore';
 import api from '../../lib/axios';
 import { ROLE_DASHBOARDS } from '../../utils/roleGuard';
 
+// Firebase imports
+import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+import { auth, googleProvider } from '../../lib/firebase';
+
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -30,8 +34,6 @@ export default function Login() {
       let userData;
       try {
         // Try Firebase Auth First
-        const { signInWithEmailAndPassword } = await import('firebase/auth');
-        const { auth } = await import('../../lib/firebase');
         await signInWithEmailAndPassword(auth, form.email.trim().toLowerCase(), form.password);
         
         // Fetch user context from backend using the interceptor (which now attaches the Firebase token)
@@ -75,9 +77,6 @@ export default function Login() {
     setLoading(true);
     
     try {
-      const { signInWithPopup } = await import('firebase/auth');
-      const { auth, googleProvider } = await import('../../lib/firebase');
-      
       await signInWithPopup(auth, googleProvider);
       
       // Fetch user context from backend using the interceptor (which now attaches the Firebase token)
