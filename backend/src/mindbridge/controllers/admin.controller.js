@@ -114,7 +114,7 @@ async function getSchools(req, res) {
         take,
         orderBy: { createdAt: 'desc' },
         include: {
-          _count: { select: { users: true, families: true } },
+          _count: { select: { users: { where: { role: { not: 'SCHOOL_ADMIN' } } }, families: true } },
         },
       }),
       prisma.school.count(),
@@ -280,7 +280,7 @@ async function getUsers(req, res) {
     const { role, schoolId, isActive, search } = req.query;
 
     const where = {
-      role: (role && role !== 'SUPER_ADMIN') ? role : { not: 'SUPER_ADMIN' },
+      role: (role && role !== 'SUPER_ADMIN') ? role : { notIn: ['SUPER_ADMIN', 'SCHOOL_ADMIN'] },
       schoolId: req.user.role === 'SCHOOL_ADMIN' ? req.user.schoolId : (schoolId || undefined),
       ...(isActive !== undefined && { isActive: isActive === 'true' }),
       ...(search && {
@@ -464,7 +464,7 @@ async function getSchoolDetail(req, res) {
     const school = await prisma.school.findUnique({
       where: { id },
       include: {
-        _count: { select: { users: true, families: true, classes: true } },
+        _count: { select: { users: { where: { role: { not: 'SCHOOL_ADMIN' } } }, families: true, classes: true } },
         classes: { orderBy: { grade: 'asc' } },
       },
     });
