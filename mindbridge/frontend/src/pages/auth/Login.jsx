@@ -153,7 +153,9 @@ export default function Login() {
         <div className="w-full max-w-md">
           {/* Mobile logo */}
           <div className="mb-8 lg:hidden">
-            <img src="/assets/logo_full.png" alt="Intel Counselling" className="h-12 w-auto object-contain" />
+            <div className="bg-surface-900 p-4 rounded-2xl inline-flex shadow-lg items-center justify-center">
+              <img src="/assets/logo_full.png" alt="Intel Counselling" className="h-8 w-auto object-contain" />
+            </div>
           </div>
 
           <div className="mb-8">
