@@ -218,7 +218,7 @@ export default function SchoolList() {
                     </div>
                     <div>
                       <p className="text-xs font-medium text-surface-900">{school._count?.users || 0}</p>
-                      <p className="text-[10px] text-surface-500 uppercase tracking-wider">Users</p>
+                      <p className="text-[10px] text-surface-500 uppercase tracking-wider">Students</p>
                     </div>
                   </div>
                 </div>

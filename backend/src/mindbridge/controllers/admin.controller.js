@@ -114,7 +114,7 @@ async function getSchools(req, res) {
         take,
         orderBy: { createdAt: 'desc' },
         include: {
-          _count: { select: { users: { where: { role: { not: 'SCHOOL_ADMIN' } } }, families: true } },
+          _count: { select: { users: { where: { role: 'STUDENT' } }, families: true } },
         },
       }),
       prisma.school.count(),
@@ -464,7 +464,7 @@ async function getSchoolDetail(req, res) {
     const school = await prisma.school.findUnique({
       where: { id },
       include: {
-        _count: { select: { users: { where: { role: { not: 'SCHOOL_ADMIN' } } }, families: true, classes: true } },
+        _count: { select: { users: { where: { role: 'STUDENT' } }, families: true, classes: true } },
         classes: { orderBy: { grade: 'asc' } },
       },
     });

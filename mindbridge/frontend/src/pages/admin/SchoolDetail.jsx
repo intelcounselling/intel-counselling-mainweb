@@ -109,7 +109,7 @@ export default function SchoolDetail() {
           <div className="bg-white rounded-2xl border border-surface-200 p-5 shadow-sm flex items-start gap-4">
             <div className="p-3 bg-accent-50 text-accent-600 rounded-xl"><Users className="w-5 h-5" /></div>
             <div>
-              <p className="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-1">Total Users</p>
+              <p className="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-1">Total Students</p>
               <p className="font-bold text-lg text-surface-900">{school._count?.users || 0}</p>
             </div>
           </div>
