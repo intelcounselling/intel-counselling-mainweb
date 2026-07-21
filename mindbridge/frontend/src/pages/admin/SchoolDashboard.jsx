@@ -10,6 +10,7 @@ import DonutChart from '../../components/charts/DonutChart';
 import BarChart from '../../components/charts/BarChart';
 import RadarChart from '../../components/charts/RadarChart';
 import api from '../../lib/axios';
+import useAuthStore from '../../store/authStore';
 
 // ── Constants ─────────────────────────────────────────────────
 const TOOL_META = {
@@ -177,6 +178,8 @@ function AnalyticsCard({ category, data }) {
 export default function SchoolDashboard() {
   const { id: schoolId } = useParams();
   const [selectedClass, setSelectedClass] = useState('');
+  const user = useAuthStore(s => s.user);
+  const isSchoolAdmin = user?.role === 'SCHOOL_ADMIN';
 
   const { data, isLoading } = useQuery({
     queryKey: ['school-analytics', schoolId, selectedClass],
@@ -191,9 +194,11 @@ export default function SchoolDashboard() {
     <div className="space-y-8 animate-slide-up max-w-7xl">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link to="/admin/schools" className="p-2 hover:bg-surface-200 rounded-xl text-surface-600 transition-colors">
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
+        {!isSchoolAdmin && (
+          <Link to="/admin/schools" className="p-2 hover:bg-surface-200 rounded-xl text-surface-600 transition-colors">
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+        )}
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary-100 text-primary-700">

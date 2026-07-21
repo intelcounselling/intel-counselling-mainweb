@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { School, Users, AlertTriangle, TrendingUp, Plus, ArrowRight } from 'lucide-react';
 import { Card, Badge, Spinner, EmptyState } from '../../components/ui';
 import SeverityBadge from '../../components/charts/SeverityBadge';
@@ -34,6 +34,10 @@ export default function AdminDashboard() {
 
   if (isLoading) return <div className="flex justify-center pt-20"><Spinner size="xl" /></div>;
 
+  if (isSchoolAdmin && user?.schoolId) {
+    return <Navigate to={`/admin/schools/${user.schoolId}/dashboard`} replace />;
+  }
+
   const { stats, recentAlerts } = data || {};
 
   return (
@@ -54,9 +58,9 @@ export default function AdminDashboard() {
       {/* Quick Actions */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          ...(!isSchoolAdmin ? [{ label: 'Add New School', to: '/admin/schools', icon: Plus, color: 'from-primary-600 to-primary-700' }] : []),
+          { label: 'Add New School', to: '/admin/schools', icon: Plus, color: 'from-primary-600 to-primary-700' },
           { label: 'Manage Users', to: '/admin/users', icon: Users, color: 'from-accent-500 to-accent-700' },
-          { label: isSchoolAdmin ? 'View My School' : 'View All Schools', to: '/admin/schools', icon: School, color: 'from-surface-700 to-surface-900' },
+          { label: 'View All Schools', to: '/admin/schools', icon: School, color: 'from-surface-700 to-surface-900' },
         ].map(a => (
           <Link key={a.label} to={a.to}
             className={`bg-gradient-to-br ${a.color} text-white rounded-2xl p-5 flex items-center gap-4 hover:opacity-90 transition-opacity shadow-glass`}>

@@ -35,8 +35,8 @@ const NAV_BY_ROLE = {
     { to: '/admin/settings', label: 'Settings', icon: Settings },
   ],
   SCHOOL_ADMIN: [
+    // This serves as a fallback; dynamic routing handled in component
     { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-    { to: '/admin/schools', label: 'Schools', icon: School },
     { to: '/admin/users', label: 'Users', icon: Users },
     { to: '/admin/settings', label: 'Settings', icon: Settings },
   ],
@@ -53,7 +53,18 @@ const ROLE_LABELS = {
 export default function Sidebar({ mobileOpen, onClose }) {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
-  const navItems = NAV_BY_ROLE[user?.role] || [];
+  
+  const navItems = (() => {
+    if (user?.role === 'SCHOOL_ADMIN' && user?.schoolId) {
+      return [
+        { to: `/admin/schools/${user.schoolId}/dashboard`, label: 'Dashboard', icon: LayoutDashboard, exact: true },
+        { to: `/admin/schools/${user.schoolId}/classes`, label: 'Classes', icon: Building2 },
+        { to: '/admin/users', label: 'Users', icon: Users },
+        { to: '/admin/settings', label: 'Settings', icon: Settings },
+      ];
+    }
+    return NAV_BY_ROLE[user?.role] || [];
+  })();
 
   const handleLogout = async () => {
     try {

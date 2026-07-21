@@ -48,6 +48,9 @@ const ADMIN_ROLES = ['SUPER_ADMIN', 'SCHOOL_ADMIN'];
 function AuthRedirect() {
   const user = useAuthStore(s => s.user);
   if (!user) return <Navigate to="/login" replace />;
+  if (user.role === 'SCHOOL_ADMIN' && user.schoolId) {
+    return <Navigate to={`/admin/schools/${user.schoolId}/dashboard`} replace />;
+  }
   return <Navigate to={ROLE_DASHBOARDS[user.role] || '/login'} replace />;
 }
 
