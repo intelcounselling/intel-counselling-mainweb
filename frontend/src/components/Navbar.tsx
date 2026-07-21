@@ -161,8 +161,8 @@ const Navbar: React.FC<NavbarProps> = ({ onBookClick, onAssessmentClick, onLogin
               </span>
             </button>
           ) : (
-            <button 
-              onClick={onLoginClick}
+            <a 
+              href="https://intel-counselling-student.vercel.app/login"
               className="flex items-center justify-center bg-main text-intel-dark rounded-full transition-all duration-300 shadow-lg active:scale-95 px-3 md:px-4 lg:px-6 py-2 md:py-2.5 lg:py-3 font-black text-[9px] lg:text-[10px] uppercase tracking-widest hover:bg-white"
             >
               <div className="items-center gap-1.5 whitespace-nowrap hidden sm:flex">
@@ -171,7 +171,7 @@ const Navbar: React.FC<NavbarProps> = ({ onBookClick, onAssessmentClick, onLogin
               <span className="sm:hidden">
                 <LogIn size={16} />
               </span>
-            </button>
+            </a>
           )}
         </div>
 
@@ -258,12 +258,12 @@ const Navbar: React.FC<NavbarProps> = ({ onBookClick, onAssessmentClick, onLogin
                 Logout ({user.name}) <LogIn size={18} />
               </button>
             ) : (
-              <button 
-                onClick={() => { onLoginClick?.(); setIsMenuOpen(false); }}
+              <a 
+                href="https://intel-counselling-student.vercel.app/login"
                 className="w-full py-5 bg-main text-intel-dark rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg flex items-center justify-center gap-2"
               >
                 Student Portal <LogIn size={18} />
-              </button>
+              </a>
             )}
           </div>
         </div>
