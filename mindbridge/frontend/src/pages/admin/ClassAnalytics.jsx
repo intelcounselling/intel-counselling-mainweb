@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
-import { Users, Plus, ArrowLeft, Trash2 } from 'lucide-react';
-import { Card, Button, Spinner, EmptyState, Badge, Modal } from '../../components/ui';
+import { Users, Plus, ArrowLeft, Trash2, Search, UserPlus } from 'lucide-react';
+import { Card, Button, Spinner, EmptyState, Badge, Modal, Input } from '../../components/ui';
 import SeverityBadge from '../../components/charts/SeverityBadge';
 import { useToast } from '../../components/ui/Toast';
 import api from '../../lib/axios';
@@ -13,6 +13,8 @@ export default function ClassAnalytics() {
   const { success, error: toastError } = useToast();
   const qc = useQueryClient();
   const [deleteUserModal, setDeleteUserModal] = useState(null);
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [assignSearch, setAssignSearch] = useState('');
 
   const deleteMutation = useMutation({
     mutationFn: (userId) => api.delete(`/admin/users/${userId}`),
@@ -24,18 +26,43 @@ export default function ClassAnalytics() {
     onError: (err) => toastError(err.response?.data?.error || 'Failed to delete student'),
   });
 
+  const assignMutation = useMutation({
+    mutationFn: (studentId) => api.post(`/admin/schools/${id}/classes/${classId}/assign`, { studentId }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['school-students', id] });
+      success('Student assigned to class successfully');
+    },
+    onError: (err) => toastError(err.response?.data?.error || 'Failed to assign student'),
+  });
+
   const { data: studentsData, isLoading } = useQuery({
     queryKey: ['school-students', id, classId],
     queryFn: () => api.get(`/admin/schools/${id}/students?classId=${classId}`).then(r => r.data),
   });
 
+  const { data: allStudentsData } = useQuery({
+    queryKey: ['school-students', id],
+    queryFn: () => api.get(`/admin/schools/${id}/students?limit=100`).then(r => r.data),
+    enabled: assignModalOpen,
+  });
+
   const students = studentsData?.students || [];
+  const allSchoolStudents = allStudentsData?.students || [];
   
   // Use the first student to get the class name, or fallback if unassigned
   const className = classId === 'unassigned' ? 'Unassigned Students' : (students[0]?.class?.name || 'Class Roster');
 
   const totalAlerts = students.reduce((sum, s) => sum + (s._count?.alerts || 0), 0);
   const testedStudents = students.filter(s => s.testResults?.length > 0).length;
+
+  // Filter students who are not in this class and match search query
+  const assignableStudents = allSchoolStudents.filter(s => {
+    const isAlreadyInClass = s.classId === classId;
+    const matchesSearch = (s.firstName + ' ' + s.lastName + ' ' + s.email)
+      .toLowerCase()
+      .includes(assignSearch.toLowerCase());
+    return !isAlreadyInClass && matchesSearch;
+  });
 
   if (isLoading) return <div className="flex justify-center pt-20"><Spinner size="xl" /></div>;
 
@@ -58,8 +85,11 @@ export default function ClassAnalytics() {
         </div>
         
         <div className="flex gap-3">
+          <Button variant="outline" icon={<UserPlus className="w-4 h-4" />} onClick={() => setAssignModalOpen(true)}>
+            Assign Student
+          </Button>
           <Link to={`/admin/schools/${id}/create-family`}>
-            <Button variant="primary" icon={<Plus className="w-4 h-4" />}>Add Student</Button>
+            <Button variant="primary" icon={<Plus className="w-4 h-4" />}>Create Student</Button>
           </Link>
         </div>
       </div>
@@ -174,6 +204,54 @@ export default function ClassAnalytics() {
             </div>
           </div>
         )}
+      </Modal>
+
+      <Modal isOpen={assignModalOpen} onClose={() => setAssignModalOpen(false)} title="Assign Student to Class">
+        <div className="space-y-4 pt-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
+            <input 
+              className="w-full bg-surface-50 border border-surface-200 text-surface-900 text-sm rounded-xl focus:ring-primary-500 focus:border-primary-500 block pl-10 p-2.5 transition-colors" 
+              placeholder="Search students by name or email..." 
+              value={assignSearch} 
+              onChange={e => setAssignSearch(e.target.value)} 
+            />
+          </div>
+
+          <div className="max-h-80 overflow-y-auto divide-y divide-surface-100 border border-surface-200 rounded-xl bg-surface-50/30">
+            {assignableStudents.length === 0 ? (
+              <p className="text-center py-8 text-sm text-surface-400">No assignable students found.</p>
+            ) : (
+              assignableStudents.map(student => (
+                <div key={student.id} className="flex justify-between items-center p-3 hover:bg-white transition-colors">
+                  <div>
+                    <p className="font-semibold text-sm text-surface-900">{student.firstName} {student.lastName}</p>
+                    <p className="text-xs text-surface-500">{student.email}</p>
+                    <p className="text-[10px] mt-0.5 text-primary-600 font-medium">
+                      Current: {student.class?.name || 'Unassigned'}
+                    </p>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    icon={<UserPlus className="w-3.5 h-3.5" />}
+                    onClick={() => {
+                      assignMutation.mutate(student.id);
+                      setAssignModalOpen(false);
+                    }}
+                    loading={assignMutation.isPending && assignMutation.variables === student.id}
+                  >
+                    Assign
+                  </Button>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <Button variant="outline" onClick={() => setAssignModalOpen(false)}>Cancel</Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
