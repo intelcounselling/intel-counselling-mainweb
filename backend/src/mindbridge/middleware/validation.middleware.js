@@ -49,11 +49,28 @@ const validateCreateSchool = [
     .notEmpty()
     .withMessage('School name is required')
     .escape(),
-  body('contactEmail')
+  body('adminFirstName')
+    .trim()
+    .isString()
+    .notEmpty()
+    .withMessage('Admin first name is required')
+    .escape(),
+  body('adminLastName')
+    .trim()
+    .isString()
+    .notEmpty()
+    .withMessage('Admin last name is required')
+    .escape(),
+  body('adminEmail')
     .trim()
     .isEmail()
-    .withMessage('Must be a valid contact email')
+    .withMessage('Must be a valid admin email address')
     .normalizeEmail(),
+  body('adminPhone')
+    .optional()
+    .trim()
+    .isString()
+    .escape(),
   body('address')
     .optional()
     .trim()

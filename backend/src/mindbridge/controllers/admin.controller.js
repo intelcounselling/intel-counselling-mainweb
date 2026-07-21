@@ -45,9 +45,14 @@ async function getDashboard(req, res) {
 
 async function createSchool(req, res) {
   try {
-    const { name, address, contactEmail, contactPhone } = req.body;
-    if (!name || !contactEmail) {
-      return res.status(400).json({ error: 'Name and contact email required' });
+    const { name, address, adminFirstName, adminLastName, adminEmail, adminPhone } = req.body;
+    if (!name || !adminFirstName || !adminLastName || !adminEmail) {
+      return res.status(400).json({ error: 'Name, admin first name, last name, and email are required' });
+    }
+
+    const existingUser = await prisma.user.findUnique({ where: { email: adminEmail } });
+    if (existingUser) {
+      return res.status(400).json({ error: 'Admin email is already in use by another user' });
     }
 
     // Generate unique 6-char access code
@@ -60,12 +65,40 @@ async function createSchool(req, res) {
     }
 
     const logoUrl = req.file ? `/uploads/logos/${req.file.filename}` : null;
+    const { plainPassword, passwordHash } = await regeneratePassword();
 
-    const school = await prisma.school.create({
-      data: { name, address, contactEmail, contactPhone, accessCode, logoUrl },
+    const [school, user] = await prisma.$transaction(async (tx) => {
+      const sch = await tx.school.create({
+        data: {
+          name,
+          address,
+          contactEmail: adminEmail,
+          contactPhone: adminPhone || null,
+          accessCode,
+          logoUrl
+        },
+      });
+
+      const usr = await tx.user.create({
+        data: {
+          email: adminEmail,
+          passwordHash,
+          role: 'SCHOOL_ADMIN',
+          firstName: adminFirstName,
+          lastName: adminLastName,
+          phone: adminPhone || null,
+          schoolId: sch.id,
+          mustResetPassword: true,
+          isOnboarded: false,
+        }
+      });
+
+      return [sch, usr];
     });
 
-    res.status(201).json({ school, accessCode });
+    await syncUserToFirebase(adminEmail, plainPassword, `${adminFirstName} ${adminLastName}`);
+
+    res.status(201).json({ school, adminEmail, plainPassword });
   } catch (err) {
     handleError(res, err, 'createSchool');
   }
