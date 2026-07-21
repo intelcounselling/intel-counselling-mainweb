@@ -17,10 +17,12 @@
     "postinstall": "npm run db:generate --workspace=backend"
   },
   "dependencies": {
+    "@prisma/client": "^5.10.0",
     "@vercel/kv": "^2.0.0",
+    "dotenv": "^17.3.1",
     "googleapis": "^171.4.0",
     "pdfkit": "^0.18.0",
-    "dotenv": "^17.3.1"
+    "prisma": "^5.10.0"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
