@@ -186,21 +186,6 @@ export default function SchoolDetail() {
         )}
       </Card>
 
-      {/* Reset Password Result Modal */}
-      <Modal isOpen={!!resetModal} onClose={() => setResetModal(null)} title="Password Reset">
-        {resetModal && (
-          <div className="space-y-4">
-            <p className="text-sm text-surface-600">New credentials for <strong>{resetModal.email}</strong>:</p>
-            <div className="bg-surface-50 rounded-xl p-4 font-mono text-sm">
-              <p><span className="text-surface-500">Email:</span> {resetModal.email}</p>
-              <p><span className="text-surface-500">Password:</span> <span className="font-bold text-primary-700">{resetModal.newPassword}</span></p>
-            </div>
-            <p className="text-xs text-surface-400">The student will be prompted to change this password on next login.</p>
-            <Button variant="primary" className="w-full" onClick={() => setResetModal(null)}>Done</Button>
-          </div>
-        )}
-      </Modal>
-
       {/* Delete Confirmation Modal */}
       <Modal isOpen={!!deleteUserModal} onClose={() => setDeleteUserModal(null)} title="Confirm Deletion">
         {deleteUserModal && (
