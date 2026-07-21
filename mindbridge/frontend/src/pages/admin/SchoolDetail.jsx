@@ -129,21 +129,20 @@ export default function SchoolDetail() {
         </div>
       )}
 
-      {/* Students Data Grid */}
-      <Card padding={false} className="border-surface-200/50 shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-surface-100 bg-surface-50/50 flex flex-wrap gap-4 items-center justify-between">
+      {/* Classes Grid */}
+      <div className="mt-8">
+        <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-surface-900 flex items-center gap-2">
-            <Users className="w-5 h-5 text-primary-500" />
-            School Roster
-            <Badge variant="primary" size="sm" className="ml-2">{students.length}</Badge>
+            <School className="w-5 h-5 text-primary-500" />
+            Classes & Analytics
           </h3>
           
           <div className="flex gap-2">
             <Link to={`/admin/schools/${id}/classes`}>
-              <Button variant="outline" size="sm" icon={<School className="w-4 h-4" />}>Classes</Button>
+              <Button variant="outline" size="sm" icon={<School className="w-4 h-4" />}>Manage Classes</Button>
             </Link>
             <Link to={`/admin/schools/${id}/create-family`}>
-              <Button variant="outline" size="sm" icon={<Plus className="w-4 h-4" />}>Add Family</Button>
+              <Button variant="outline" size="sm" icon={<Plus className="w-4 h-4" />}>Add Student</Button>
             </Link>
             <Link to={`/admin/schools/${id}/generate-credentials`}>
               <Button variant="outline" size="sm" icon={<Download className="w-4 h-4" />}>Bulk Import</Button>
@@ -151,93 +150,52 @@ export default function SchoolDetail() {
           </div>
         </div>
 
-        {!students.length ? (
-          <EmptyState icon="👥" title="No students yet"
-            description="Create a family or use bulk import to add students to this school." className="py-16" />
+        {Object.keys(groupedStudents).length === 0 ? (
+          <EmptyState icon="🏫" title="No classes found" description="Add students or create classes to see analytics here." className="py-16 bg-white border border-surface-200 rounded-2xl shadow-sm" />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[800px]">
-              <thead>
-                <tr className="bg-surface-50/50 border-b border-surface-200 text-xs uppercase tracking-wider text-surface-500 font-semibold">
-                  <th className="px-6 py-4">Student</th>
-                  <th className="px-6 py-4">Grade</th>
-                  <th className="px-6 py-4">Last Assessment</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4">Alerts</th>
-                  <th className="px-6 py-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-surface-100">
-                {Object.entries(groupedStudents).map(([className, classStudents]) => {
-                  const isExpanded = expandedClasses[className] !== false; // expanded by default
-                  return (
-                    <Fragment key={className}>
-                      <tr 
-                        className="bg-surface-50 cursor-pointer hover:bg-surface-100 transition-colors border-y border-surface-200"
-                        onClick={() => toggleClass(className)}
-                      >
-                        <td colSpan="6" className="px-6 py-3 font-semibold text-surface-700 select-none">
-                          <div className="flex items-center gap-2">
-                            {isExpanded ? <ChevronDown className="w-4 h-4 text-surface-400" /> : <ChevronRight className="w-4 h-4 text-surface-400" />}
-                            {className} <Badge variant="primary" size="xs" className="ml-2">{classStudents.length}</Badge>
-                          </div>
-                        </td>
-                      </tr>
-                      {isExpanded && classStudents.map(student => {
-                        const lastResult = student.testResults?.[0];
-                        const alertCount = student._count?.alerts || 0;
-                        return (
-                          <tr key={student.id} className={`hover:bg-surface-50/50 transition-colors ${alertCount > 0 ? 'bg-red-50/30' : ''}`}>
-                            <td className="px-6 py-4 pl-12">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-100 to-accent-100 text-primary-700 font-bold flex items-center justify-center flex-shrink-0">
-                                  {student.firstName[0]}{student.lastName[0]}
-                                </div>
-                                <div>
-                                  <p className="font-semibold text-surface-900">{student.firstName} {student.lastName}</p>
-                                  <p className="text-xs text-surface-500">{student.email}</p>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 text-surface-700 font-medium">
-                              {student.grade ? `Grade ${student.grade}` : '—'}
-                            </td>
-                            <td className="px-6 py-4">
-                              {lastResult ? (
-                                <div>
-                                  <p className="text-sm font-medium text-surface-900">{lastResult.test?.name || 'Assessment'}</p>
-                                  <p className="text-xs text-surface-500">{formatRelative(lastResult.takenAt)}</p>
-                                </div>
-                              ) : (
-                                <span className="text-surface-400 text-sm italic">Never tested</span>
-                              )}
-                            </td>
-                            <td className="px-6 py-4">
-                              {lastResult ? <SeverityBadge severity={lastResult.severity} /> : '—'}
-                            </td>
-                            <td className="px-6 py-4">
-                              {alertCount > 0
-                                ? <Badge variant="danger" size="sm" className="animate-pulse">{alertCount} Active Alert{alertCount > 1 ? 's' : ''}</Badge>
-                                : <span className="text-surface-400 text-sm">None</span>
-                              }
-                            </td>
-                            <td className="px-6 py-4">
-                              <div className="flex items-center justify-end gap-2">
-                                <Button variant="ghost" size="sm" className="text-surface-500 hover:text-red-600 hover:bg-red-50" icon={<Trash2 className="w-4 h-4" />}
-                                  onClick={() => setDeleteUserModal(student)} title="Delete Student" />
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Object.entries(groupedStudents).map(([className, classStudents]) => {
+              const totalAlerts = classStudents.reduce((sum, s) => sum + (s._count?.alerts || 0), 0);
+              const testedStudents = classStudents.filter(s => s.testResults?.length > 0).length;
+              
+              const classObj = classStudents.find(s => s.classId)?.class;
+              const classIdParam = classObj ? classObj.id : 'unassigned';
+
+              return (
+                <Link key={className} to={`/admin/schools/${id}/classes/${classIdParam}/analytics`} className="block group">
+                  <Card padding={false} className="h-full border-surface-200 hover:border-primary-300 hover:shadow-md transition-all flex flex-col">
+                    <div className="p-5 flex-1">
+                      <div className="flex justify-between items-start mb-4">
+                        <h4 className="text-lg font-bold text-surface-900 group-hover:text-primary-600 transition-colors">{className}</h4>
+                        <Badge variant="primary">{classStudents.length} Students</Badge>
+                      </div>
+                      
+                      <div className="space-y-3 mt-4">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-surface-500">Tested Students</span>
+                          <span className="font-medium text-surface-900">{testedStudents} / {classStudents.length}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-surface-500">Active Alerts</span>
+                          {totalAlerts > 0 ? (
+                            <Badge variant="danger" size="xs" className="animate-pulse">{totalAlerts}</Badge>
+                          ) : (
+                            <span className="text-surface-400">0</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="bg-surface-50/50 px-5 py-3 border-t border-surface-100 flex items-center justify-between">
+                      <span className="text-xs font-medium text-primary-600">View Detailed Analytics</span>
+                      <ChevronRight className="w-4 h-4 text-primary-600" />
+                    </div>
+                  </Card>
+                </Link>
+              );
+            })}
           </div>
         )}
-      </Card>
+      </div>
 
       {/* Delete Confirmation Modal */}
       <Modal isOpen={!!deleteUserModal} onClose={() => setDeleteUserModal(null)} title="Confirm Deletion">
@@ -251,26 +209,25 @@ export default function SchoolDetail() {
               <Button variant="outline" onClick={() => setDeleteUserModal(null)}>Cancel</Button>
               <Button variant="primary" className="bg-red-600 hover:bg-red-700 text-white border-transparent"
                 onClick={() => deleteMutation.mutate(deleteUserModal.id)} loading={deleteMutation.isPending}>
-                Yes, Delete Student
+                Delete Student
               </Button>
             </div>
           </div>
         )}
       </Modal>
 
-      {/* Delete School Modal */}
-      <Modal isOpen={deleteSchoolModal} onClose={() => setDeleteSchoolModal(false)} title="Confirm School Deletion">
+      <Modal isOpen={deleteSchoolModal} onClose={() => setDeleteSchoolModal(false)} title="Delete School">
         <div className="space-y-4 pt-2">
-          <p className="text-surface-600">
-            Are you sure you want to delete <span className="font-semibold text-surface-900">{school?.name}</span>?
-          </p>
-          <div className="p-3.5 bg-red-50 border border-red-200 rounded-2xl text-xs text-red-700 leading-relaxed font-medium">
-            ⚠️ <strong>CRITICAL WARNING:</strong> This action will permanently delete this school, all of its classes, all family groupings, and <strong>ALL user accounts</strong> (students, parents, and school admins) associated with it. This cannot be undone.
+          <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+            <p className="text-red-800 font-medium">Warning: This action is permanent and irreversible.</p>
+            <p className="text-red-600 text-sm mt-1">
+              Deleting this school will also permanently delete all associated users, classes, test results, and records.
+            </p>
           </div>
           <div className="flex justify-end gap-3 pt-4">
             <Button variant="outline" onClick={() => setDeleteSchoolModal(false)}>Cancel</Button>
             <Button variant="primary" className="bg-red-600 hover:bg-red-700 text-white border-transparent"
-              onClick={() => deleteSchoolMutation.mutate()} loading={deleteSchoolMutation.isPending}>
+              onClick={() => deleteSchoolMutation.mutate(id)} loading={deleteSchoolMutation.isPending}>
               Yes, Delete School
             </Button>
           </div>

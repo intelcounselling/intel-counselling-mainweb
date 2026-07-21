@@ -15,6 +15,7 @@ import SchoolList from './pages/admin/SchoolList';
 import SchoolDetail from './pages/admin/SchoolDetail';
 import SchoolDashboard from './pages/admin/SchoolDashboard';
 import ClassManager from './pages/admin/ClassManager';
+import ClassAnalytics from './pages/admin/ClassAnalytics';
 import CreateFamily from './pages/admin/CreateFamily';
 import UserManagement from './pages/admin/UserManagement';
 import GenerateCredentials from './pages/admin/GenerateCredentials';
@@ -77,6 +78,7 @@ const router = createBrowserRouter([
       { path: 'schools/:id', element: <SchoolDetail /> },
       { path: 'schools/:id/dashboard', element: <SchoolDashboard /> },
       { path: 'schools/:id/classes', element: <ClassManager /> },
+      { path: 'schools/:id/classes/:classId/analytics', element: <ClassAnalytics /> },
       { path: 'schools/:id/create-family', element: <CreateFamily /> },
       { path: 'schools/:id/generate-credentials', element: <GenerateCredentials /> },
       { path: 'users', element: <UserManagement /> },

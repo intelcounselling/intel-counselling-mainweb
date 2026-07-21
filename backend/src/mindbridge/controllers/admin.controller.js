@@ -152,10 +152,18 @@ async function getSchoolStudents(req, res) {
   try {
     const { id } = req.params;
     const { skip, take, page, limit } = parsePagination(req.query);
+    const { classId } = req.query;
+
+    const where = { 
+      schoolId: id, 
+      role: 'STUDENT',
+      ...(classId && classId !== 'unassigned' ? { classId } : {}),
+      ...(classId === 'unassigned' ? { classId: null } : {})
+    };
 
     const [students, total] = await Promise.all([
       prisma.user.findMany({
-        where: { schoolId: id, role: 'STUDENT' },
+        where,
         skip,
         take,
         orderBy: { lastName: 'asc' },
@@ -169,7 +177,7 @@ async function getSchoolStudents(req, res) {
           class: true,
         },
       }),
-      prisma.user.count({ where: { schoolId: id, role: 'STUDENT' } }),
+      prisma.user.count({ where }),
     ]);
 
     res.json({ students, pagination: buildPaginationMeta(total, page, limit) });
