@@ -153,13 +153,6 @@ export default function SchoolList() {
                       <p className="text-[10px] text-surface-500 uppercase tracking-wider">Users</p>
                     </div>
                   </div>
-                  
-                  <div className="text-right">
-                    <p className="text-[10px] text-surface-500 uppercase tracking-wider mb-0.5">Access Code</p>
-                    <span className="text-xs font-mono font-bold bg-primary-50 text-primary-700 px-2.5 py-1 rounded-md border border-primary-100">
-                      {school.accessCode}
-                    </span>
-                  </div>
                 </div>
               </div>
             </Link>

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
-import { Users, Plus, Download, School, ArrowLeft, Key, Trash2, Mail, Phone, Hash, MoreVertical, LayoutDashboard } from 'lucide-react';
+import { Users, Plus, Download, School, ArrowLeft, Trash2, Mail, Phone, MoreVertical, LayoutDashboard } from 'lucide-react';
 import { Card, Button, Spinner, EmptyState, Badge, Modal } from '../../components/ui';
 import SeverityBadge from '../../components/charts/SeverityBadge';
 import { useToast } from '../../components/ui/Toast';
@@ -12,16 +12,7 @@ export default function SchoolDetail() {
   const { id } = useParams();
   const { success, error: toastError } = useToast();
   const qc = useQueryClient();
-  const [resetModal, setResetModal] = useState(null);
   const [deleteUserModal, setDeleteUserModal] = useState(null);
-
-  const resetMutation = useMutation({
-    mutationFn: (userId) => api.post(`/admin/users/${userId}/reset-password`),
-    onSuccess: ({ data }) => {
-      setResetModal({ email: data.email, newPassword: data.newPassword });
-    },
-    onError: () => toastError('Failed to reset password'),
-  });
 
   const deleteMutation = useMutation({
     mutationFn: (userId) => api.delete(`/admin/users/${userId}`),
@@ -76,7 +67,7 @@ export default function SchoolDetail() {
 
       {/* Stats Cards */}
       {school && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="bg-white rounded-2xl border border-surface-200 p-5 shadow-sm flex items-start gap-4">
             <div className="p-3 bg-blue-50 text-blue-600 rounded-xl"><Mail className="w-5 h-5" /></div>
             <div>
@@ -90,14 +81,6 @@ export default function SchoolDetail() {
             <div>
               <p className="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-1">Phone</p>
               <p className="font-medium text-surface-900 truncate">{school.contactPhone || '—'}</p>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-2xl border border-surface-200 p-5 shadow-sm flex items-start gap-4">
-            <div className="p-3 bg-purple-50 text-purple-600 rounded-xl"><Hash className="w-5 h-5" /></div>
-            <div>
-              <p className="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-1">Access Code</p>
-              <p className="font-mono font-bold text-lg text-surface-900">{school.accessCode}</p>
             </div>
           </div>
           
@@ -190,8 +173,6 @@ export default function SchoolDetail() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="sm" className="text-surface-500 hover:text-primary-600 hover:bg-primary-50" icon={<Key className="w-4 h-4" />}
-                            onClick={() => resetMutation.mutate(student.id)} title="Reset Password" />
                           <Button variant="ghost" size="sm" className="text-surface-500 hover:text-red-600 hover:bg-red-50" icon={<Trash2 className="w-4 h-4" />}
                             onClick={() => setDeleteUserModal(student)} title="Delete Student" />
                         </div>

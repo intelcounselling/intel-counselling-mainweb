@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Search, Filter, ToggleLeft, ToggleRight, Key, Trash2 } from 'lucide-react';
-import { Card, Button, Select, Badge, Spinner, Modal } from '../../components/ui';
+import { Search, ToggleLeft, ToggleRight, Trash2, School, Users } from 'lucide-react';
+import { Card, Select, Badge, Button, Modal, Spinner, EmptyState } from '../../components/ui';
 import SeverityBadge from '../../components/charts/SeverityBadge';
 import { useToast } from '../../components/ui/Toast';
 import api from '../../lib/axios';
@@ -15,8 +15,7 @@ export default function UserManagement() {
   const [search, setSearch] = useState('');
   const [role, setRole] = useState('');
   const [isActive, setIsActive] = useState('');
-  const [resetModal, setResetModal] = useState(null); // { id, email, newPassword }
-  const [deleteUserModal, setDeleteUserModal] = useState(null); // holds user to delete
+  const [deleteUserModal, setDeleteUserModal] = useState(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-users', search, role, isActive],
@@ -28,14 +27,6 @@ export default function UserManagement() {
     mutationFn: (id) => api.put(`/admin/users/${id}/toggle-active`),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-users'] }); success('User status updated'); },
     onError: () => toastError('Failed to update user'),
-  });
-
-  const resetMutation = useMutation({
-    mutationFn: (id) => api.post(`/admin/users/${id}/reset-password`),
-    onSuccess: ({ data }) => {
-      setResetModal({ email: data.email, newPassword: data.newPassword });
-    },
-    onError: () => toastError('Failed to reset password'),
   });
 
   const deleteMutation = useMutation({
@@ -68,7 +59,6 @@ export default function UserManagement() {
         </div>
       </div>
 
-      {/* Filters Toolbar */}
       <Card padding={false} className="border-surface-200/50 shadow-sm overflow-visible">
         <div className="p-4 flex flex-col sm:flex-row gap-4 items-center bg-white rounded-2xl">
           <div className="relative flex-1 w-full">
@@ -141,8 +131,6 @@ export default function UserManagement() {
                         <Button variant="ghost" size="sm" className={user.isActive ? "text-green-600 hover:bg-green-50" : "text-surface-500 hover:bg-surface-100"}
                           icon={user.isActive ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
                           onClick={() => toggleMutation.mutate(user.id)} title={user.isActive ? "Deactivate" : "Activate"} />
-                        <Button variant="ghost" size="sm" className="text-surface-500 hover:text-primary-600 hover:bg-primary-50" icon={<Key className="w-4 h-4" />}
-                          onClick={() => resetMutation.mutate(user.id)} title="Reset Password" />
                         <Button variant="ghost" size="sm" className="text-surface-500 hover:text-red-600 hover:bg-red-50" icon={<Trash2 className="w-4 h-4" />}
                           onClick={() => setDeleteUserModal(user)} title="Delete User" />
                       </div>
@@ -155,35 +143,18 @@ export default function UserManagement() {
         )}
       </Card>
 
-      {/* Reset Password Result Modal */}
-      <Modal isOpen={!!resetModal} onClose={() => setResetModal(null)} title="Password Reset">
-        {resetModal && (
-          <div className="space-y-4">
-            <p className="text-sm text-surface-600">New credentials for <strong>{resetModal.email}</strong>:</p>
-            <div className="bg-surface-50 rounded-xl p-4 font-mono text-sm">
-              <p><span className="text-surface-500">Email:</span> {resetModal.email}</p>
-              <p><span className="text-surface-500">Password:</span> <span className="font-bold text-primary-700">{resetModal.newPassword}</span></p>
-            </div>
-            <p className="text-xs text-surface-400">The user will be prompted to change this password on next login.</p>
-            <Button variant="primary" className="w-full" onClick={() => setResetModal(null)}>Done</Button>
-          </div>
-        )}
-      </Modal>
-
-      {/* Delete Confirmation Modal */}
       <Modal isOpen={!!deleteUserModal} onClose={() => setDeleteUserModal(null)} title="Confirm Deletion">
         {deleteUserModal && (
-          <div className="space-y-4">
-            <p className="text-sm text-surface-600">
-              Are you sure you want to delete the user account for <strong>{deleteUserModal.firstName} {deleteUserModal.lastName}</strong> ({deleteUserModal.email})?
+          <div className="space-y-4 pt-2">
+            <p className="text-surface-600">
+              Are you sure you want to delete <span className="font-semibold text-surface-900">{deleteUserModal?.firstName} {deleteUserModal?.lastName}</span>? 
+              This action cannot be undone.
             </p>
-            <p className="text-xs text-red-500 font-semibold bg-red-50 p-3 rounded-lg">
-              ⚠️ Warning: This will permanently delete this account and all associated test results, alerts, appointments, and counselling notes. This action cannot be undone.
-            </p>
-            <div className="flex justify-end gap-3">
+            <div className="flex justify-end gap-3 pt-4">
               <Button variant="outline" onClick={() => setDeleteUserModal(null)}>Cancel</Button>
-              <Button variant="danger" loading={deleteMutation.isPending} onClick={() => deleteMutation.mutate(deleteUserModal.id)}>
-                Delete Account
+              <Button variant="primary" className="bg-red-600 hover:bg-red-700 text-white border-transparent"
+                onClick={() => deleteMutation.mutate(deleteUserModal.id)} loading={deleteMutation.isPending}>
+                Yes, Delete User
               </Button>
             </div>
           </div>
