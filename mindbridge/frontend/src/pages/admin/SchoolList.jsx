@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Plus, School, ChevronRight, Search, X, Upload } from 'lucide-react';
+import { Plus, School, ChevronRight, Search, X, Upload, Users } from 'lucide-react';
 import { Card, Button, Input, Spinner, EmptyState, Badge } from '../../components/ui';
 import { useToast } from '../../components/ui/Toast';
 import api from '../../lib/axios';
