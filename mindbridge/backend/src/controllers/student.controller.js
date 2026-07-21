@@ -10,7 +10,7 @@ async function getDashboard(req, res) {
   try {
     const studentId = req.user.id;
 
-    const [tests, recentResults, concerns, student] = await Promise.all([
+    const [tests, recentResults, concerns, student, appointments] = await Promise.all([
       prisma.test.findMany({ where: { isActive: true }, orderBy: { createdAt: 'asc' } }),
       prisma.testResult.findMany({
         where: { studentId },
@@ -27,6 +27,15 @@ async function getDashboard(req, res) {
         where: { id: studentId },
         include: { school: { select: { name: true } } },
       }),
+      prisma.appointment.findMany({
+        where: { 
+          patientId: studentId,
+          slot: { gte: new Date() }
+        },
+        orderBy: { slot: 'asc' },
+        take: 3,
+        include: { psychiatrist: { select: { firstName: true, lastName: true, avatarUrl: true } } }
+      })
     ]);
 
     // Get latest result per test category
@@ -36,9 +45,21 @@ async function getDashboard(req, res) {
       if (!latestByCategory[cat]) latestByCategory[cat] = result;
     }
 
-    res.json({ student, tests, recentResults, latestByCategory: Object.values(latestByCategory), concerns });
+    res.json({ student, tests, recentResults, latestByCategory: Object.values(latestByCategory), concerns, upcomingAppointments: appointments });
   } catch (err) {
     handleError(res, err, 'getDashboard (student)');
+  }
+}
+
+async function completeOnboarding(req, res) {
+  try {
+    const student = await prisma.user.update({
+      where: { id: req.user.id },
+      data: { isOnboarded: true },
+    });
+    res.json({ success: true, student });
+  } catch (err) {
+    handleError(res, err, 'completeOnboarding');
   }
 }
 
@@ -180,4 +201,4 @@ async function getConcerns(req, res) {
   }
 }
 
-module.exports = { getDashboard, getTests, submitTest, getResults, getResult, submitConcern, getConcerns };
+module.exports = { getDashboard, getTests, submitTest, getResults, getResult, submitConcern, getConcerns, completeOnboarding };

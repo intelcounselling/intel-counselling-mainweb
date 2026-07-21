@@ -38,6 +38,7 @@ import TestList from './pages/student/TestList';
 import TakeTest from './pages/student/TakeTest';
 import ResultDetail from './pages/student/ResultDetail';
 import ConcernForm from './pages/student/ConcernForm';
+import StudentOnboarding from './pages/student/StudentOnboarding';
 
 // ── Shared Settings ───────────────────────────────────────────
 import Settings from './pages/Settings';
@@ -118,6 +119,14 @@ const router = createBrowserRouter([
   },
 
   // ── Student ────────────────────────────────────────────────
+  {
+    path: '/student/onboarding',
+    element: (
+      <ProtectedRoute roles={['STUDENT']}>
+        <StudentOnboarding />
+      </ProtectedRoute>
+    )
+  },
   {
     path: '/student',
     element: (

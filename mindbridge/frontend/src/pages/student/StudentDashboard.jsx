@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Brain, Clock } from 'lucide-react';
-import { Card, Spinner, EmptyState, Badge } from '../../components/ui';
-import SeverityBadge from '../../components/charts/SeverityBadge';
+import { Card, Spinner, EmptyState, Badge, Button } from '../../components/ui';
 import useAuthStore from '../../store/authStore';
 import api from '../../lib/axios';
 import { formatRelative, formatDate } from '../../utils/formatters';
@@ -40,7 +39,18 @@ export default function StudentDashboard() {
 
   if (isLoading) return <div className="flex justify-center pt-20"><Spinner size="xl" /></div>;
 
-  const { tests = [], recentResults = [], latestByCategory = [], concerns = [] } = data || {};
+  const { tests = [], recentResults = [], latestByCategory = [], concerns = [], upcomingAppointments = [] } = data || {};
+
+  // Generate insights based on completed assessments
+  const generateInsight = (result) => {
+    const cat = result.test?.category;
+    if (cat === 'LearningPattern') return 'Discover how to leverage your unique learning style for better retention.';
+    if (cat === 'StudyBehaviour') return 'Try the Pomodoro technique to break down long study sessions into manageable chunks.';
+    if (cat === 'EmotionalWellness') return 'Remember to take breaks. Your mental health is just as important as your grades.';
+    if (cat === 'InternetUsage') return 'Setting digital boundaries can improve your sleep and focus.';
+    if (cat === 'PersonalityDimensions') return 'Your unique personality traits are your strengths. Lean into what makes you, you!';
+    return 'Great job completing this assessment. Every step helps us understand you better.';
+  };
 
   // ISSS completion tracking
   const isssCategories = Object.keys(ISSS_TOOLS);
@@ -84,19 +94,57 @@ export default function StudentDashboard() {
         </div>
       </div>
 
-      {/* Score Summary Strip */}
+      {/* Insights Strip (Replaces raw scores & severity) */}
       {latestByCategory.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {latestByCategory.map(result => (
-            <Card key={result.id} className="flex items-center gap-4">
-              <div className="text-3xl">{TEST_ICONS[result.test?.category] || '🧠'}</div>
-              <div className="flex-1">
-                <p className="text-xs text-surface-500 font-medium">{result.test?.category}</p>
-                <p className="text-2xl font-bold text-surface-900">{result.score}<span className="text-sm text-surface-400">/{result.maxScore}</span></p>
-                <SeverityBadge severity={result.severity} size="xs" />
-              </div>
-            </Card>
-          ))}
+        <div>
+          <h3 className="text-lg font-semibold text-surface-900 mb-4">Your Insights</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {latestByCategory.map(result => (
+              <Card key={result.id} className="flex flex-col gap-3 bg-white">
+                <div className="flex items-center gap-3 border-b border-surface-100 pb-3">
+                  <div className="text-2xl">{TEST_ICONS[result.test?.category] || '🧠'}</div>
+                  <p className="font-semibold text-surface-900">{result.test?.category}</p>
+                </div>
+                <p className="text-sm text-surface-600 leading-relaxed">
+                  {generateInsight(result)}
+                </p>
+                <div className="mt-auto pt-2">
+                  <Link to="/student/results" className="text-xs text-primary-600 hover:underline font-medium">View detailed report →</Link>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Upcoming Appointments */}
+      {upcomingAppointments.length > 0 && (
+        <div>
+          <h3 className="text-lg font-semibold text-surface-900 mb-4">Upcoming Appointments</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {upcomingAppointments.map(appt => (
+              <Card key={appt.id} className="border-l-4 border-l-primary-500">
+                <div className="flex items-center gap-3 mb-3">
+                  <img src={appt.psychiatrist?.avatarUrl || `https://ui-avatars.com/api/?name=${appt.psychiatrist?.firstName}+${appt.psychiatrist?.lastName}`} className="w-10 h-10 rounded-full" alt="Counsellor" />
+                  <div>
+                    <p className="text-sm font-semibold text-surface-900">Dr. {appt.psychiatrist?.lastName}</p>
+                    <p className="text-xs text-surface-500">School Counsellor</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-surface-700 mb-4">
+                  <Clock className="w-4 h-4 text-surface-400" />
+                  <span>{formatDate(appt.slot)} at {new Date(appt.slot).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+                {appt.meetingLink ? (
+                  <a href={appt.meetingLink} target="_blank" rel="noopener noreferrer">
+                    <Button variant="primary" size="sm" className="w-full">Join Meeting</Button>
+                  </a>
+                ) : (
+                  <Button variant="outline" size="sm" className="w-full" disabled>In Person</Button>
+                )}
+              </Card>
+            ))}
+          </div>
         </div>
       )}
 
@@ -144,8 +192,7 @@ export default function StudentDashboard() {
                   <p className="font-medium text-surface-900 text-sm">{r.test?.name}</p>
                   <p className="text-xs text-surface-400">{formatRelative(r.takenAt)}</p>
                 </div>
-                <span className="font-bold text-surface-700">{r.score}/{r.maxScore}</span>
-                <SeverityBadge severity={r.severity} size="xs" />
+                <span className="font-medium text-surface-500 text-sm">Completed</span>
               </div>
             ))}
           </div>

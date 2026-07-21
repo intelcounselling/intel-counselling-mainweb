@@ -27,6 +27,10 @@ export default function ProtectedRoute({ children, roles }) {
     return <Navigate to="/reset-password" replace />;
   }
 
+  if (user.role === 'STUDENT' && !user.isOnboarded && location.pathname !== '/student/onboarding') {
+    return <Navigate to="/student/onboarding" replace />;
+  }
+
   if (roles && !roles.includes(user.role)) {
     const dashboard = ROLE_DASHBOARDS[user.role] || '/login';
     return <Navigate to={dashboard} replace />;

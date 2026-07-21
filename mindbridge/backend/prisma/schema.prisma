@@ -113,6 +113,7 @@ model User {
   dateOfBirth       DateTime?
   isActive          Boolean  @default(true)
   mustResetPassword Boolean  @default(true)
+  isOnboarded       Boolean  @default(false)
   otpCode           String?
   otpExpiresAt      DateTime?
   createdAt         DateTime @default(now())
