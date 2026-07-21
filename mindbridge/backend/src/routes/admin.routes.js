@@ -5,13 +5,21 @@ const { upload } = require('../middleware/upload.middleware');
 const { validateCreateSchool, validateUUID } = require('../middleware/validation.middleware');
 const ctrl = require('../controllers/admin.controller');
 
-const admin = [verifyToken, requireRole('SUPER_ADMIN', 'SCHOOL_ADMIN')];
+const checkSchoolAccess = (req, res, next) => {
+  if (req.user.role === 'SCHOOL_ADMIN' && req.params.id && req.params.id !== req.user.schoolId) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+  next();
+};
+
+const superAdmin = [verifyToken, requireRole('SUPER_ADMIN')];
+const admin = [verifyToken, requireRole('SUPER_ADMIN', 'SCHOOL_ADMIN'), checkSchoolAccess];
 
 router.get('/dashboard', ...admin, ctrl.getDashboard);
 
 // Schools
 router.get('/schools', ...admin, ctrl.getSchools);
-router.post('/schools', ...admin, upload.single('logo'), validateCreateSchool, ctrl.createSchool);
+router.post('/schools', ...superAdmin, upload.single('logo'), validateCreateSchool, ctrl.createSchool);
 router.get('/schools/:id', ...admin, validateUUID('id'), ctrl.getSchoolDetail);
 router.put('/schools/:id', ...admin, upload.single('logo'), validateUUID('id'), ctrl.updateSchool);
 router.get('/schools/:id/students', ...admin, validateUUID('id'), ctrl.getSchoolStudents);

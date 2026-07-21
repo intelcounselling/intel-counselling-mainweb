@@ -10,6 +10,9 @@ const crypto = require('crypto');
 
 async function getDashboard(req, res) {
   try {
+    const isSchoolAdmin = req.user.role === 'SCHOOL_ADMIN';
+    const schoolId = req.user.schoolId;
+
     const [
       totalSchools,
       totalStudents,
@@ -17,15 +20,19 @@ async function getDashboard(req, res) {
       alertsThisMonth,
       recentAlerts,
     ] = await Promise.all([
-      prisma.school.count({ where: { isActive: true } }),
-      prisma.user.count({ where: { role: 'STUDENT', isActive: true } }),
-      prisma.user.count({ where: { role: 'PARENT', isActive: true } }),
+      isSchoolAdmin ? 1 : prisma.school.count({ where: { isActive: true } }),
+      prisma.user.count({ where: { role: 'STUDENT', isActive: true, ...(isSchoolAdmin && { schoolId }) } }),
+      prisma.user.count({ where: { role: 'PARENT', isActive: true, ...(isSchoolAdmin && { schoolId }) } }),
       prisma.alert.count({
-        where: { firedAt: { gte: new Date(new Date().setDate(1)) } },
+        where: { 
+          firedAt: { gte: new Date(new Date().setDate(1)) },
+          ...(isSchoolAdmin && { student: { schoolId } })
+        },
       }),
       prisma.alert.findMany({
         take: 5,
         orderBy: { firedAt: 'desc' },
+        where: isSchoolAdmin ? { student: { schoolId } } : undefined,
         include: {
           student: { select: { firstName: true, lastName: true, school: { select: { name: true } } } },
         },
@@ -74,8 +81,11 @@ async function createSchool(req, res) {
 async function getSchools(req, res) {
   try {
     const { skip, take, page, limit } = parsePagination(req.query);
+    const where = req.user.role === 'SCHOOL_ADMIN' ? { id: req.user.schoolId } : {};
+
     const [schools, total] = await Promise.all([
       prisma.school.findMany({
+        where,
         skip,
         take,
         orderBy: { createdAt: 'desc' },
@@ -83,7 +93,7 @@ async function getSchools(req, res) {
           _count: { select: { users: true, families: true } },
         },
       }),
-      prisma.school.count(),
+      prisma.school.count({ where }),
     ]);
     res.json({ schools, pagination: buildPaginationMeta(total, page, limit) });
   } catch (err) {

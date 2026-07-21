@@ -5,6 +5,7 @@ import { Card, Badge, Spinner, EmptyState } from '../../components/ui';
 import SeverityBadge from '../../components/charts/SeverityBadge';
 import api from '../../lib/axios';
 import { formatRelative, formatDate } from '../../utils/formatters';
+import useAuthStore from '../../store/authStore';
 
 function StatCard({ title, value, icon: Icon, color, trend }) {
   return (
@@ -24,6 +25,8 @@ function StatCard({ title, value, icon: Icon, color, trend }) {
 }
 
 export default function AdminDashboard() {
+  const user = useAuthStore(s => s.user);
+  const isSchoolAdmin = user?.role === 'SCHOOL_ADMIN';
   const { data, isLoading } = useQuery({
     queryKey: ['admin-dashboard'],
     queryFn: () => api.get('/admin/dashboard').then(r => r.data),
@@ -42,7 +45,7 @@ export default function AdminDashboard() {
 
       {/* Stats row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
-        <StatCard title="Total Schools" value={stats?.totalSchools} icon={School} color="bg-primary-600" />
+        {!isSchoolAdmin && <StatCard title="Total Schools" value={stats?.totalSchools} icon={School} color="bg-primary-600" />}
         <StatCard title="Total Students" value={stats?.totalStudents} icon={Users} color="bg-accent-500" />
         <StatCard title="Total Parents" value={stats?.totalParents} icon={Users} color="bg-green-600" />
         <StatCard title="Alerts This Month" value={stats?.alertsThisMonth} icon={AlertTriangle} color="bg-red-500" />
@@ -51,9 +54,9 @@ export default function AdminDashboard() {
       {/* Quick Actions */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { label: 'Add New School', to: '/admin/schools', icon: Plus, color: 'from-primary-600 to-primary-700' },
+          ...(!isSchoolAdmin ? [{ label: 'Add New School', to: '/admin/schools', icon: Plus, color: 'from-primary-600 to-primary-700' }] : []),
           { label: 'Manage Users', to: '/admin/users', icon: Users, color: 'from-accent-500 to-accent-700' },
-          { label: 'View All Schools', to: '/admin/schools', icon: School, color: 'from-surface-700 to-surface-900' },
+          { label: isSchoolAdmin ? 'View My School' : 'View All Schools', to: '/admin/schools', icon: School, color: 'from-surface-700 to-surface-900' },
         ].map(a => (
           <Link key={a.label} to={a.to}
             className={`bg-gradient-to-br ${a.color} text-white rounded-2xl p-5 flex items-center gap-4 hover:opacity-90 transition-opacity shadow-glass`}>

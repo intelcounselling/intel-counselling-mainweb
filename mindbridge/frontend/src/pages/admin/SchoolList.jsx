@@ -6,6 +6,7 @@ import { Card, Button, Input, Spinner, EmptyState, Badge } from '../../component
 import { useToast } from '../../components/ui/Toast';
 import api from '../../lib/axios';
 import { formatDate } from '../../utils/formatters';
+import useAuthStore from '../../store/authStore';
 
 function CreateSchoolPanel({ onClose, onSuccess }) {
   const { success, error: toastError } = useToast();
@@ -68,6 +69,8 @@ function CreateSchoolPanel({ onClose, onSuccess }) {
 }
 
 export default function SchoolList() {
+  const user = useAuthStore(s => s.user);
+  const isSchoolAdmin = user?.role === 'SCHOOL_ADMIN';
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const qc = useQueryClient();
@@ -89,9 +92,11 @@ export default function SchoolList() {
           <h2 className="text-2xl font-bold text-surface-900">Schools</h2>
           <p className="text-surface-500 mt-1">{data?.schools?.length || 0} schools registered</p>
         </div>
-        <Button variant="primary" icon={<Plus className="w-4 h-4" />} onClick={() => setShowCreate(true)}>
-          Add School
-        </Button>
+        {!isSchoolAdmin && (
+          <Button variant="primary" icon={<Plus className="w-4 h-4" />} onClick={() => setShowCreate(true)}>
+            Add School
+          </Button>
+        )}
       </div>
 
       <div className="relative">
@@ -107,8 +112,8 @@ export default function SchoolList() {
       {isLoading ? (
         <div className="flex justify-center pt-12"><Spinner size="lg" /></div>
       ) : !schools.length ? (
-        <EmptyState icon="🏫" title="No schools found" description="Add your first school to get started." action={
-          <Button variant="primary" onClick={() => setShowCreate(true)} icon={<Plus className="w-4 h-4" />}>Add School</Button>
+        <EmptyState icon="🏫" title="No schools found" description={isSchoolAdmin ? "You haven't been assigned to a school yet." : "Add your first school to get started."} action={
+          !isSchoolAdmin ? <Button variant="primary" onClick={() => setShowCreate(true)} icon={<Plus className="w-4 h-4" />}>Add School</Button> : null
         } />
       ) : (
         <div className="grid gap-4">
