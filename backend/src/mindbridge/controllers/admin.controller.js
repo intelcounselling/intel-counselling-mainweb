@@ -246,7 +246,7 @@ async function getUsers(req, res) {
     const { role, schoolId, isActive, search } = req.query;
 
     const where = {
-      ...(role && { role }),
+      role: (role && role !== 'SUPER_ADMIN') ? role : { not: 'SUPER_ADMIN' },
       schoolId: req.user.role === 'SCHOOL_ADMIN' ? req.user.schoolId : (schoolId || undefined),
       ...(isActive !== undefined && { isActive: isActive === 'true' }),
       ...(search && {
@@ -678,6 +678,90 @@ async function deleteUser(req, res) {
   }
 }
 
+async function batchDeleteUsers(req, res) {
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'Invalid user IDs' });
+    }
+
+    const idsToDelete = ids.filter(id => id !== req.user.id);
+    if (idsToDelete.length === 0) {
+      return res.status(400).json({ error: 'You cannot delete your own account' });
+    }
+
+    const usersToDelete = await prisma.user.findMany({
+      where: { id: { in: idsToDelete } }
+    });
+
+    if (usersToDelete.length === 0) {
+      return res.status(404).json({ error: 'No users found' });
+    }
+
+    for (const u of usersToDelete) {
+      if (u.role === 'SUPER_ADMIN') {
+        return res.status(403).json({ error: 'Super Admin users cannot be deleted' });
+      }
+      if (req.user.role === 'SCHOOL_ADMIN' && u.schoolId !== req.user.schoolId) {
+        return res.status(403).json({ error: 'Insufficient permissions to delete users from another school' });
+      }
+    }
+
+    const userEmails = usersToDelete.map(u => u.email);
+    for (const email of userEmails) {
+      deleteFirebaseUser(email).catch(() => {});
+    }
+
+    await prisma.$transaction([
+      prisma.refreshToken.deleteMany({ where: { userId: { in: idsToDelete } } }),
+      prisma.alert.deleteMany({ where: { studentId: { in: idsToDelete } } }),
+      prisma.concern.deleteMany({ where: { studentId: { in: idsToDelete } } }),
+      prisma.appointment.deleteMany({ where: { OR: [{ patientId: { in: idsToDelete } }, { psychiatristId: { in: idsToDelete } }] } }),
+      prisma.counsellingNote.deleteMany({ where: { OR: [{ patientId: { in: idsToDelete } }, { counsellorId: { in: idsToDelete } }] } }),
+      prisma.testResult.deleteMany({ where: { studentId: { in: idsToDelete } } }),
+      prisma.user.deleteMany({ where: { id: { in: idsToDelete } } }),
+    ]);
+
+    res.json({ success: true, message: `${idsToDelete.length} user(s) deleted successfully` });
+  } catch (err) {
+    handleError(res, err, 'batchDeleteUsers');
+  }
+}
+
+async function deleteSchool(req, res) {
+  try {
+    const { id } = req.params;
+
+    const school = await prisma.school.findUnique({ where: { id } });
+    if (!school) return res.status(404).json({ error: 'School not found' });
+
+    const usersInSchool = await prisma.user.findMany({ where: { schoolId: id } });
+    const userIds = usersInSchool.map(u => u.id);
+    const userEmails = usersInSchool.map(u => u.email);
+
+    for (const email of userEmails) {
+      deleteFirebaseUser(email).catch(() => {});
+    }
+
+    await prisma.$transaction([
+      prisma.refreshToken.deleteMany({ where: { userId: { in: userIds } } }),
+      prisma.alert.deleteMany({ where: { studentId: { in: userIds } } }),
+      prisma.concern.deleteMany({ where: { studentId: { in: userIds } } }),
+      prisma.appointment.deleteMany({ where: { OR: [{ patientId: { in: userIds } }, { psychiatristId: { in: userIds } }] } }),
+      prisma.counsellingNote.deleteMany({ where: { OR: [{ patientId: { in: userIds } }, { counsellorId: { in: userIds } }] } }),
+      prisma.testResult.deleteMany({ where: { studentId: { in: userIds } } }),
+      prisma.class.deleteMany({ where: { schoolId: id } }),
+      prisma.family.deleteMany({ where: { schoolId: id } }),
+      prisma.user.deleteMany({ where: { schoolId: id } }),
+      prisma.school.delete({ where: { id } }),
+    ]);
+
+    res.json({ success: true, message: 'School and all associated data deleted successfully' });
+  } catch (err) {
+    handleError(res, err, 'deleteSchool');
+  }
+}
+
 // ── Helper ────────────────────────────────────────────────────
 
 function generateAccessCode() {
@@ -708,4 +792,6 @@ module.exports = {
   resetUserPassword,
   generateBulkCredentials,
   deleteUser,
+  batchDeleteUsers,
+  deleteSchool,
 };

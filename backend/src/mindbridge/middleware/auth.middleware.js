@@ -60,6 +60,16 @@ async function verifyToken(req, res, next) {
       return res.status(401).json({ error: 'User not found or inactive' });
     }
 
+    // If they authenticated via Firebase (e.g., Google) and still have mustResetPassword flagged,
+    // clear it because they are using an external provider.
+    if (emailFromFirebase && user.mustResetPassword) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { mustResetPassword: false }
+      });
+      user.mustResetPassword = false;
+    }
+
     req.user = user;
     next();
   } catch (err) {
