@@ -13,8 +13,7 @@
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
     "build:frontend": "npm run build --workspace=frontend",
     "build:backend": "npm run build --workspace=backend",
-    "start:backend": "npm run start --workspace=backend",
-    "postinstall": "npx -y prisma@5.10.0 generate --schema=backend/prisma/schema.prisma"
+    "start:backend": "npm run start --workspace=backend"
   },
   "dependencies": {
     "@prisma/client": "^5.10.0",
