@@ -449,6 +449,7 @@ async function generateBulkCredentials(req, res) {
           lastName: last_name,
           grade: grade || null,
           schoolId,
+          classId: (role.toUpperCase() === 'STUDENT' && req.body.classId) ? req.body.classId : null,
           mustResetPassword: true,
         },
       });
@@ -545,6 +546,66 @@ async function assignStudentToClass(req, res) {
     res.json({ success: true });
   } catch (err) {
     handleError(res, err, 'assignStudentToClass');
+  }
+}
+
+async function removeStudentFromClass(req, res) {
+  try {
+    const { studentId } = req.body;
+    if (!studentId) return res.status(400).json({ error: 'studentId required' });
+    await prisma.user.update({ where: { id: studentId }, data: { classId: null } });
+    res.json({ success: true });
+  } catch (err) {
+    handleError(res, err, 'removeStudentFromClass');
+  }
+}
+
+async function createStudentInClass(req, res) {
+  try {
+    const { id: schoolId, classId } = req.params;
+    const { firstName, lastName, email } = req.body;
+
+    if (!firstName || !lastName) {
+      return res.status(400).json({ error: 'First name and last name required' });
+    }
+
+    const school = await prisma.school.findUnique({ where: { id: schoolId } });
+    if (!school) return res.status(404).json({ error: 'School not found' });
+
+    let userEmail = email?.trim().toLowerCase();
+    if (userEmail) {
+      const existing = await prisma.user.findUnique({ where: { email: userEmail } });
+      if (existing) return res.status(400).json({ error: `Email ${userEmail} is already registered` });
+    }
+
+    const creds = await generateCredentials(firstName, lastName, school.accessCode);
+    userEmail = userEmail || creds.email;
+
+    const student = await prisma.user.create({
+      data: {
+        email: userEmail,
+        passwordHash: creds.passwordHash,
+        role: 'STUDENT',
+        firstName,
+        lastName,
+        schoolId,
+        classId,
+        mustResetPassword: true,
+      },
+    });
+
+    // Sync to Firebase Auth (non-blocking)
+    syncUserToFirebase(userEmail, creds.plainPassword, `${firstName} ${lastName}`).catch(() => {});
+
+    res.status(201).json({
+      student,
+      credentials: {
+        email: userEmail,
+        password: creds.plainPassword
+      }
+    });
+  } catch (err) {
+    handleError(res, err, 'createStudentInClass');
   }
 }
 

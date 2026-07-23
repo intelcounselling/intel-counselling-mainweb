@@ -146,6 +146,10 @@
 }
 </script>
 <link rel="stylesheet" href="/src/index.css">
+<script>
+  // Ping backend to wake up free-tier server as early as possible
+  fetch('/api/health').catch(() => {});
+</script>
 </head>
 <body>
     <div id="root"></div>

@@ -10,6 +10,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet" />
     <title>Intel Counselling — Student Mental Health Platform</title>
+    <script>
+      // Ping backend to wake up free-tier server as early as possible
+      fetch('/api/portal/health').catch(() => {});
+    </script>
   </head>
   <body>
     <div id="root"></div>

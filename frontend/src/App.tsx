@@ -43,8 +43,6 @@ const AppContent: React.FC = () => {
   const navigate = useNavigate(); // Added useNavigate
 
   useEffect(() => {
-    // Ping backend to wake up free-tier server
-    fetch('/api/health').catch(() => {});
     
     const handleResize = () => setWindowWidth(window.innerWidth);
     window.addEventListener('resize', handleResize);

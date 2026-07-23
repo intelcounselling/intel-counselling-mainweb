@@ -36,6 +36,8 @@ router.post('/schools/:id/classes', ...admin, validateUUID('id'), ctrl.createCla
 router.put('/schools/:id/classes/:classId', ...admin, ctrl.updateClass);
 router.delete('/schools/:id/classes/:classId', ...admin, ctrl.deleteClass);
 router.post('/schools/:id/classes/:classId/assign', ...admin, ctrl.assignStudentToClass);
+router.post('/schools/:id/classes/:classId/unassign', ...admin, ctrl.removeStudentFromClass);
+router.post('/schools/:id/classes/:classId/students', ...admin, ctrl.createStudentInClass);
 
 // Users
 router.get('/users', ...admin, ctrl.getUsers);

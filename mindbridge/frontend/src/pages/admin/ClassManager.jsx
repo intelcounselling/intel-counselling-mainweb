@@ -5,6 +5,7 @@ import { ArrowLeft, Plus, Pencil, Trash2, Users } from 'lucide-react';
 import { Card, Button, Input, Spinner, EmptyState } from '../../components/ui';
 import { useToast } from '../../components/ui/Toast';
 import api from '../../lib/axios';
+import ClassStudentModal from './ClassStudentModal';
 
 function ClassForm({ onSubmit, loading, initial = {} }) {
   const [name, setName] = useState(initial.name || '');
@@ -53,6 +54,7 @@ export default function ClassManager() {
   const { success, error: toastError } = useToast();
   const [showForm, setShowForm] = useState(false);
   const [editClass, setEditClass] = useState(null);
+  const [selectedClassForStudents, setSelectedClassForStudents] = useState(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['classes', schoolId],
@@ -146,14 +148,23 @@ export default function ClassManager() {
                 </div>
                 <div className="flex gap-2">
                   <button
+                    onClick={() => setSelectedClassForStudents(cls)}
+                    className="p-2 hover:bg-primary-50 rounded-lg text-primary-600 hover:text-primary-700 transition-colors"
+                    title="Manage Students"
+                  >
+                    <Users className="w-4 h-4" />
+                  </button>
+                  <button
                     onClick={() => setEditClass(cls)}
                     className="p-2 hover:bg-surface-100 rounded-lg text-surface-500 hover:text-surface-900 transition-colors"
+                    title="Edit Class"
                   >
                     <Pencil className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => { if (confirm(`Delete class "${cls.name}"?`)) deleteMutation.mutate(cls.id); }}
                     className="p-2 hover:bg-red-50 rounded-lg text-surface-500 hover:text-red-600 transition-colors"
+                    title="Delete Class"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -163,6 +174,13 @@ export default function ClassManager() {
           </Card>
         ))}
       </div>
+
+      <ClassStudentModal
+        isOpen={!!selectedClassForStudents}
+        onClose={() => setSelectedClassForStudents(null)}
+        schoolId={schoolId}
+        cls={selectedClassForStudents}
+      />
     </div>
   );
 }
