@@ -891,6 +891,8 @@ module.exports = {
   updateClass,
   deleteClass,
   assignStudentToClass,
+  removeStudentFromClass,
+  createStudentInClass,
   getUsers,
   toggleUserActive,
   resetUserPassword,
