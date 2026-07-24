@@ -53,7 +53,7 @@ const ROLE_LABELS = {
 export default function Sidebar({ mobileOpen, onClose }) {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
-  
+
   const navItems = (() => {
     if (user?.role === 'SCHOOL_ADMIN' && user?.schoolId) {
       return [
@@ -70,7 +70,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
     try {
       const { refreshToken } = useAuthStore.getState();
       await api.post('/auth/logout', { refreshToken });
-    } catch {}
+    } catch { }
     logout();
     navigate('/login');
   };
@@ -135,4 +135,5 @@ export default function Sidebar({ mobileOpen, onClose }) {
       </aside>
     </>
   );
+}
 }

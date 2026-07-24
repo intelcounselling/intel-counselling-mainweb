@@ -29,7 +29,7 @@ export default function TakeTest() {
   });
 
   const test = data;
-  
+
   // Fix JSON parsing bug for questions
   const parseQuestions = (q) => {
     if (typeof q === 'string') {
@@ -120,81 +120,94 @@ export default function TakeTest() {
   const progressPct = totalQ ? Math.round(((currentQ) / totalQ) * 100) : 0;
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative bg-[#1c1a3b]">
-      <div className="max-w-[700px] w-full p-10 animate-slide-up bg-white rounded-[2rem] shadow-xl relative z-10 min-h-[400px] flex flex-col">
-        
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #312e81 100%)' }}>
+
+      {/* Animated Background Orbs */}
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-blob" />
+      <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-blob animation-delay-2000" />
+      <div className="absolute -bottom-24 left-1/3 w-96 h-96 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-blob animation-delay-4000" />
+
+      <div className="max-w-3xl w-full p-10 animate-slide-up bg-white rounded-[2.5rem] shadow-2xl relative z-10">
         {/* Header */}
-        <div className="mb-8">
-          <div className="inline-block bg-[#eff0ff] text-[#5551ff] text-[10px] font-bold px-3 py-1.5 rounded-full mb-4 uppercase tracking-widest">
-            Assessment {currentQ === 0 ? 1 : 1} of 5
+        <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between border-b border-surface-100 pb-6 mb-8 gap-4">
+          <div className="flex flex-col items-start gap-2">
+            <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-surface-400 hover:text-indigo-600 transition-colors text-sm font-bold bg-surface-50 px-3 py-1.5 rounded-lg mb-2">
+              <ArrowLeft className="w-4 h-4" /> Back
+            </button>
+            <h2 className="text-3xl font-extrabold text-surface-900 tracking-tight">{test.name}</h2>
           </div>
-          
-          <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between border-b border-[#f0eee9] pb-6 gap-4">
-            <h2 className="text-3xl font-bold text-[#111111] font-serif tracking-tight" style={{ fontFamily: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif' }}>
-              {test.name}
-            </h2>
-            <div className="text-right flex-shrink-0">
-              <p className="text-[#8c8270] text-sm font-bold tracking-wide">Question {currentQ + 1} of {totalQ}</p>
-              <div className="w-full h-1 bg-[#e4dcd0] mt-2 rounded-full" />
+          <div className="text-left sm:text-right w-full sm:w-auto">
+            <p className="text-sm font-bold text-surface-400 mb-2">Question {currentQ + 1} of {totalQ}</p>
+            <div className="w-full sm:w-32 h-2 bg-surface-100 rounded-full overflow-hidden">
+              <div className="h-full bg-indigo-500 rounded-full transition-all duration-500 ease-out" style={{ width: `${progressPct}%` }} />
             </div>
           </div>
         </div>
 
-        <div className="flex-1">
-          <h3 className="text-2xl font-bold text-[#222222] font-serif leading-relaxed mb-10" style={{ fontFamily: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif' }}>
+        <div className="mb-10">
+          <span className="inline-block bg-indigo-50 text-indigo-700 text-xs font-bold px-3 py-1 rounded-full mb-4 uppercase tracking-widest">
+            Question {currentQ + 1}
+          </span>
+          <h3 className="text-2xl font-bold text-surface-800 leading-relaxed">
             {currentQuestion?.text}
           </h3>
-
-          <div className="space-y-3 mb-10">
-            {(currentQuestion?.options || []).map(option => {
-              const isSelected = answers[currentQuestion.id] === option.value;
-              return (
-                <button
-                  key={option.value}
-                  onClick={() => handleAnswer(currentQuestion.id, option.value)}
-                  className={`w-full text-left px-6 py-4 rounded-xl border-2 transition-all duration-200 transform hover:scale-[1.01] ${
-                    isSelected
-                      ? 'border-[#c7bca7] bg-[#fdfaf5] shadow-sm'
-                      : 'border-[#f2efeb] hover:border-[#e0d6c3] hover:bg-[#faf8f5] text-[#444444]'
-                  }`}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors ${
-                      isSelected ? 'border-[#8c8270] bg-[#8c8270]' : 'border-[#d1cac0]'
-                    }`}>
-                      {isSelected && <div className="w-2 h-2 bg-white rounded-full" />}
-                    </div>
-                    <span className={`text-lg ${isSelected ? 'text-[#333333] font-semibold' : 'text-[#555555]'}`}>{option.label}</span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center justify-between mt-auto gap-4">
-          <button 
-            onClick={handlePrev} 
+        <div className="space-y-4">
+          {(currentQuestion?.options || []).map(option => {
+            const isSelected = answers[currentQuestion.id] === option.value;
+            return (
+              <button
+                key={option.value}
+                onClick={() => handleAnswer(currentQuestion.id, option.value)}
+                className={`w-full text-left px-6 py-5 rounded-2xl border-2 transition-all duration-200 transform hover:scale-[1.01] ${isSelected
+                    ? 'border-indigo-600 bg-indigo-50 shadow-md'
+                    : 'border-surface-200 hover:border-indigo-300 hover:bg-surface-50 text-surface-700'
+                  }`}
+              >
+                <div className="flex items-center gap-4">
+                  <div className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors ${isSelected ? 'border-indigo-600 bg-indigo-600' : 'border-surface-300'
+                    }`}>
+                    {isSelected && <div className="w-2.5 h-2.5 bg-white rounded-full" />}
+                  </div>
+                  <span className={`text-lg font-medium ${isSelected ? 'text-indigo-900' : 'text-surface-700'}`}>{option.label}</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center justify-between mt-10 gap-4">
+          <button
+            onClick={handlePrev}
             disabled={currentQ === 0}
-            className={`w-full sm:w-auto px-6 py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition-all ${
-              currentQ === 0 ? 'opacity-0 pointer-events-none' : 'text-[#8c8270] hover:bg-[#f5f2eb]'
-            }`}
+            className={`w-full sm:w-auto px-6 py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${currentQ === 0 ? 'opacity-0 pointer-events-none' : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
+              }`}
           >
-            <ArrowLeft className="w-4 h-4" /> Previous
+            <ArrowLeft className="w-5 h-5" /> Previous
           </button>
 
           <button
             onClick={handleNext}
             disabled={!answered || mutation.isPending}
-            className={`w-full sm:w-auto px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all duration-300 ${
-              !answered 
-                ? 'bg-[#f0ece5] text-[#b3aaa0] cursor-not-allowed'
-                : 'bg-[#e5ddd0] text-[#786c5c] hover:bg-[#d9d0c2] hover:shadow-md active:scale-95'
-            }`}
+            className={`w-full sm:w-auto px-8 py-4 rounded-xl font-bold flex items-center justify-center gap-3 transition-all duration-300 ${!answered
+                ? 'bg-surface-100 text-surface-400 cursor-not-allowed'
+                : 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-lg active:scale-95'
+              }`}
           >
             {currentQ === totalQ - 1 ? 'Submit Assessment' : 'Next Question'}
-            {currentQ === totalQ - 1 ? <CheckCircle className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
+            {currentQ === totalQ - 1 ? <CheckCircle className="w-5 h-5" /> : <ArrowRight className="w-5 h-5" />}
           </button>
+        </div>
+
+        {/* Question dots */}
+        <div className="flex justify-center gap-2 flex-wrap mt-10">
+          {questions.map((q, i) => (
+            <button key={q.id} onClick={() => setCurrentQ(i)}
+              className={`w-3 h-3 rounded-full transition-all duration-300 ${i === currentQ ? 'bg-indigo-600 w-8' :
+                  answers[q.id] !== undefined ? 'bg-emerald-400' : 'bg-surface-200'
+                }`} />
+          ))}
         </div>
       </div>
     </div>
