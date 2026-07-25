@@ -7,14 +7,6 @@ import useAuthStore from '../../store/authStore';
 import api from '../../lib/axios';
 import { formatRelative, formatDate } from '../../utils/formatters';
 
-// ISSS Tool display metadata
-const ISSS_TOOLS = {
-  LearningPattern: { icon: '🧠', label: 'Learning Pattern' },
-  StudyBehaviour: { icon: '📚', label: 'Study Behaviour' },
-  EmotionalWellness: { icon: '💙', label: 'Emotional Wellness' },
-  InternetUsage: { icon: '📱', label: 'Internet Usage' },
-  PersonalityDimensions: { icon: '✨', label: 'Personality Dimensions' },
-};
 
 const TEST_ICONS = {
   LearningPattern: '🧠',
@@ -51,11 +43,7 @@ export default function StudentDashboard() {
     return 'Great job completing this assessment. Every step helps us understand you better.';
   };
 
-  // ISSS completion tracking
-  const isssCategories = Object.keys(ISSS_TOOLS);
-  const completedCategories = new Set(latestByCategory.map(r => r.test?.category).filter(c => isssCategories.includes(c)));
-  const isssComplete = isssCategories.every(c => completedCategories.has(c));
-  const completionPct = Math.round((completedCategories.size / isssCategories.length) * 100);
+
 
   const scrollToAssessments = () => {
     document.getElementById('assessments-grid')?.scrollIntoView({ behavior: 'smooth' });
@@ -89,22 +77,7 @@ export default function StudentDashboard() {
             </button>
           </div>
 
-          {/* ISSS Journey Tracker */}
-          <div className="w-full max-w-2xl">
-            <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-[#f0eee9]">
-              <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-4">
-                <p className="text-base font-bold text-[#111111]" style={{ fontFamily: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif' }}>
-                  {isssComplete ? '🎉 All 5 core assessments complete!' : 'Your ISSS Journey Progress'}
-                </p>
-                <span className="text-sm font-bold bg-[#f5f2eb] text-[#8c8270] px-4 py-1.5 rounded-full border border-[#e4dcd0]">
-                  {completionPct}%
-                </span>
-              </div>
-              <div className="h-2 rounded-full bg-[#f2efeb] overflow-hidden">
-                <div className="h-full rounded-full bg-[#8c8270] transition-all duration-1000 ease-out" style={{ width: `${completionPct}%` }} />
-              </div>
-            </div>
-          </div>
+
         </section>
 
         {/* 2. Primary Assessment Grid */}
