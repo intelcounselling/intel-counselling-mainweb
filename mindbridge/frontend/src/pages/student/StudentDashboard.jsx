@@ -66,8 +66,8 @@ export default function StudentDashboard() {
       <div className="w-full max-w-[1400px] mx-auto pb-24 space-y-24 relative z-10">
         
         {/* 1. Full-Height Welcome Hero */}
-        <section className="relative w-full min-h-[60vh] flex flex-col justify-center items-center text-center">
-          <div className="flex flex-col items-center max-w-3xl">
+        <section className="relative w-full flex flex-col items-center text-center pt-12 md:pt-20 pb-8">
+          <div className="flex flex-col items-center max-w-3xl mb-16">
             <div className="bg-[#f5f2eb] text-[#8c8270] text-[10px] font-bold px-3 py-1.5 rounded-full mb-8 uppercase tracking-widest shadow-sm border border-[#e4dcd0]">
               Welcome to MindBridge
             </div>
@@ -90,7 +90,7 @@ export default function StudentDashboard() {
           </div>
 
           {/* ISSS Journey Tracker */}
-          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-2xl">
+          <div className="w-full max-w-2xl">
             <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-[#f0eee9]">
               <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-4">
                 <p className="text-base font-bold text-[#111111]" style={{ fontFamily: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif' }}>
