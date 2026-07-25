@@ -120,7 +120,7 @@ export default function TakeTest() {
   const progressPct = totalQ ? Math.round(((currentQ) / totalQ) * 100) : 0;
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative bg-[#1c1a3b]">
+    <div className="min-h-screen flex items-center justify-center p-4 relative bg-[#fdfaf5]">
       <div className="max-w-[700px] w-full p-10 animate-slide-up bg-white rounded-[2rem] shadow-xl relative z-10 min-h-[400px] flex flex-col">
         
         {/* Header */}
