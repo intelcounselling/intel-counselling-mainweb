@@ -51,17 +51,7 @@ async function getDashboard(req, res) {
   }
 }
 
-async function completeOnboarding(req, res) {
-  try {
-    const student = await prisma.user.update({
-      where: { id: req.user.id },
-      data: { isOnboarded: true },
-    });
-    res.json({ success: true, student });
-  } catch (err) {
-    handleError(res, err, 'completeOnboarding');
-  }
-}
+
 
 // ── Tests ─────────────────────────────────────────────────────
 
@@ -201,4 +191,4 @@ async function getConcerns(req, res) {
   }
 }
 
-module.exports = { getDashboard, getTests, submitTest, getResults, getResult, submitConcern, getConcerns, completeOnboarding };
+module.exports = { getDashboard, getTests, submitTest, getResults, getResult, submitConcern, getConcerns };
