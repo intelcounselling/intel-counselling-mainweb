@@ -22,7 +22,7 @@ export default function TakeTest() {
 
   const mutation = useMutation({
     mutationFn: () => api.post(`/student/tests/${testId}/submit`, {
-      answers: Object.entries(answers).map(([questionId, value]) => ({ questionId: parseInt(questionId), value })),
+      answers: Object.entries(answers).map(([questionId, value]) => ({ questionId, value })),
       shareWithTherapist,
     }),
     onSuccess: ({ data }) => setResult(data),
