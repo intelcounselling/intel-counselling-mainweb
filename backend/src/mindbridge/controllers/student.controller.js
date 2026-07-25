@@ -84,12 +84,14 @@ async function submitTest(req, res) {
       validityWarning
     } = calculateScore(answersMap, questions, thresholds, test.category);
 
+    const maxScore = 60; // most are out of 60 based on logic, visual/auditory/kinesthetic is 20 max each
+
     const result = await prisma.testResult.create({
       data: {
         studentId,
         testId,
         score,
-        maxScore: 60, // most are out of 60 based on logic, visual/auditory/kinesthetic is 20 max each
+        maxScore,
         severity: validityWarning ? `[Validity Warning] ${severity}` : severity,
         isLow: requiresCounselling || isLow,
         answers: answersMap || {},
