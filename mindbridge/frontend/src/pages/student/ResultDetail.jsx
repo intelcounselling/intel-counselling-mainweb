@@ -63,7 +63,7 @@ function ExpandableRow({ result, isOpen, toggle }) {
               <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
                 <div className="space-y-4">
                   <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 rounded-xl bg-[#eff0ff] text-[#5551ff] border border-[#d6d8ff] flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-xl bg-[#fdfaf5] text-[#8c8270] border border-[#e4dcd0] flex items-center justify-center">
                       <Activity className="w-5 h-5" />
                     </div>
                     <h4 className="font-bold text-[#111111] text-lg" style={{ fontFamily: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif' }}>Question Breakdown</h4>
@@ -137,8 +137,8 @@ export default function ResultDetail() {
 
         {!results.length ? (
           <div className="flex flex-col items-center justify-center p-16 text-center border-dashed border-2 border-[#8c8270]/30 bg-white/5 rounded-[2rem]">
-            <div className="w-24 h-24 bg-[#1c1a3b] rounded-full flex items-center justify-center shadow-inner mb-6 border border-[#5551ff]/30">
-              <LineChart className="w-10 h-10 text-[#5551ff]" />
+            <div className="w-24 h-24 bg-[#1c1a3b] rounded-full flex items-center justify-center shadow-inner mb-6 border border-[#8c8270]/30">
+              <LineChart className="w-10 h-10 text-[#b3aaa0]" />
             </div>
             <h3 className="text-2xl font-bold text-white mb-3" style={{ fontFamily: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif' }}>No results yet</h3>
             <p className="text-[#b3aaa0] mb-8 max-w-md">
@@ -156,8 +156,8 @@ export default function ResultDetail() {
               <div className="absolute top-0 left-0 w-full h-2 bg-[#8c8270]" />
               
               <div className="flex items-center gap-4 mb-8">
-                <div className="w-12 h-12 rounded-xl bg-[#eff0ff] flex items-center justify-center border border-[#d6d8ff]">
-                  <LineChart className="w-6 h-6 text-[#5551ff]" />
+                <div className="w-12 h-12 rounded-xl bg-[#fdfaf5] flex items-center justify-center border border-[#e4dcd0]">
+                  <LineChart className="w-6 h-6 text-[#8c8270]" />
                 </div>
                 <h3 className="text-2xl font-bold text-[#111111]" style={{ fontFamily: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif' }}>Score Progression History</h3>
               </div>

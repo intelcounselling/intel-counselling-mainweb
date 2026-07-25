@@ -46,8 +46,8 @@ export default function ConcernForm() {
           </div>
           <div className="relative z-10">
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-14 h-14 rounded-2xl bg-[#eff0ff] border border-[#d6d8ff] flex items-center justify-center shadow-sm">
-                <MessageSquare className="w-7 h-7 text-[#5551ff]" />
+              <div className="w-14 h-14 rounded-2xl bg-[#fdfaf5] border border-[#e4dcd0] flex items-center justify-center shadow-sm">
+                <MessageSquare className="w-7 h-7 text-[#8c8270]" />
               </div>
               <h3 className="text-3xl font-bold text-[#111111]" style={{ fontFamily: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif' }}>Something on your mind?</h3>
             </div>

@@ -68,7 +68,7 @@ export default function StudentDashboard() {
         {/* 1. Full-Height Welcome Hero */}
         <section className="relative w-full min-h-[60vh] flex flex-col justify-center items-center text-center">
           <div className="flex flex-col items-center max-w-3xl">
-            <div className="bg-[#eff0ff] text-[#5551ff] text-[10px] font-bold px-3 py-1.5 rounded-full mb-8 uppercase tracking-widest shadow-sm">
+            <div className="bg-[#f5f2eb] text-[#8c8270] text-[10px] font-bold px-3 py-1.5 rounded-full mb-8 uppercase tracking-widest shadow-sm border border-[#e4dcd0]">
               Welcome to MindBridge
             </div>
             <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 tracking-tight leading-tight" style={{ fontFamily: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif' }}>
@@ -96,7 +96,7 @@ export default function StudentDashboard() {
                 <p className="text-base font-bold text-[#111111]" style={{ fontFamily: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif' }}>
                   {isssComplete ? '🎉 All 5 core assessments complete!' : 'Your ISSS Journey Progress'}
                 </p>
-                <span className="text-sm font-bold bg-[#eff0ff] text-[#5551ff] px-4 py-1.5 rounded-full">
+                <span className="text-sm font-bold bg-[#f5f2eb] text-[#8c8270] px-4 py-1.5 rounded-full border border-[#e4dcd0]">
                   {completionPct}%
                 </span>
               </div>
@@ -198,8 +198,8 @@ export default function StudentDashboard() {
               </div>
               <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
                 <div className="flex-1 text-center md:text-left">
-                  <div className="bg-[#eff0ff] w-14 h-14 rounded-2xl flex items-center justify-center mb-6 mx-auto md:mx-0 shadow-sm border border-[#d6d8ff]">
-                    <Sparkles className="w-7 h-7 text-[#5551ff]" />
+                  <div className="bg-[#fdfaf5] w-14 h-14 rounded-2xl flex items-center justify-center mb-6 mx-auto md:mx-0 shadow-sm border border-[#e4dcd0]">
+                    <Sparkles className="w-7 h-7 text-[#8c8270]" />
                   </div>
                   <h3 className="text-3xl font-bold mb-3 text-[#111111]" style={{ fontFamily: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif' }}>Something on your mind?</h3>
                   <p className="text-[#555555] text-base max-w-md mx-auto md:mx-0 leading-relaxed">

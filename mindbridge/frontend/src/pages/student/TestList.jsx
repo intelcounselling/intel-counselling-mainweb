@@ -81,8 +81,8 @@ export default function TestList() {
 
         {/* Privacy Notice Redesign */}
         <div className="mt-12 bg-white rounded-[2rem] p-8 border border-[#f0eee9] shadow-xl flex flex-col md:flex-row items-center gap-6 group hover:shadow-2xl transition-all">
-          <div className="w-16 h-16 rounded-2xl bg-[#eff0ff] flex items-center justify-center flex-shrink-0 shadow-sm border border-[#d6d8ff] group-hover:scale-110 transition-transform">
-            <ShieldCheck className="w-8 h-8 text-[#5551ff]" />
+          <div className="w-16 h-16 rounded-2xl bg-[#fdfaf5] flex items-center justify-center flex-shrink-0 shadow-sm border border-[#e4dcd0] group-hover:scale-110 transition-transform">
+            <ShieldCheck className="w-8 h-8 text-[#8c8270]" />
           </div>
           <div className="text-center md:text-left">
             <h4 className="text-xl font-bold text-[#111111] mb-2" style={{ fontFamily: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif' }}>Your Privacy Matters</h4>
