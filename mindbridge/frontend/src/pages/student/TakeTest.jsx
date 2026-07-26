@@ -32,10 +32,11 @@ export default function TakeTest() {
   
   // Fix JSON parsing bug for questions
   const parseQuestions = (q) => {
-    if (typeof q === 'string') {
-      try { return JSON.parse(q); } catch (e) { return []; }
+    let parsed = q;
+    while (typeof parsed === 'string') {
+      try { parsed = JSON.parse(parsed); } catch (e) { return []; }
     }
-    return q || [];
+    return Array.isArray(parsed) ? parsed : [];
   };
 
   const questions = parseQuestions(test?.questions);

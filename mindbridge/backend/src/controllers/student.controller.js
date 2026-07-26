@@ -77,10 +77,10 @@ async function submitTest(req, res) {
     let thresholds = test.thresholds;
 
     // Fix if stored as JSON string in DB
-    if (typeof questions === 'string') {
+    while (typeof questions === 'string') {
       try { questions = JSON.parse(questions); } catch (e) { questions = []; }
     }
-    if (typeof thresholds === 'string') {
+    while (typeof thresholds === 'string') {
       try { thresholds = JSON.parse(thresholds); } catch (e) { thresholds = []; }
     }
 
