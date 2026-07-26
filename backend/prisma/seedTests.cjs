@@ -152,15 +152,15 @@ async function main() {
   ];
 
   for (const testData of tests) {
-    const existing = await prisma.test.findFirst({ where: { name: testData.name } };
+    const existing = await prisma.test.findFirst({ where: { name: testData.name } });
     if (!existing) {
-      await prisma.test.create({ data: testData };
+      await prisma.test.create({ data: testData });
       console.log(`Created test: ${testData.name}`);
     } else {
       await prisma.test.update({
         where: { id: existing.id },
         data: testData
-      };
+      });
       console.log(`Updated test: ${testData.name}`);
     }
   }
@@ -172,7 +172,7 @@ main()
   .catch((e) => {
     console.error(e);
     process.exit(1);
-  }
+  })
   .finally(async () => {
     await prisma.$disconnect();
-  };
+  });
