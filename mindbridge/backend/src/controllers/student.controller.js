@@ -73,8 +73,16 @@ async function submitTest(req, res) {
     const test = await prisma.test.findUnique({ where: { id: testId } });
     if (!test) return res.status(404).json({ error: 'Test not found' });
 
-    const questions = test.questions;
-    const thresholds = test.thresholds;
+    let questions = test.questions;
+    let thresholds = test.thresholds;
+
+    // Fix if stored as JSON string in DB
+    if (typeof questions === 'string') {
+      try { questions = JSON.parse(questions); } catch (e) { questions = []; }
+    }
+    if (typeof thresholds === 'string') {
+      try { thresholds = JSON.parse(thresholds); } catch (e) { thresholds = []; }
+    }
 
     let answersMap = {};
     if (Array.isArray(answers)) {
