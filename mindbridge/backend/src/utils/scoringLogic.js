@@ -5,24 +5,27 @@ const calculateScore = (answers, questions, thresholds, category) => {
   let requiresCounselling = false;
   let subScores = null;
 
-  // Validity check: If 80% or more answers are "5"
-  let count5 = 0;
+  // Validity check: If 80% or more answers are "5" (which is actually value 4 usually in 0-4 scale, but keeping original logic if they pass 5)
+  let countMax = 0;
   Object.values(answers).forEach((val) => {
-    if (val === 5) count5++;
+    // some questions use 1-5, some 0-4. Assuming val >= 4 is maxish
+    if (val >= 4) countMax++;
   });
   
   const totalQuestions = Object.keys(answers).length;
-  const validityWarning = (count5 / totalQuestions) >= 0.8;
+  const validityWarning = totalQuestions > 0 && (countMax / totalQuestions) >= 0.8;
 
   // Category specific logic
   if (category === 'LearningPattern') {
-    subScores = { visual: 0, auditory: 0, kinesthetic: 0 };
+    subScores = { Visual: 0, Auditory: 0, Kinesthetic: 0, Mixed: 0 };
     
-    // Sum scores
-    for (const [qId, qIds] of Object.entries(thresholds.scoring)) {
-      qIds.forEach(id => {
-        subScores[qId] += answers[id] || 0;
-      });
+    // Sum scores based on question dimensions
+    for (const q of questions) {
+      const val = answers[q.id] || 0;
+      score += val; // Total score
+      if (q.dimension && subScores[q.dimension] !== undefined) {
+        subScores[q.dimension] += val;
+      }
     }
 
     // Sort to find dominant style
@@ -42,29 +45,39 @@ const calculateScore = (answers, questions, thresholds, category) => {
       }
     }
   } else {
-    // Normal / Reverse scoring logic for domains 2-5
+    // Normal / Reverse scoring logic
     for (const q of questions) {
-      let val = answers[q.id] || 3;
+      let val = answers[q.id] || 0; // Use 0 as default instead of 3 to avoid inflating scores of unanswered
       if (q.reverse) {
-        val = 6 - val; // 1->5, 2->4, 3->3, 4->2, 5->1
+        // Find max value from options for reverse scoring
+        let maxVal = 4;
+        if (q.options && q.options.length > 0) {
+           maxVal = Math.max(...q.options.map(o => o.value));
+        }
+        val = maxVal - val; 
       }
       score += val;
     }
+  }
 
-    // Determine category based on thresholds
-    for (const range of thresholds.ranges) {
-      if (score >= range.min && score <= range.max) {
-        severity = range.label;
-        if (range.color === 'Orange' || range.color === 'Red') {
-          isLow = true;
-        }
-        break;
+  // Determine category based on thresholds (which is an array)
+  const thresholdsArray = Array.isArray(thresholds) ? thresholds : (thresholds.ranges || []);
+  for (const range of thresholdsArray) {
+    if (score >= range.min && score <= range.max) {
+      severity = range.label || range.severity || 'Unknown';
+      
+      // Determine if action is needed
+      if (range.isLow === true) {
+        isLow = true;
+      } else if (range.severity === 'severe' || range.severity === 'moderately severe' || range.color === 'Red' || range.color === 'Orange') {
+        isLow = true;
       }
+      break;
     }
+  }
 
-    if (score < 36 && (category === 'EmotionalWellness' || category === 'InternetUsage')) {
-      requiresCounselling = true;
-    }
+  if (score < 36 && (category === 'EmotionalWellness' || category === 'InternetUsage')) {
+    requiresCounselling = true;
   }
 
   return {
