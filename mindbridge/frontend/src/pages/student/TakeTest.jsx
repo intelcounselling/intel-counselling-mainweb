@@ -26,6 +26,7 @@ export default function TakeTest() {
       shareWithTherapist,
     }),
     onSuccess: ({ data }) => setResult(data),
+    onError: (err) => alert("Submission failed: " + (err.response?.data?.error || err.message)),
   });
 
   const test = data;

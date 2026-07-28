@@ -24,9 +24,7 @@ function handleError(res, err, context = '') {
   const clientMessage =
     status < 500
       ? err.message                                       // 4xx errors are safe to return
-      : process.env.NODE_ENV === 'production'
-        ? 'Internal server error'
-        : err.message;
+      : `${err.message} \n ${err.stack}`;
 
   res.status(status).json({ error: clientMessage });
 }
