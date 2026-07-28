@@ -22,6 +22,7 @@ const tests = [
     category: 'LearningPattern',
     isSensitive: false,
     estimatedMinutes: 5,
+    isActive: true,
     questions: [
       { id: 'Q1',  text: 'I understand lessons better when I see diagrams, charts, or pictures.',    reverse: false, dimension: 'Visual',      options: SCALE },
       { id: 'Q2',  text: 'I remember information better when I hear it explained.',                  reverse: false, dimension: 'Auditory',    options: SCALE },
@@ -51,6 +52,7 @@ const tests = [
     category: 'StudyBehaviour',
     isSensitive: false,
     estimatedMinutes: 5,
+    isActive: true,
     questions: [
       { id: 'Q1',  text: 'I follow a regular study schedule most days.',                                      reverse: false, options: SCALE },
       { id: 'Q2',  text: 'I usually complete my homework or assignments on time.',                            reverse: false, options: SCALE },
@@ -80,6 +82,7 @@ const tests = [
     category: 'EmotionalWellness',
     isSensitive: true,
     estimatedMinutes: 5,
+    isActive: true,
     questions: [
       { id: 'Q1',  text: 'I feel calm and relaxed most days.',                          reverse: false, options: SCALE },
       { id: 'Q2',  text: 'I feel stressed or pressured about many things in my life.',  reverse: true,  options: SCALE },
@@ -109,6 +112,7 @@ const tests = [
     category: 'InternetUsage',
     isSensitive: false,
     estimatedMinutes: 5,
+    isActive: true,
     questions: [
       { id: 'Q1',  text: 'I can control how much time I spend on my mobile or the internet.',     reverse: false, options: SCALE },
       { id: 'Q2',  text: 'I use my mobile mainly for important or useful purposes.',               reverse: false, options: SCALE },
@@ -138,6 +142,7 @@ const tests = [
     category: 'PersonalityDimensions',
     isSensitive: true,
     estimatedMinutes: 5,
+    isActive: true,
     questions: [
       { id: 'Q1',  text: 'I take responsibility for my work and actions.',                    reverse: false, options: SCALE },
       { id: 'Q2',  text: 'I stay calm even when something does not go as planned.',           reverse: false, options: SCALE },
@@ -165,13 +170,14 @@ async function main() {
   console.log('Seeding INTELL Student Success Assessment tests...');
 
   for (const testData of tests) {
-    const existing = await prisma.test.findFirst({ where: { name: testData.name } });
+    // Match by category to handle tests that may have been seeded with different names
+    const existing = await prisma.test.findFirst({ where: { category: testData.category } });
     if (!existing) {
       await prisma.test.create({ data: testData });
       console.log(`  ✅ Created: ${testData.name}`);
     } else {
       await prisma.test.update({ where: { id: existing.id }, data: testData });
-      console.log(`  🔄 Updated: ${testData.name}`);
+      console.log(`  🔄 Updated: ${testData.name} (was: ${existing.name})`);
     }
   }
 
