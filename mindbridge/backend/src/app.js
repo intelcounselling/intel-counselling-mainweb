@@ -50,7 +50,7 @@ app.use((req, res, next) => {
 app.use(auditLog);
 
 // ── API Routes ────────────────────────────────────────────────
-app.use('/api', apiLimiter, routes);
+app.use(['/api/portal/api', '/api/portal', '/api'], apiLimiter, routes);
 
 // ── 404 Handler ───────────────────────────────────────────────
 app.use((req, res) => {
