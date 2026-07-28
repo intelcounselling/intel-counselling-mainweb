@@ -61,7 +61,7 @@ app.use((req, res) => {
 app.use((err, req, res, next) => {
   logger.error('Unhandled error:', err);
   res.status(err.status || 500).json({
-    error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message,
+    error: err.message + '\n' + err.stack,
   });
 });
 
