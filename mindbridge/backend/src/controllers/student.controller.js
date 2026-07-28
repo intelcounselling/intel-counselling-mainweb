@@ -86,12 +86,18 @@ async function submitTest(req, res) {
 
     let answersMap = {};
     if (Array.isArray(answers)) {
-      answers.forEach(a => { answersMap[a.questionId || a.id] = parseInt(a.value ?? a) || 0; });
+      // Coerce questionId to string AND numeric so both string and numeric question ids match
+      answers.forEach(a => {
+        const key = a.questionId ?? a.id;
+        answersMap[String(key)] = parseInt(a.value ?? a) || 0;
+        answersMap[Number(key)] = parseInt(a.value ?? a) || 0; // numeric key alias
+      });
     } else if (typeof answers === 'object') {
-      answersMap = Object.keys(answers).reduce((acc, key) => {
-        acc[key] = parseInt(answers[key].value ?? answers[key]) || 0;
-        return acc;
-      }, {});
+      Object.keys(answers).forEach(key => {
+        const val = parseInt(answers[key].value ?? answers[key]) || 0;
+        answersMap[key] = val;
+        answersMap[Number(key)] = val;
+      });
     }
 
     const {
@@ -103,7 +109,16 @@ async function submitTest(req, res) {
       validityWarning
     } = calculateScore(answersMap, questions, thresholds, test.category);
 
-    const maxScore = 60; // most are out of 60 based on logic, visual/auditory/kinesthetic is 20 max each
+    // Compute maxScore dynamically from questions/thresholds
+    let maxScore = 0;
+    if (Array.isArray(questions) && questions.length > 0) {
+      for (const q of questions) {
+        if (q.options && q.options.length > 0) {
+          maxScore += Math.max(...q.options.map(o => o.value));
+        }
+      }
+    }
+    if (!maxScore) maxScore = 60; // fallback
 
     const result = await prisma.testResult.create({
       data: {

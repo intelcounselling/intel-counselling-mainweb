@@ -21,7 +21,7 @@ const calculateScore = (answers, questions, thresholds, category) => {
     
     // Sum scores based on question dimensions
     for (const q of questions) {
-      const val = answers[q.id] || 0;
+      const val = answers[q.id] ?? answers[String(q.id)] ?? answers[Number(q.id)] ?? 0;
       score += val; // Total score
       if (q.dimension && subScores[q.dimension] !== undefined) {
         subScores[q.dimension] += val;
@@ -47,7 +47,7 @@ const calculateScore = (answers, questions, thresholds, category) => {
   } else {
     // Normal / Reverse scoring logic
     for (const q of questions) {
-      let val = answers[q.id] || 0; // Use 0 as default instead of 3 to avoid inflating scores of unanswered
+      let val = answers[q.id] ?? answers[String(q.id)] ?? answers[Number(q.id)] ?? 0;
       if (q.reverse) {
         // Find max value from options for reverse scoring
         let maxVal = 4;
