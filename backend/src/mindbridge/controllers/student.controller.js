@@ -10,7 +10,7 @@ async function getDashboard(req, res) {
   try {
     const studentId = req.user.id;
 
-    const [tests, recentResults, concerns, student] = await Promise.all([
+    const [tests, recentResults, concerns, student, appointments] = await Promise.all([
       prisma.test.findMany({ where: { isActive: true }, orderBy: { createdAt: 'asc' } }),
       prisma.testResult.findMany({
         where: { studentId },
@@ -27,6 +27,15 @@ async function getDashboard(req, res) {
         where: { id: studentId },
         include: { school: { select: { name: true } } },
       }),
+      prisma.appointment.findMany({
+        where: { 
+          patientId: studentId,
+          slot: { gte: new Date() }
+        },
+        orderBy: { slot: 'asc' },
+        take: 3,
+        include: { psychiatrist: { select: { firstName: true, lastName: true, avatarUrl: true } } }
+      })
     ]);
 
     // Get latest result per test category
@@ -36,11 +45,13 @@ async function getDashboard(req, res) {
       if (!latestByCategory[cat]) latestByCategory[cat] = result;
     }
 
-    res.json({ student, tests, recentResults, latestByCategory: Object.values(latestByCategory), concerns });
+    res.json({ student, tests, recentResults, latestByCategory: Object.values(latestByCategory), concerns, upcomingAppointments: appointments });
   } catch (err) {
     handleError(res, err, 'getDashboard (student)');
   }
 }
+
+
 
 // ── Tests ─────────────────────────────────────────────────────
 
@@ -62,17 +73,31 @@ async function submitTest(req, res) {
     const test = await prisma.test.findUnique({ where: { id: testId } });
     if (!test) return res.status(404).json({ error: 'Test not found' });
 
-    const questions = test.questions;
-    const thresholds = test.thresholds;
+    let questions = test.questions;
+    let thresholds = test.thresholds;
+
+    // Fix if stored as JSON string in DB
+    while (typeof questions === 'string') {
+      try { questions = JSON.parse(questions); } catch (e) { questions = []; }
+    }
+    while (typeof thresholds === 'string') {
+      try { thresholds = JSON.parse(thresholds); } catch (e) { thresholds = []; }
+    }
 
     let answersMap = {};
     if (Array.isArray(answers)) {
-      answers.forEach(a => { answersMap[a.questionId || a.id] = parseInt(a.value ?? a) || 0; });
+      // Coerce questionId to string AND numeric so both string and numeric question ids match
+      answers.forEach(a => {
+        const key = a.questionId ?? a.id;
+        answersMap[String(key)] = parseInt(a.value ?? a) || 0;
+        answersMap[Number(key)] = parseInt(a.value ?? a) || 0; // numeric key alias
+      });
     } else if (typeof answers === 'object') {
-      answersMap = Object.keys(answers).reduce((acc, key) => {
-        acc[key] = parseInt(answers[key].value ?? answers[key]) || 0;
-        return acc;
-      }, {});
+      Object.keys(answers).forEach(key => {
+        const val = parseInt(answers[key].value ?? answers[key]) || 0;
+        answersMap[key] = val;
+        answersMap[Number(key)] = val;
+      });
     }
 
     const {
@@ -84,7 +109,16 @@ async function submitTest(req, res) {
       validityWarning
     } = calculateScore(answersMap, questions, thresholds, test.category);
 
-    const maxScore = 60; // most are out of 60 based on logic, visual/auditory/kinesthetic is 20 max each
+    // Compute maxScore dynamically from questions/thresholds
+    let maxScore = 0;
+    if (Array.isArray(questions) && questions.length > 0) {
+      for (const q of questions) {
+        if (q.options && q.options.length > 0) {
+          maxScore += Math.max(...q.options.map(o => o.value));
+        }
+      }
+    }
+    if (!maxScore) maxScore = 60; // fallback
 
     const result = await prisma.testResult.create({
       data: {
@@ -94,8 +128,8 @@ async function submitTest(req, res) {
         maxScore,
         severity: validityWarning ? `[Validity Warning] ${severity}` : severity,
         isLow: requiresCounselling || isLow,
-        answers: answersMap || {},
-        subScores: subScores || undefined,
+        answers: Object.keys(answersMap).length ? answersMap : {},
+        ...(subScores && { subScores }),
         sharedWithTherapist: shareWithTherapist ?? (requiresCounselling || isLow),
       },
       include: { test: { select: { name: true, category: true, thresholds: true } } },
