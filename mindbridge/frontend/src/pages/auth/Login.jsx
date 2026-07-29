@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { Brain, Eye, EyeOff, Lock, Mail } from 'lucide-react';
+import { Brain, Eye, EyeOff, Lock, Mail, ArrowLeft } from 'lucide-react';
 import { FcGoogle } from 'react-icons/fc';
 import { useToast } from '../../components/ui/Toast';
 import { Button, Input, Spinner } from '../../components/ui';
@@ -111,7 +111,14 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex relative">
+      <a
+        href="https://intelcounselling.com"
+        className="absolute top-6 right-6 inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-surface-200 bg-white text-sm font-medium text-surface-700 hover:bg-surface-50 hover:text-surface-950 hover:shadow-sm transition-all z-50"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Return to main website
+      </a>
       {/* Left: Branding panel */}
       <div className="hidden lg:flex flex-col justify-between w-[480px] flex-shrink-0 relative overflow-hidden"
         style={{ background: 'linear-gradient(145deg, #000000 0%, #081220 50%, #03060c 100%)' }}>
