@@ -8,6 +8,84 @@ const crypto = require('crypto');
 
 // ── Dashboard ─────────────────────────────────────────────────
 
+const sqlite3 = require('sqlite3');
+const fs = require('fs');
+const path = require('path');
+
+async function getMainWebsiteTestStats() {
+  return new Promise((resolve) => {
+    // Locate SQLite database
+    let sqliteDbPath = path.resolve(__dirname, '../../../../backend/database.sqlite');
+    if (!fs.existsSync(sqliteDbPath)) {
+      sqliteDbPath = path.resolve(__dirname, '../../database.sqlite');
+    }
+
+    if (!fs.existsSync(sqliteDbPath)) {
+      return resolve({
+        career: 0,
+        phq9: 0,
+        gad7: 0,
+        pss10: 0,
+        sleep: 0,
+        sas: 0
+      });
+    }
+
+    const db = new sqlite3.Database(sqliteDbPath, sqlite3.OPEN_READONLY, (err) => {
+      if (err) {
+        logger.error('Failed to open SQLite database for stats:', err);
+        return resolve({ career: 0, phq9: 0, gad7: 0, pss10: 0, sleep: 0, sas: 0 });
+      }
+    });
+
+    db.all("SELECT test_id, encrypted_answers, iv FROM assessment_results", (err, rows) => {
+      db.close();
+      if (err) {
+        logger.error('Failed to query SQLite database for stats:', err);
+        return resolve({ career: 0, phq9: 0, gad7: 0, pss10: 0, sleep: 0, sas: 0 });
+      }
+
+      const stats = {
+        career: 0,
+        phq9: 0,
+        gad7: 0,
+        pss10: 0,
+        sleep: 0,
+        sas: 0
+      };
+
+      if (!rows) return resolve(stats);
+
+      rows.forEach(row => {
+        if (row.test_id) {
+          if (stats[row.test_id] !== undefined) {
+            stats[row.test_id]++;
+          }
+        } else if (row.encrypted_answers) {
+          try {
+            const rawKey = process.env.ENCRYPTION_KEY || 'intel_counselling_default_dev_key_32b!';
+            const key = crypto.createHash('sha256').update(rawKey).digest();
+            const iv = Buffer.from(row.iv, 'hex');
+            const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+            let decrypted = decipher.update(row.encrypted_answers, 'hex', 'utf8');
+            decrypted += decipher.final('utf8');
+
+            const len = decrypted.length;
+            if (len === 200) stats.career++;
+            else if (len === 9) stats.phq9++;
+            else if (len === 7) stats.gad7++;
+            else if (len === 10) stats.pss10++;
+          } catch (e) {
+            // Ignore decryption failures
+          }
+        }
+      });
+
+      resolve(stats);
+    });
+  });
+}
+
 async function getDashboard(req, res) {
   try {
     const isSchoolAdmin = req.user.role === 'SCHOOL_ADMIN';
@@ -19,6 +97,7 @@ async function getDashboard(req, res) {
       totalParents,
       alertsThisMonth,
       recentAlerts,
+      mainWebsiteStats,
     ] = await Promise.all([
       isSchoolAdmin ? 1 : prisma.school.count({ where: { isActive: true } }),
       prisma.user.count({ where: { role: 'STUDENT', isActive: true, ...(isSchoolAdmin && { schoolId }) } }),
@@ -37,10 +116,11 @@ async function getDashboard(req, res) {
           student: { select: { firstName: true, lastName: true, school: { select: { name: true } } } },
         },
       }),
+      getMainWebsiteTestStats(),
     ]);
 
     res.json({
-      stats: { totalSchools, totalStudents, totalParents, alertsThisMonth },
+      stats: { totalSchools, totalStudents, totalParents, alertsThisMonth, mainWebsiteStats },
       recentAlerts,
     });
   } catch (err) {

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link, Navigate } from 'react-router-dom';
-import { School, Users, AlertTriangle, ArrowRight, Activity, ShieldCheck } from 'lucide-react';
+import { School, Users, AlertTriangle, ArrowRight, Activity, ShieldCheck, Brain, HeartPulse, Moon, Smartphone, Sparkles } from 'lucide-react';
 import { Card, Spinner, EmptyState } from '../../components/ui';
 import SeverityBadge from '../../components/charts/SeverityBadge';
 import api from '../../lib/axios';
@@ -130,6 +130,36 @@ export default function AdminDashboard() {
               <ArrowRight className="w-5 h-5 text-surface-300 group-hover:text-accent-500 transform group-hover:translate-x-1 transition-all" />
             </Link>
           </div>
+
+          <h3 className="text-lg font-semibold text-surface-900 mt-8">Main Website Activity</h3>
+          <Card className="p-5 border-surface-200/50 shadow-sm bg-white rounded-2xl">
+            <p className="text-sm text-surface-500 mb-4">Total completions per assessment type</p>
+            <div className="space-y-4">
+              {[
+                { label: 'Career Guidance Assessment', count: stats?.mainWebsiteStats?.career || 0, icon: Sparkles, color: 'text-amber-500 bg-amber-50 animate-pulse' },
+                { label: 'Depression Screening (PHQ-9)', count: stats?.mainWebsiteStats?.phq9 || 0, icon: HeartPulse, color: 'text-red-500 bg-red-50' },
+                { label: 'Anxiety Screening (GAD-7)', count: stats?.mainWebsiteStats?.gad7 || 0, icon: Activity, color: 'text-emerald-500 bg-emerald-50' },
+                { label: 'Stress Self-Check (PSS-10)', count: stats?.mainWebsiteStats?.pss10 || 0, icon: Brain, color: 'text-amber-700 bg-amber-50' },
+                { label: 'Sleep Hygiene Check', count: stats?.mainWebsiteStats?.sleep || 0, icon: Moon, color: 'text-indigo-500 bg-indigo-50' },
+                { label: 'Smartphone Addiction (SAS)', count: stats?.mainWebsiteStats?.sas || 0, icon: Smartphone, color: 'text-blue-500 bg-blue-50' }
+              ].map((test, index) => {
+                const Icon = test.icon;
+                return (
+                  <div key={index} className="flex items-center justify-between p-2 rounded-xl hover:bg-surface-50 transition-colors">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${test.color}`}>
+                        <Icon className="w-5 h-5" />
+                      </div>
+                      <span className="text-sm font-semibold text-surface-700 truncate">{test.label}</span>
+                    </div>
+                    <span className="text-sm font-bold text-surface-800 bg-surface-100 px-2.5 py-1 rounded-md shrink-0">
+                      {test.count}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
         </div>
       </div>
     </div>

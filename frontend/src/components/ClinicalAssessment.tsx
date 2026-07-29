@@ -52,6 +52,29 @@ const ClinicalAssessment: React.FC<ClinicalAssessmentProps> = ({ config, onClose
     
     if (!isInitialLoad) {
       setSearchParams({ r: finalAnswers.join('') }, { replace: true });
+
+      let userId = null;
+      try {
+        const savedUser = localStorage.getItem('auth_user');
+        if (savedUser) userId = JSON.parse(savedUser).id;
+      } catch (e) {}
+
+      fetch('/api/save-answers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          answers: finalAnswers.join(''), 
+          userId,
+          testId: config.id
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.id) {
+          setSearchParams({ r: finalAnswers.join(''), id: data.id }, { replace: true });
+        }
+      })
+      .catch(err => console.error('Failed to save clinical answers:', err));
     }
     
     finalAnswers.forEach((val, idx) => {

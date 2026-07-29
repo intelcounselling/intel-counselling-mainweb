@@ -17,7 +17,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { answers, userId } = req.body;
+    const { answers, userId, testId } = req.body;
 
     if (!answers || typeof answers !== 'string') {
       return res.status(400).json({ error: 'Invalid answers payload' });
@@ -26,7 +26,10 @@ export default async function handler(req, res) {
     const { encrypted, iv } = encrypt(answers);
     const id = crypto.randomUUID();
 
-    await insertResult(id, encrypted, iv, userId || null);
+    // Default to 'career' if answers length is 200
+    const resolvedTestId = testId || (answers.length === 200 ? 'career' : null);
+
+    await insertResult(id, encrypted, iv, userId || null, resolvedTestId);
 
     res.status(200).json({ id });
   } catch (error) {

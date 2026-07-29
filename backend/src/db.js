@@ -52,13 +52,19 @@ function getDb() {
         encrypted_answers TEXT NOT NULL,
         iv TEXT NOT NULL,
         user_id TEXT,
+        test_id TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `, () => {
-      // Add column if it doesn't already exist (idempotent migration)
+      // Add columns if they don't already exist (idempotent migration)
       db.all("PRAGMA table_info(assessment_results)", (err, rows) => {
-        if (!err && rows && !rows.some(r => r.name === 'user_id')) {
-          db.run('ALTER TABLE assessment_results ADD COLUMN user_id TEXT', () => {});
+        if (!err && rows) {
+          if (!rows.some(r => r.name === 'user_id')) {
+            db.run('ALTER TABLE assessment_results ADD COLUMN user_id TEXT', () => {});
+          }
+          if (!rows.some(r => r.name === 'test_id')) {
+            db.run('ALTER TABLE assessment_results ADD COLUMN test_id TEXT', () => {});
+          }
         }
       });
     });
@@ -66,12 +72,12 @@ function getDb() {
   return db;
 }
 
-export function insertResult(id, encryptedAnswers, iv, userId = null) {
+export function insertResult(id, encryptedAnswers, iv, userId = null, testId = null) {
   return new Promise((resolve, reject) => {
     const database = getDb();
     database.run(
-      'INSERT INTO assessment_results (id, encrypted_answers, iv, user_id) VALUES (?, ?, ?, ?)',
-      [id, encryptedAnswers, iv, userId],
+      'INSERT INTO assessment_results (id, encrypted_answers, iv, user_id, test_id) VALUES (?, ?, ?, ?, ?)',
+      [id, encryptedAnswers, iv, userId, testId],
       function (err) {
         if (err) reject(err);
         else resolve(this.lastID);
