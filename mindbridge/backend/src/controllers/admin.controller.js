@@ -128,7 +128,75 @@ async function getDashboard(req, res) {
   }
 }
 
-// ── Schools ───────────────────────────────────────────────────
+// ── Severe Students With No Appointment ───────────────────────
+
+async function getSevereNoAppointment(req, res) {
+  try {
+    const isSchoolAdmin = req.user.role === 'SCHOOL_ADMIN';
+    const schoolId = req.user.schoolId;
+
+    // Fetch the most recent isLow=true result per student
+    const flaggedResults = await prisma.testResult.findMany({
+      where: {
+        isLow: true,
+        ...(isSchoolAdmin && { student: { schoolId } }),
+      },
+      orderBy: { takenAt: 'desc' },
+      distinct: ['studentId'],
+      include: {
+        student: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            school: { select: { name: true } },
+          },
+        },
+        test: { select: { name: true, category: true } },
+      },
+    });
+
+    if (!flaggedResults.length) return res.json({ students: [] });
+
+    const now = new Date();
+
+    // Filter to students with no pending/confirmed future appointment
+    const students = [];
+    for (const r of flaggedResults) {
+      const appt = await prisma.appointment.findFirst({
+        where: {
+          patientId: r.studentId,
+          slot: { gte: now },
+          status: { in: ['PENDING', 'CONFIRMED'] },
+        },
+      });
+      if (!appt) {
+        const daysSince = Math.floor((now - new Date(r.takenAt)) / (1000 * 60 * 60 * 24));
+        students.push({
+          id: r.studentId,
+          firstName: r.student.firstName,
+          lastName: r.student.lastName,
+          email: r.student.email,
+          school: r.student.school,
+          severity: r.severity,
+          testName: r.test.name,
+          testCategory: r.test.category,
+          takenAt: r.takenAt,
+          daysSince,
+        });
+      }
+    }
+
+    // Sort by most urgent (oldest unactioned flag first)
+    students.sort((a, b) => b.daysSince - a.daysSince);
+
+    res.json({ students });
+  } catch (err) {
+    handleError(res, err, 'getSevereNoAppointment');
+  }
+}
+
 
 async function createSchool(req, res) {
   try {
@@ -884,4 +952,5 @@ module.exports = {
   deleteUser,
   batchDeleteUsers,
   deleteSchool,
+  getSevereNoAppointment,
 };

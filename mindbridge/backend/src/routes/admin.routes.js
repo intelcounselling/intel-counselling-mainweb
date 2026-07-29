@@ -16,6 +16,7 @@ const superAdmin = [verifyToken, requireRole('SUPER_ADMIN')];
 const admin = [verifyToken, requireRole('SUPER_ADMIN', 'SCHOOL_ADMIN'), checkSchoolAccess];
 
 router.get('/dashboard', ...admin, ctrl.getDashboard);
+router.get('/severe-no-appt', ...admin, ctrl.getSevereNoAppointment);
 
 // Schools
 router.get('/schools', ...admin, ctrl.getSchools);

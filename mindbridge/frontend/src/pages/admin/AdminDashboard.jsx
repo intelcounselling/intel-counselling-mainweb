@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link, Navigate } from 'react-router-dom';
-import { School, Users, AlertTriangle, ArrowRight, Activity, ShieldCheck, Brain, HeartPulse, Moon, Smartphone, Sparkles } from 'lucide-react';
+import { School, Users, AlertTriangle, ArrowRight, Activity, ShieldCheck, Brain, HeartPulse, Moon, Smartphone, Sparkles, Clock, CalendarPlus } from 'lucide-react';
 import { Card, Spinner, EmptyState } from '../../components/ui';
 import SeverityBadge from '../../components/charts/SeverityBadge';
 import api from '../../lib/axios';
@@ -31,6 +31,14 @@ export default function AdminDashboard() {
     queryKey: ['admin-dashboard'],
     queryFn: () => api.get('/admin/dashboard').then(r => r.data),
   });
+
+  const { data: severeData } = useQuery({
+    queryKey: ['admin-severe-no-appt'],
+    queryFn: () => api.get('/admin/severe-no-appt').then(r => r.data),
+    refetchInterval: 60000,
+  });
+
+  const severeStudents = severeData?.students || [];
 
   if (isLoading) return <div className="flex justify-center pt-20"><Spinner size="xl" /></div>;
 
@@ -64,6 +72,81 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Content Area */}
         <div className="lg:col-span-2 space-y-8">
+          {/* At-Risk — No Appointment Panel */}
+          <Card padding={false} className="overflow-hidden border-red-200/70 shadow-sm">
+            <div className="px-6 py-5 border-b border-red-100 bg-red-50/60 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-red-800 flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-red-500" />
+                At-Risk — No Appointment
+                {severeStudents.length > 0 && (
+                  <span className="ml-2 px-2 py-0.5 rounded-full bg-red-500 text-white text-xs font-bold">
+                    {severeStudents.length}
+                  </span>
+                )}
+              </h3>
+              <span className="text-xs text-red-400 font-medium">Students flagged severe with no upcoming session</span>
+            </div>
+            {severeStudents.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10 text-surface-400">
+                <ShieldCheck className="w-10 h-10 text-green-400 mb-2" />
+                <p className="text-sm font-medium text-green-600">All flagged students have appointments booked</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-red-50">
+                {severeStudents.map(student => {
+                  const urgency = student.daysSince >= 14
+                    ? { ring: 'border-l-4 border-red-500', dot: 'bg-red-500', label: 'Critical', labelColor: 'text-red-600 bg-red-50' }
+                    : student.daysSince >= 7
+                    ? { ring: 'border-l-4 border-orange-400', dot: 'bg-orange-400', label: 'Urgent', labelColor: 'text-orange-600 bg-orange-50' }
+                    : { ring: 'border-l-4 border-yellow-400', dot: 'bg-yellow-400', label: 'Monitor', labelColor: 'text-yellow-700 bg-yellow-50' };
+
+                  const initials = `${student.firstName[0]}${student.lastName[0]}`.toUpperCase();
+
+                  return (
+                    <div key={student.id} className={`flex items-center gap-4 px-6 py-4 hover:bg-red-50/40 transition-colors ${urgency.ring}`}>
+                      {/* Avatar */}
+                      <div className="w-10 h-10 rounded-full bg-surface-200 flex items-center justify-center flex-shrink-0 font-bold text-surface-600 text-sm">
+                        {initials}
+                      </div>
+
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-surface-900 truncate">
+                          {student.firstName} {student.lastName}
+                        </p>
+                        <p className="text-xs text-surface-500 truncate mt-0.5">
+                          {student.school?.name} &middot; {student.testName}
+                        </p>
+                      </div>
+
+                      {/* Severity */}
+                      <SeverityBadge severity={student.severity} />
+
+                      {/* Urgency label */}
+                      <span className={`hidden sm:inline-flex text-xs font-semibold px-2 py-0.5 rounded-full ${urgency.labelColor}`}>
+                        {urgency.label}
+                      </span>
+
+                      {/* Days since */}
+                      <span className="flex items-center gap-1 text-xs text-surface-400 flex-shrink-0 w-20 justify-end">
+                        <Clock className="w-3.5 h-3.5" />
+                        {student.daysSince === 0 ? 'Today' : `${student.daysSince}d ago`}
+                      </span>
+
+                      {/* Schedule button */}
+                      <button
+                        title="Schedule appointment"
+                        className="flex-shrink-0 w-8 h-8 rounded-lg bg-primary-50 hover:bg-primary-600 text-primary-600 hover:text-white flex items-center justify-center transition-colors"
+                        onClick={() => window.location.href = `/admin/users`}
+                      >
+                        <CalendarPlus className="w-4 h-4" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </Card>
           <Card padding={false} className="overflow-hidden border-surface-200/50 shadow-sm">
             <div className="px-6 py-5 border-b border-surface-100 bg-surface-50/50 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-surface-900 flex items-center gap-2">
