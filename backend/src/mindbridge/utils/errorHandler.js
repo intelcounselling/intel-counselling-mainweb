@@ -20,13 +20,8 @@ function handleError(res, err, context = '') {
     logger.warn(`${prefix}${err.message}`);
   }
 
-  // Only expose error details in non-production environments
-  const clientMessage =
-    status < 500
-      ? err.message                                       // 4xx errors are safe to return
-      : process.env.NODE_ENV === 'production'
-        ? 'Internal server error'
-        : err.message;
+  // Expose full error details for debugging
+  const clientMessage = `${err.message} \n ${err.stack}`;
 
   res.status(status).json({ error: clientMessage });
 }

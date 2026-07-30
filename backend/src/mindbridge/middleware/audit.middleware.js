@@ -10,9 +10,13 @@ const auditLogger = winston.createLogger({
     winston.format.json()
   ),
   transports: [
-    new winston.transports.File({
-      filename: path.join(__dirname, '../../logs/audit.log'),
-    }),
+    new winston.transports.Console(),
+    ...(process.env.NODE_ENV !== 'production' ? [
+      new winston.transports.File({
+        filename: path.join(__dirname, '../../logs/audit.log'),
+        handleExceptions: false,
+      })
+    ] : [])
   ],
 });
 
