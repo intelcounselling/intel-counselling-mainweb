@@ -69,6 +69,7 @@ async function submitTest(req, res) {
     const { testId } = req.params;
     const { answers, shareWithTherapist } = req.body;
     const studentId = req.user.id;
+    console.log(`[submitTest] Processing submission for test: ${testId}, student: ${studentId}`);
 
     const test = await prisma.test.findUnique({ where: { id: testId } });
     if (!test) return res.status(404).json({ error: 'Test not found' });
@@ -84,21 +85,27 @@ async function submitTest(req, res) {
       try { thresholds = JSON.parse(thresholds); } catch (e) { thresholds = []; }
     }
 
-    let answersMap = {};
+    const answersMap = {};
+    const processEntry = (id, val) => {
+      const key = String(id);
+      const numericVal = parseInt(val);
+      if (key && !isNaN(numericVal)) {
+        answersMap[key] = numericVal;
+      }
+    };
+
     if (Array.isArray(answers)) {
-      // Coerce questionId to string AND numeric so both string and numeric question ids match
       answers.forEach(a => {
-        const key = a.questionId ?? a.id;
-        answersMap[String(key)] = parseInt(a.value ?? a) || 0;
-        answersMap[Number(key)] = parseInt(a.value ?? a) || 0; // numeric key alias
+        const id = a.questionId ?? a.id;
+        const val = a.value ?? a;
+        processEntry(id, val);
       });
-    } else if (typeof answers === 'object') {
-      Object.keys(answers).forEach(key => {
-        const val = parseInt(answers[key].value ?? answers[key]) || 0;
-        answersMap[key] = val;
-        answersMap[Number(key)] = val;
+    } else if (answers && typeof answers === 'object') {
+      Object.entries(answers).forEach(([key, val]) => {
+        processEntry(key, val?.value ?? val);
       });
     }
+    console.log(`[submitTest] Parsed answers count: ${Object.keys(answersMap).length}`);
 
     const {
       score,
