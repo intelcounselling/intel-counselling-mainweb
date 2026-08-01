@@ -50,6 +50,7 @@ app.use((req, res, next) => {
 app.use(auditLog);
 
 // ── API Routes ────────────────────────────────────────────────
+app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 app.use('/api', apiLimiter, routes);
 
 // ── 404 Handler ───────────────────────────────────────────────
