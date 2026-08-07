@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const compression = require('compression');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const logger = require('./utils/logger');
@@ -11,6 +12,8 @@ const { auditLog } = require('./middleware/audit.middleware');
 const routes = require('./routes');
 
 const app = express();
+
+app.use(compression());
 
 // ── Security ──────────────────────────────────────────────────
 app.use(helmet({

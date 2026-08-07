@@ -1,6 +1,6 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LazyImage } from './ui/LazyImage';
 
 const Gallery: React.FC = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -15,14 +15,6 @@ const Gallery: React.FC = () => {
     src: `/assets/imgs/gallery/${i + 1}.jpeg`,
   }));
   const displayImages = [...images, ...images];
-
-  // Tile config — smaller on mobile
-  const getTile = (index: number): { colSpan: number } => {
-    const i = index % 14;
-    // wide tiles at positions: 0, 3, 7, 10, 13
-    const wide = [0, 3, 7, 10, 13];
-    return { colSpan: wide.includes(i) ? 2 : 1 };
-  };
 
   // Auto-scroll
   useEffect(() => {
@@ -89,13 +81,10 @@ const Gallery: React.FC = () => {
     setSelectedImage(images[(i + 1) % images.length]);
   };
 
-  // Responsive row height
-  const rowH = typeof window !== 'undefined' && window.innerWidth < 640 ? 130 : 200;
-  const gap = 10;
-  const totalH = rowH * 2 + gap;
-  // Responsive tile width
-  const tileW = typeof window !== 'undefined' && window.innerWidth < 640 ? 120 : 200;
-  const wideTileW = tileW * 2 + gap;
+  // Responsive Carousel heights and widths
+  const carouselH = typeof window !== 'undefined' && window.innerWidth < 640 ? 180 : 260;
+  const cardW = typeof window !== 'undefined' && window.innerWidth < 640 ? 240 : 360;
+  const gap = 16;
 
   return (
     <section id="gallery" className="bg-[#1A1A1A] py-14 sm:py-20 md:py-24 scroll-mt-20 overflow-hidden select-none">
@@ -134,16 +123,13 @@ const Gallery: React.FC = () => {
             className={`flex overflow-x-auto overflow-y-hidden px-4 sm:px-8 md:px-14 pb-2
                         [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden
                         ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-            style={{ height: `${totalH + 12}px` }}
+            style={{ height: `${carouselH + 12}px` }}
           >
             <div
-              className="grid grid-rows-2 grid-flow-col"
-              style={{ gap: `${gap}px`, height: `${totalH}px` }}
+              className="flex items-center"
+              style={{ gap: `${gap}px`, height: `${carouselH}px` }}
             >
               {displayImages.map((img, index) => {
-                const tile = getTile(index);
-                const isWide = tile.colSpan === 2;
-                const w = isWide ? wideTileW : tileW;
                 return (
                   <div
                     key={`${img.id}-${index}`}
@@ -154,18 +140,16 @@ const Gallery: React.FC = () => {
                                transition-all duration-500
                                hover:border-white/20"
                     style={{
-                      width: `${w}px`,
-                      minWidth: `${w}px`,
-                      gridRow: 'span 1',
-                      height: `${rowH}px`,
+                      width: `${cardW}px`,
+                      minWidth: `${cardW}px`,
+                      height: `${carouselH}px`,
                     }}
                   >
-                    <img
+                    <LazyImage
                       src={img.src}
                       alt={`Gallery ${img.id}`}
                       draggable={false}
-                      loading={index < 8 ? 'eager' : 'lazy'}
-                      className="w-full h-full object-contain pointer-events-none
+                      className="w-full h-full object-cover pointer-events-none
                                  transition-transform duration-[2000ms] ease-out
                                  group-hover/tile:scale-[1.04]"
                     />
@@ -214,7 +198,7 @@ const Gallery: React.FC = () => {
             <ChevronLeft size={20} />
           </button>
           <div className="relative max-w-5xl w-full h-full flex items-center justify-center" onClick={e => e.stopPropagation()}>
-            <img
+            <LazyImage
               key={selectedImage.src}
               src={selectedImage.src}
               alt="Gallery expanded"

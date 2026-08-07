@@ -19,23 +19,25 @@ async function verifyToken(req, res, next) {
     const { admin, initialized } = require('../config/firebaseAdmin');
 
     try {
-      if (initialized) {
-        // Try Firebase first
-        const decodedToken = await admin.auth().verifyIdToken(token);
-        emailFromFirebase = decodedToken.email;
-      } else {
-        throw new Error('Firebase Admin not initialized');
-      }
-    } catch (firebaseErr) {
-      // Fallback to JWT if Firebase fails or isn't initialized
-      try {
-        payload = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
-      } catch (err) {
-        if (err.name === 'TokenExpiredError') {
-          return res.status(401).json({ error: 'Token expired', code: 'TOKEN_EXPIRED' });
+      const unverifiedDecoded = jwt.decode(token, { complete: true });
+      
+      const isFirebaseToken = unverifiedDecoded?.payload?.iss?.includes('securetoken.google.com');
+
+      if (isFirebaseToken) {
+        if (initialized) {
+          const decodedToken = await admin.auth().verifyIdToken(token);
+          emailFromFirebase = decodedToken.email;
+        } else {
+          throw new Error('Firebase Admin not initialized');
         }
-        return res.status(401).json({ error: 'Invalid token' });
+      } else {
+        payload = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
       }
+    } catch (err) {
+      if (err.name === 'TokenExpiredError') {
+        return res.status(401).json({ error: 'Token expired', code: 'TOKEN_EXPIRED' });
+      }
+      return res.status(401).json({ error: 'Invalid token' });
     }
 
     // Find user by email (Firebase) or by ID (JWT)

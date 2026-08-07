@@ -29,18 +29,18 @@ const ReadingQuote: React.FC = () => {
   return (
     <>
       <style>{`
-        @keyframes elegantFadeIn {
-          0%   { opacity: 0; transform: translateY(16px); filter: blur(3px); }
-          100% { opacity: 1; transform: translateY(0);   filter: blur(0); }
+        @keyframes softRise {
+          0%   { opacity: 0; transform: translateY(10px); }
+          100% { opacity: 1; transform: translateY(0); }
         }
-        .animate-elegant-read { animation: elegantFadeIn 1.1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+        .animate-elegant-read { animation: softRise 1.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
       `}</style>
       <div
         ref={quoteRef}
         className="mb-10 sm:mb-16 md:mb-24 relative z-10
                    text-center px-4 max-w-4xl mx-auto
-                   flex flex-wrap justify-center items-baseline
-                   gap-x-2 sm:gap-x-4 md:gap-x-6 gap-y-2 sm:gap-y-3 md:gap-y-5"
+                   flex flex-wrap justify-center items-end
+                   gap-x-2 sm:gap-x-3 md:gap-x-4 gap-y-1 sm:gap-y-2 md:gap-y-3"
       >
         {words.map((word, i) => {
           const cleanWord = word.replace(/["\.]/g, '').toLowerCase();
@@ -50,10 +50,15 @@ const ReadingQuote: React.FC = () => {
               key={i}
               className={`inline-block opacity-0 ${isVisible ? 'animate-elegant-read' : ''}
                 ${isEmphasized
-                  ? 'font-serif italic text-xl sm:text-3xl md:text-5xl font-light text-terracotta lowercase tracking-tight'
-                  : 'font-sans font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] text-[10px] sm:text-xs md:text-sm text-white/50'
+                  ? 'font-serif italic text-2xl sm:text-4xl md:text-6xl font-light lowercase tracking-tight'
+                  : 'text-lg sm:text-2xl md:text-4xl tracking-wide font-light'
                 }`}
-              style={{ animationDelay: isVisible ? `${i * 100}ms` : '0ms' }}
+              style={{
+                animationDelay: isVisible ? `${i * 130}ms` : '0ms',
+                fontFamily: isEmphasized ? "'Playfair Display', serif" : "'Cormorant Garamond', serif",
+                color: isEmphasized ? '#C19B6C' : '#D4C5A9',
+                fontWeight: isEmphasized ? 300 : 400,
+              }}
             >
               {word}
             </span>

@@ -43,11 +43,6 @@ const CareerGuidancePage: React.FC = () => {
 
         <FadeIn delay={200}>
           <SpotlightCard className="bg-[#1C1F22] border-2 border-terracotta/20 p-8 md:p-16 rounded-[40px] md:rounded-[60px] shadow-2xl transition-all duration-700 hover:scale-[1.01] flex flex-col gap-10 text-left relative overflow-hidden">
-            {/* Promo Corner Ribbon */}
-            <div className="absolute top-0 right-0 bg-terracotta text-white font-black text-[10px] uppercase tracking-widest px-8 py-2 rotate-45 translate-x-6 translate-y-3 shadow-md">
-              Promo ₹1
-            </div>
-
             <div className="flex flex-col md:flex-row gap-8 items-start">
               <div className="w-16 h-16 md:w-20 md:h-20 shrink-0 bg-intel-dark text-white rounded-3xl flex items-center justify-center shadow-xl border border-white/10">
                 <Sparkles size={28} />
@@ -108,8 +103,8 @@ const CareerGuidancePage: React.FC = () => {
 
             <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-8 border-t border-white/10">
               <div className="text-left">
-                <span className="text-xs font-bold text-white/40 block mb-1 uppercase tracking-wider">Special Price</span>
-                <span className="text-4xl md:text-5xl font-black text-white serif tracking-tight">₹1<span className="text-xs font-bold text-white/60 ml-1">only</span></span>
+                <span className="text-xs font-bold text-white/40 block mb-1 uppercase tracking-wider">Packages from</span>
+                <span className="text-4xl md:text-5xl font-black text-white serif tracking-tight">₹2,999</span>
               </div>
 
               <button 

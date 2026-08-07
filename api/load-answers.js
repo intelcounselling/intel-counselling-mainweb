@@ -1,18 +1,5 @@
 import { decrypt } from './_encryption.js';
-
-let kv;
-const memoryStore = new Map();
-
-async function getKV() {
-  if (kv) return kv;
-  try {
-    const { kv: vercelKV } = await import('@vercel/kv');
-    kv = vercelKV;
-    return kv;
-  } catch {
-    return null;
-  }
-}
+import { db } from './_firebase.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', true);
@@ -27,19 +14,19 @@ export default async function handler(req, res) {
     const { id } = req.query;
     if (!id) return res.status(400).json({ error: 'Missing id parameter' });
 
-    const store = await getKV();
-    let raw;
-
-    if (store) {
-      raw = await store.get(`assessment:${id}`);
-    } else {
-      raw = memoryStore.get(id) || null;
+    if (!db) {
+      return res.status(500).json({ error: 'Database not configured' });
     }
 
-    if (!raw) return res.status(404).json({ error: 'Result not found' });
-
-    const { encrypted, iv } = typeof raw === 'string' ? JSON.parse(raw) : raw;
-    const answers = decrypt(encrypted, iv);
+    const docRef = db.collection('assessments').doc(id);
+    const doc = await docRef.get();
+    
+    if (!doc.exists) {
+      return res.status(404).json({ error: 'Result not found' });
+    }
+    
+    const data = doc.data();
+    const answers = decrypt(data.encrypted, data.iv);
 
     res.status(200).json({ answers });
   } catch (error) {

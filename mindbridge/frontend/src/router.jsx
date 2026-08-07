@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import ProtectedRoute from './utils/roleGuard';
 import { ROLE_DASHBOARDS } from './utils/roleGuard';
@@ -9,39 +10,53 @@ import Login from './pages/auth/Login';
 import ResetPassword from './pages/auth/ResetPassword';
 import ForgotPassword from './pages/auth/ForgotPassword';
 
+// ── Helper ────────────────────────────────────────────────────
+const Loadable = (Component) => (props) => (
+  <Suspense fallback={
+    <div className="flex h-[calc(100vh-64px)] w-full items-center justify-center bg-surface-50">
+      <div className="flex flex-col items-center gap-4">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary-200 border-t-primary-600"></div>
+        <p className="text-sm font-medium text-surface-500">Loading...</p>
+      </div>
+    </div>
+  }>
+    <Component {...props} />
+  </Suspense>
+);
+
 // ── Admin ─────────────────────────────────────────────
-import AdminDashboard from './pages/admin/AdminDashboard';
-import SchoolList from './pages/admin/SchoolList';
-import SchoolDetail from './pages/admin/SchoolDetail';
-import SchoolDashboard from './pages/admin/SchoolDashboard';
-import ClassManager from './pages/admin/ClassManager';
-import ClassAnalytics from './pages/admin/ClassAnalytics';
-import CreateFamily from './pages/admin/CreateFamily';
-import UserManagement from './pages/admin/UserManagement';
-import GenerateCredentials from './pages/admin/GenerateCredentials';
+const AdminDashboard = Loadable(lazy(() => import('./pages/admin/AdminDashboard')));
+const SchoolList = Loadable(lazy(() => import('./pages/admin/SchoolList')));
+const SchoolDetail = Loadable(lazy(() => import('./pages/admin/SchoolDetail')));
+const SchoolDashboard = Loadable(lazy(() => import('./pages/admin/SchoolDashboard')));
+const ClassManager = Loadable(lazy(() => import('./pages/admin/ClassManager')));
+const ClassAnalytics = Loadable(lazy(() => import('./pages/admin/ClassAnalytics')));
+const CreateFamily = Loadable(lazy(() => import('./pages/admin/CreateFamily')));
+const UserManagement = Loadable(lazy(() => import('./pages/admin/UserManagement')));
+const GenerateCredentials = Loadable(lazy(() => import('./pages/admin/GenerateCredentials')));
 
 // ── Psychiatrist ──────────────────────────────────────────────
-import PsychiatristDashboard from './pages/psychiatrist/PsychiatristDashboard';
-import SchoolOverview from './pages/psychiatrist/SchoolOverview';
-import AlertsFeed from './pages/psychiatrist/AlertsFeed';
-import StudentProfile from './pages/psychiatrist/StudentProfile';
-import AppointmentManager from './pages/psychiatrist/AppointmentManager';
+const PsychiatristDashboard = Loadable(lazy(() => import('./pages/psychiatrist/PsychiatristDashboard')));
+const SchoolOverview = Loadable(lazy(() => import('./pages/psychiatrist/SchoolOverview')));
+const AlertsFeed = Loadable(lazy(() => import('./pages/psychiatrist/AlertsFeed')));
+const StudentProfile = Loadable(lazy(() => import('./pages/psychiatrist/StudentProfile')));
+const AppointmentManager = Loadable(lazy(() => import('./pages/psychiatrist/AppointmentManager')));
 
 // ── Parent ─────────────────────────────────────────────
-import ParentDashboard from './pages/parent/ParentDashboard';
-import ChildResults from './pages/parent/ChildResults';
-import AppointmentList from './pages/parent/AppointmentList';
-import ComparisonReport from './pages/parent/ComparisonReport';
+const ParentDashboard = Loadable(lazy(() => import('./pages/parent/ParentDashboard')));
+const ChildResults = Loadable(lazy(() => import('./pages/parent/ChildResults')));
+const AppointmentList = Loadable(lazy(() => import('./pages/parent/AppointmentList')));
+const ComparisonReport = Loadable(lazy(() => import('./pages/parent/ComparisonReport')));
 
 // ── Student ───────────────────────────────────────────────────
-import StudentDashboard from './pages/student/StudentDashboard';
-import TestList from './pages/student/TestList';
-import TakeTest from './pages/student/TakeTest';
-import ResultDetail from './pages/student/ResultDetail';
-import ConcernForm from './pages/student/ConcernForm';
+const StudentDashboard = Loadable(lazy(() => import('./pages/student/StudentDashboard')));
+const TestList = Loadable(lazy(() => import('./pages/student/TestList')));
+const TakeTest = Loadable(lazy(() => import('./pages/student/TakeTest')));
+const ResultDetail = Loadable(lazy(() => import('./pages/student/ResultDetail')));
+const ConcernForm = Loadable(lazy(() => import('./pages/student/ConcernForm')));
 
 // ── Shared Settings ───────────────────────────────────────────
-import Settings from './pages/Settings';
+const Settings = Loadable(lazy(() => import('./pages/Settings')));
 
 const ADMIN_ROLES = ['SUPER_ADMIN', 'SCHOOL_ADMIN'];
 

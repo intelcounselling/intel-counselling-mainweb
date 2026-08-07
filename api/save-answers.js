@@ -1,23 +1,6 @@
 import crypto from 'crypto';
 import { encrypt } from './_encryption.js';
-
-// Vercel KV (Redis) — automatically injected when you add KV store in Vercel dashboard
-// Falls back to a simple in-memory map for local dev (won't persist across restarts)
-let kv;
-const memoryStore = new Map();
-
-async function getKV() {
-  if (kv) return kv;
-  try {
-    // Vercel KV SDK — installed via @vercel/kv
-    const { kv: vercelKV } = await import('@vercel/kv');
-    kv = vercelKV;
-    return kv;
-  } catch {
-    // Fallback: in-memory (local dev without KV configured)
-    return null;
-  }
-}
+import { db } from './_firebase.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', true);
@@ -36,15 +19,17 @@ export default async function handler(req, res) {
 
     const { encrypted, iv } = encrypt(answers);
     const id = crypto.randomUUID();
-    const payload = JSON.stringify({ encrypted, iv });
-
-    const store = await getKV();
-    if (store) {
-      // Store with 24-hour TTL (86400 seconds)
-      await store.set(`assessment:${id}`, payload, { ex: 86400 });
+    
+    if (db) {
+      // Set to Firestore in the 'assessments' collection
+      await db.collection('assessments').doc(id).set({
+        encrypted,
+        iv,
+        createdAt: new Date()
+      });
     } else {
-      // Local dev fallback
-      memoryStore.set(id, payload);
+      console.warn('Firebase DB not initialized. Skipping save.');
+      return res.status(500).json({ error: 'Database not configured' });
     }
 
     res.status(200).json({ id });

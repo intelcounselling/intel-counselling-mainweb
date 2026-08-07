@@ -105,10 +105,10 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
     }
 
     try {
-      const amount = 1;
+      const amount = selectedPackage === 'assessment_only' ? 2999 : 4999;
       const serviceName = selectedPackage === 'assessment_only'
-        ? 'Career Guidance Assessment (Assessment Only - Promo)'
-        : 'Career Guidance Assessment (Assessment + Explanation - Promo)';
+        ? 'Career Guidance Assessment (Assessment Only)'
+        : 'Career Guidance Assessment (Assessment + Result Explanation)';
 
       // Create session on server side
       const response = await fetch('/api/create-cashfree-session', {
@@ -359,7 +359,7 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
                     >
                       <div className="flex justify-between items-center w-full">
                         <span className="font-bold text-xs text-intel-dark">Assessment Only</span>
-                        <span className="font-black text-sm text-terracotta">₹1</span>
+                        <span className="font-black text-sm text-terracotta">₹2,999</span>
                       </div>
                       <p className="text-[10px] text-intel-dark/60 leading-relaxed font-medium">Interest Test + Aptitude Test + Intelligence Test + Score Report (PDF)</p>
                     </button>
@@ -375,7 +375,7 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
                     >
                       <div className="flex justify-between items-center w-full">
                         <span className="font-bold text-xs text-intel-dark">Assessment + Result Explanation</span>
-                        <span className="font-black text-sm text-terracotta">₹1</span>
+                        <span className="font-black text-sm text-terracotta">₹4,999</span>
                       </div>
                       <p className="text-[10px] text-intel-dark/60 leading-relaxed font-medium">Three tests + Detailed Report + 30–45 min interpretation session</p>
                     </button>
@@ -465,7 +465,9 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
                   <div className="flex justify-between items-center">
                     <span className="text-xs font-black uppercase text-intel-dark/40">Total Amount:</span>
                     <div className="text-right">
-                      <span className="text-3xl font-black text-intel-dark">₹1</span>
+                      <span className="text-3xl font-black text-intel-dark">
+                        {selectedPackage === 'assessment_only' ? '₹2,999' : '₹4,999'}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -489,7 +491,7 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
                       Processing...
                     </>
                   ) : (
-                    "Pay ₹1 & Begin"
+                    `Pay ${selectedPackage === 'assessment_only' ? '₹2,999' : '₹4,999'} & Begin`
                   )}
                 </button>
 

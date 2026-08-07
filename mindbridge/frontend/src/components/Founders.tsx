@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
-import { Linkedin, Twitter, Mail, Target, Heart, ChevronDown, ChevronUp } from 'lucide-react';
+import { Linkedin, Twitter, Mail, Target, Heart, ChevronRight, X, Star } from 'lucide-react';
+import { LazyImage } from './ui/LazyImage';
 import FadeIn from './FadeIn';
 
 interface Founder {
@@ -11,6 +12,7 @@ interface Founder {
   detailedBio: string;
   specialties: string[];
   philosophy: string;
+  badge: string;
   socials: { icon: React.ReactNode; label: string }[];
 }
 
@@ -19,12 +21,13 @@ interface FoundersProps {
 }
 
 const Founders: React.FC<FoundersProps> = ({ onExpandChange }) => {
-  const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
+  const [activeIdx, setActiveIdx] = useState<number | null>(null);
 
   const founders: Founder[] = [
     {
       name: "Priyanka R.",
-      title: "COUNSELING PSYCHOLOGIST & SENIOR STUDENT COUNSELOR",
+      title: "Counseling Psychologist",
+      badge: "10+ Years Experience",
       desc: "Founder of Intel Counselling with 10+ years of experience, Priyanka supports students with a calm presence.",
       img: "/assets/imgs/pfp_priyanka.png",
       detailedBio: "With over 10 years of dedicated clinical experience, Priyanka R. is the founder of Intel Counselling. She currently serves as a Senior Student Counselor at Rajalakshmi Engineering College. Her calm presence and deep listening make people feel safe, seen, and supported, allowing for genuine emotional breakthroughs.",
@@ -33,13 +36,14 @@ const Founders: React.FC<FoundersProps> = ({ onExpandChange }) => {
       socials: [
         { icon: <Linkedin size={16} />, label: "LinkedIn" },
         { icon: <Twitter size={16} />, label: "Twitter" },
-        { icon: <Mail size={16} />, label: "Email" }
-      ]
+        { icon: <Mail size={16} />, label: "Email" },
+      ],
     },
     {
       name: "Gayathri Gokulakrishnan",
-      title: "CO-FOUNDER & OPERATIONS MANAGER",
-      desc: "Gayathri Gokulakrishnan drives the strategic vision and operational excellence of Intel Counselling.",
+      title: "Co-Founder & Operations",
+      badge: "Strategic Growth",
+      desc: "Gayathri drives the strategic vision and operational excellence of Intel Counselling.",
       img: "/assets/imgs/pfp_gayathri.png",
       detailedBio: "As Co-Founder, Gayathri Gokulakrishnan drives the strategic vision and operational excellence of Intel Counselling. She oversees the organization's digital infrastructure and marketing outreach. Her role ensures that professional mental healthcare remains accessible and secure.",
       specialties: ["Oversees daily operations", "Managing administrative processes", "Strategic growth"],
@@ -47,16 +51,16 @@ const Founders: React.FC<FoundersProps> = ({ onExpandChange }) => {
       socials: [
         { icon: <Linkedin size={16} />, label: "LinkedIn" },
         { icon: <Twitter size={16} />, label: "Twitter" },
-        { icon: <Mail size={16} />, label: "Email" }
-      ]
-    }
+        { icon: <Mail size={16} />, label: "Email" },
+      ],
+    },
   ];
 
-  const toggleExpand = (idx: number) => {
-    const nextIdx = expandedIdx === idx ? null : idx;
-    setExpandedIdx(nextIdx);
-    onExpandChange?.(nextIdx !== null);
-  };
+  const activeFounder = activeIdx !== null ? founders[activeIdx] : null;
+  const isOpen = activeFounder !== null;
+
+  const open = (idx: number) => { setActiveIdx(idx); onExpandChange?.(true); };
+  const close = () => { setActiveIdx(null); onExpandChange?.(false); };
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-16 md:py-28">
@@ -71,125 +75,204 @@ const Founders: React.FC<FoundersProps> = ({ onExpandChange }) => {
         </div>
       </FadeIn>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 md:gap-10 items-start">
-        {founders.map((f, idx) => {
-          const isExpanded = expandedIdx === idx;
+      <div className="flex gap-4 md:gap-6 items-stretch overflow-hidden">
 
-          return (
-            <FadeIn key={idx} delay={idx * 200}>
-              <div
-                onClick={() => toggleExpand(idx)}
-                className={`bg-[#2A2825] rounded-2xl sm:rounded-3xl md:rounded-[48px]
-                             p-4 sm:p-6 md:p-10
-                             shadow-2xl border border-white/5 hover:border-white/10
-                             transition-all duration-700 relative overflow-hidden flex flex-col cursor-pointer
-                             ${isExpanded ? 'ring-2 sm:ring-4 ring-terracotta/20' : ''}`}
-              >
-                {/* Decorative corner */}
-                <div className={`absolute top-0 right-0 w-20 h-20 sm:w-28 sm:h-28 bg-white/5
-                                  rounded-bl-[50px] sm:rounded-bl-[80px] -mr-6 -mt-6 sm:-mr-8 sm:-mt-8
-                                  transition-all duration-700 ${isExpanded ? 'opacity-0 scale-150' : 'opacity-100'}`} />
+        {/* ── LEFT: Founder cards ── */}
+        <div
+          className="flex flex-col gap-4 sm:gap-5 shrink-0 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]"
+          style={{ width: isOpen ? 'min(340px, 42%)' : '100%' }}
+        >
+          {founders.map((f, idx) => {
+            const isActive = activeIdx === idx;
+            return (
+              <FadeIn key={idx} delay={idx * 200}>
+                <div
+                  onClick={() => (isActive ? close() : open(idx))}
+                  className={`group relative rounded-2xl sm:rounded-3xl overflow-hidden cursor-pointer
+                               transition-all duration-500 shadow-2xl
+                               ${isActive
+                                 ? 'ring-2 ring-[#C19B6C]/50 shadow-[0_0_40px_rgba(193,155,108,0.15)]'
+                                 : 'hover:shadow-[0_0_40px_rgba(255,255,255,0.05)]'}`}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-[#2E2C29] via-[#2A2825] to-[#232120]" />
+                  <div className="absolute inset-0 opacity-[0.03]"
+                    style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noise)\'/%3E%3C/svg%3E")' }} />
+                  <div className={`absolute -top-10 -right-10 w-32 h-32 rounded-full blur-3xl transition-all duration-700
+                                   ${isActive ? 'bg-[#C19B6C]/20 opacity-100' : 'bg-[#C19B6C]/10 opacity-0 group-hover:opacity-100'}`} />
+                  <div className={`absolute top-0 left-0 h-0.5 bg-gradient-to-r from-[#C19B6C] to-transparent
+                                   transition-all duration-500 ${isActive ? 'w-full' : 'w-0 group-hover:w-1/2'}`} />
+                  <div className={`absolute inset-0 rounded-2xl sm:rounded-3xl border transition-all duration-500
+                                   ${isActive ? 'border-[#C19B6C]/25' : 'border-white/[0.06] group-hover:border-white/[0.12]'}`} />
 
-                {/* Header row */}
-                <div className={`flex gap-3 sm:gap-5 mb-4 sm:mb-6 transition-all duration-700
-                                  ${isExpanded ? 'flex-col items-center text-center' : 'flex-row items-center'}`}>
-                  {/* Avatar */}
-                  <div className={`shrink-0 overflow-hidden rounded-xl sm:rounded-2xl border-2 border-white/10 shadow-xl
-                                    transition-all duration-700
-                                    ${isExpanded
-                                      ? 'w-20 h-20 sm:w-32 sm:h-32 md:w-48 md:h-48 mb-1'
-                                      : 'w-14 h-14 sm:w-20 sm:h-20 md:w-28 md:h-28'}`}>
-                    <img
-                      src={f.img}
-                      alt={f.name}
-                      className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700"
-                    />
-                  </div>
-
-                  {/* Name & title */}
-                  <div className={`min-w-0 transition-all duration-500 ${isExpanded ? 'text-center' : ''}`}>
-                    <h3 className={`font-black text-white serif leading-tight transition-all duration-700
-                                     ${isExpanded ? 'text-xl sm:text-2xl md:text-3xl' : 'text-base sm:text-xl md:text-2xl'}
-                                     ${!isExpanded ? 'truncate' : ''}`}>
-                      {f.name}
-                    </h3>
-                    <p className="text-[9px] sm:text-[10px] md:text-xs font-bold text-terracotta
-                                   tracking-[0.1em] sm:tracking-[0.15em] uppercase mt-1 sm:mt-2
-                                   leading-snug">
-                      {f.title}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Bio */}
-                <p className={`text-white/60 font-light leading-relaxed transition-all duration-500
-                                text-sm sm:text-sm md:text-base mb-3 sm:mb-5
-                                ${isExpanded ? 'text-center max-w-lg mx-auto' : 'line-clamp-3'}`}>
-                  {isExpanded ? f.detailedBio : f.desc}
-                </p>
-
-                {/* Expanded details */}
-                <div className={`overflow-hidden transition-all duration-700 ease-in-out ${isExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                  <div className="space-y-4 sm:space-y-6 pt-4 sm:pt-6 border-t border-white/10">
-                    {/* Specialties */}
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <Target size={13} className="text-terracotta" />
-                        <h4 className="font-bold text-white text-[9px] sm:text-xs uppercase tracking-widest">
-                          {idx === 1 ? 'Focus' : 'Expertise'}
-                        </h4>
+                  <div className="relative p-5 sm:p-7">
+                    <div className="flex items-start gap-4 mb-4">
+                      <div className="relative shrink-0">
+                        <div className={`absolute inset-0 rounded-xl sm:rounded-2xl bg-gradient-to-br from-[#C19B6C] to-[#1C3F39]
+                                         transition-all duration-500 ${isActive ? 'opacity-70' : 'opacity-0 group-hover:opacity-50'}`}
+                             style={{ padding: '2px', borderRadius: 'inherit' }} />
+                        <div className={`relative overflow-hidden shadow-xl transition-all duration-500
+                                         ${isOpen
+                                           ? 'w-14 h-14 rounded-xl'
+                                           : 'w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl'}`}>
+                          <LazyImage
+                            src={f.img}
+                            alt={f.name}
+                            className={`w-full h-full object-cover transition-all duration-700
+                                        ${isActive ? 'grayscale-0 scale-105' : 'grayscale group-hover:grayscale-0'}`}
+                          />
+                        </div>
                       </div>
-                      <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                        {f.specialties.map((s, i) => (
-                          <span key={i} className="text-[10px] sm:text-xs font-semibold
-                                                     bg-white/5 px-3 py-1.5 rounded-lg
-                                                     text-white/80 border border-white/5">
+
+                      <div className="min-w-0 flex-1 pt-0.5">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Star size={9} className="text-[#C19B6C] fill-[#C19B6C] shrink-0" />
+                          <span className="text-[8px] font-bold text-[#C19B6C]/80 uppercase tracking-[0.2em]">{f.badge}</span>
+                        </div>
+                        <h3 className={`font-black text-white serif leading-tight transition-all duration-300
+                                         ${isOpen ? 'text-sm' : 'text-base sm:text-xl'}`}>
+                          {f.name}
+                        </h3>
+                        <p className={`font-semibold text-white/40 mt-0.5 leading-snug transition-all duration-300
+                                        ${isOpen ? 'text-[8px]' : 'text-[9px] sm:text-[10px]'}`}>
+                          {f.title}
+                        </p>
+                      </div>
+                    </div>
+
+                    {!isOpen && (
+                      <p className="text-white/50 font-light leading-relaxed text-xs sm:text-sm mb-4 line-clamp-2">
+                        {f.desc}
+                      </p>
+                    )}
+
+                    {!isOpen && (
+                      <div className="flex flex-wrap gap-1.5 mb-4">
+                        {f.specialties.slice(0, 3).map((s, i) => (
+                          <span key={i}
+                            className="text-[9px] font-semibold px-2.5 py-1 rounded-full
+                                       bg-white/[0.05] text-white/50 border border-white/[0.07]">
                             {s}
                           </span>
                         ))}
+                        {f.specialties.length > 3 && (
+                          <span className="text-[9px] font-semibold px-2.5 py-1 rounded-full
+                                           bg-white/[0.05] text-white/30 border border-white/[0.07]">
+                            +{f.specialties.length - 3}
+                          </span>
+                        )}
                       </div>
-                    </div>
+                    )}
 
-                    {/* Philosophy */}
-                    <div className="bg-white/[0.03] p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-white/5">
-                      <div className="flex items-center gap-2 mb-2 sm:mb-3">
-                        <Heart size={13} className="text-terracotta" />
-                        <h4 className="font-bold text-white text-[9px] sm:text-xs uppercase tracking-widest">Philosophy</h4>
+                    <div className="h-px bg-white/[0.06] mb-4" />
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        {f.socials.slice(0, isOpen ? 2 : 3).map((social, sIdx) => (
+                          <button
+                            key={sIdx}
+                            onClick={e => e.stopPropagation()}
+                            aria-label={social.label}
+                            className="w-7 h-7 bg-white/[0.05] text-white/40 rounded-lg flex items-center justify-center
+                                       hover:bg-[#C19B6C] hover:text-white transition-all border border-white/[0.06]"
+                          >
+                            {React.isValidElement(social.icon) &&
+                              React.cloneElement(social.icon as React.ReactElement<any>, { size: 11 })}
+                          </button>
+                        ))}
                       </div>
-                      <p className="text-sm sm:text-base md:text-lg text-white/70 italic leading-relaxed serif font-medium">
-                        "{f.philosophy}"
-                      </p>
+                      <button className={`flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.15em]
+                                          px-3 py-1.5 rounded-lg transition-all duration-300
+                                          ${isActive
+                                            ? 'bg-white/10 text-white/70'
+                                            : 'bg-[#C19B6C]/15 text-[#C19B6C] hover:bg-[#C19B6C]/25'}`}>
+                        {isActive
+                          ? <><X size={10} /><span>Close</span></>
+                          : <><span>View Profile</span><ChevronRight size={10} /></>
+                        }
+                      </button>
                     </div>
                   </div>
                 </div>
+              </FadeIn>
+            );
+          })}
+        </div>
 
-                {/* Footer row */}
-                <div className={`flex items-center justify-between mt-4 sm:mt-5 pt-3 sm:pt-5
-                                  ${isExpanded ? 'border-t border-white/10' : ''}`}>
-                  <div className="flex items-center gap-2">
-                    {f.socials.map((social, sIdx) => (
-                      <button
-                        key={sIdx}
-                        onClick={e => e.stopPropagation()}
-                        aria-label={social.label}
-                        className="w-8 h-8 bg-white/5 text-white/60 rounded-xl flex items-center justify-center
-                                   hover:bg-terracotta hover:text-white transition-all border border-white/5"
-                      >
-                        {React.isValidElement(social.icon) &&
-                          React.cloneElement(social.icon as React.ReactElement<any>, { size: 13 })}
-                      </button>
+        {/* ── RIGHT: detail panel ── */}
+        <div
+          className={`flex-1 min-w-0 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]
+                       ${isOpen ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8 pointer-events-none'}`}
+          style={{ display: isOpen ? 'block' : 'none' }}
+        >
+          {activeFounder && (
+            <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden h-full shadow-2xl">
+              <div className="absolute inset-0 bg-gradient-to-br from-[#2E2C29] via-[#2A2825] to-[#232120]" />
+              <div className="absolute inset-0 rounded-2xl sm:rounded-3xl border border-white/[0.07]" />
+              <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#C19B6C] via-[#C19B6C]/50 to-transparent" />
+              <div className="absolute -top-16 -right-16 w-56 h-56 bg-[#C19B6C]/10 rounded-full blur-3xl" />
+
+              <div className="relative h-full overflow-y-auto p-6 sm:p-8
+                               [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+
+                <div className="flex flex-col items-center text-center mb-7">
+                  <div className="relative mb-5">
+                    <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-[#C19B6C] via-[#1C3F39] to-[#C19B6C]/30 opacity-60" />
+                    <div className="relative w-24 h-24 sm:w-32 sm:h-32 overflow-hidden rounded-2xl border border-white/10 shadow-2xl">
+                      <LazyImage src={activeFounder.img} alt={activeFounder.name} className="w-full h-full object-cover" />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Star size={9} className="text-[#C19B6C] fill-[#C19B6C]" />
+                    <span className="text-[9px] font-bold text-[#C19B6C]/80 uppercase tracking-[0.2em]">{activeFounder.badge}</span>
+                  </div>
+                  <h3 className="font-black text-xl sm:text-2xl text-white serif leading-tight mb-1">{activeFounder.name}</h3>
+                  <p className="text-[9px] sm:text-[10px] font-bold text-white/40 tracking-[0.15em] uppercase leading-snug max-w-xs">{activeFounder.title}</p>
+                </div>
+
+                <div className="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent mb-6" />
+
+                <p className="text-white/65 font-light leading-relaxed text-sm sm:text-base mb-6">{activeFounder.detailedBio}</p>
+
+                <div className="mb-5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Target size={12} className="text-[#C19B6C]" />
+                    <h4 className="font-bold text-white text-[9px] sm:text-[10px] uppercase tracking-widest">
+                      {activeIdx === 1 ? 'Focus Areas' : 'Expertise'}
+                    </h4>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {activeFounder.specialties.map((s, i) => (
+                      <span key={i} className="text-[10px] sm:text-xs font-semibold bg-[#C19B6C]/10 px-3 py-1.5 rounded-lg text-[#C19B6C]/90 border border-[#C19B6C]/20">{s}</span>
                     ))}
                   </div>
-                  <div className="flex items-center gap-1.5 text-terracotta font-bold text-[10px] uppercase tracking-widest">
-                    {isExpanded
-                      ? <><span>Collapse</span><ChevronUp size={13} /></>
-                      : <><span>Profile</span><ChevronDown size={13} /></>}
+                </div>
+
+                <div className="bg-white/[0.04] border border-white/[0.07] p-5 rounded-xl mb-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Heart size={12} className="text-[#C19B6C]" />
+                    <h4 className="font-bold text-white text-[9px] sm:text-[10px] uppercase tracking-widest">Philosophy</h4>
                   </div>
+                  <p className="text-sm sm:text-base text-white/60 italic leading-relaxed serif font-medium">"{activeFounder.philosophy}"</p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {activeFounder.socials.map((social, sIdx) => (
+                    <button key={sIdx} aria-label={social.label}
+                      className="w-9 h-9 bg-white/[0.05] text-white/50 rounded-xl flex items-center justify-center hover:bg-[#C19B6C] hover:text-white transition-all border border-white/[0.07]">
+                      {React.isValidElement(social.icon) && React.cloneElement(social.icon as React.ReactElement<any>, { size: 14 })}
+                    </button>
+                  ))}
                 </div>
               </div>
-            </FadeIn>
-          );
-        })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-10 sm:mt-14 text-center px-4">
+        <p className="text-[#1F1E1B]/20 font-serif italic text-sm sm:text-base md:text-lg max-w-2xl mx-auto leading-relaxed">
+          "Every session is a step toward a life that feels more like your own."
+        </p>
       </div>
     </div>
   );

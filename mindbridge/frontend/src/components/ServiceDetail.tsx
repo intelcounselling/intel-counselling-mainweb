@@ -1,6 +1,7 @@
 
 import React, { useEffect } from 'react';
 import { ArrowLeft, CheckCircle, User, GraduationCap, Briefcase, Calendar, ShieldCheck, Heart, Brain, Zap, Monitor, Users, Sparkles, Sprout } from 'lucide-react';
+import { LazyImage } from './ui/LazyImage';
 import { ViewType } from '../App';
 
 interface Specialization {
@@ -141,7 +142,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ view, onBack, onBook }) =
         </button>
 
         <div className={`relative rounded-[40px] md:rounded-[60px] overflow-hidden mb-10 md:mb-16 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.15)] ${content.isCompact ? 'h-[250px] md:h-[350px]' : 'h-[450px] md:h-[600px]'} transition-all duration-700 group/hero`}>
-          <img
+          <LazyImage
             src={content.hero}
             alt={content.title}
             className="w-full h-full object-cover opacity-90 transition-transform duration-[2000ms] group-hover/hero:scale-105"

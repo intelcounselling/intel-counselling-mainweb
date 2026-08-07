@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowRight, ShieldCheck, Star, Clock, Globe } from 'lucide-react';
+import { LazyImage } from './ui/LazyImage';
 
 interface HeroProps {
   onStartTest: () => void;
@@ -75,17 +76,6 @@ const Hero: React.FC<HeroProps> = ({ onStartTest, onStartCareerTest, onLearnMore
                         transition-transform duration-[1100ms] ease-[cubic-bezier(0.16,1,0.3,1)]"
              style={{ transform: px(8) }}>
 
-          {/* Eyebrow */}
-          <div className="hero-reveal mb-6 sm:mb-8" style={{ '--d': '0ms' } as React.CSSProperties}>
-            <div className="inline-flex items-center gap-2.5 px-4 py-[7px] rounded-full
-                            border border-[#1C3F39]/20 bg-white/70 backdrop-blur-sm
-                            shadow-[0_2px_12px_rgba(0,0,0,0.07)]">
-              <span className="w-[7px] h-[7px] rounded-full bg-[#1C3F39] shadow-[0_0_0_3px_rgba(28,63,57,0.15)] animate-pulse" />
-              <span className="text-[10px] sm:text-[10.5px] font-bold text-[#1C3F39] uppercase tracking-[0.22em]">
-                Personalized Therapy
-              </span>
-            </div>
-          </div>
 
           {/* Headline */}
           <div className="hero-reveal mb-4 sm:mb-5" style={{ '--d': '80ms' } as React.CSSProperties}>
@@ -123,14 +113,15 @@ const Hero: React.FC<HeroProps> = ({ onStartTest, onStartCareerTest, onLearnMore
             <button
               onClick={onStartTest}
               className="group relative overflow-hidden
-                         w-full sm:w-auto sm:min-w-[170px]
+                         w-full sm:w-auto sm:min-w-[190px]
                          bg-[#1C3F39] text-white
-                         px-5 py-[15px] rounded-2xl
-                         font-semibold text-[13.5px] tracking-[0.02em]
-                         flex items-center justify-center gap-2.5
-                         shadow-[0_4px_24px_rgba(28,63,57,0.32)]
+                         px-7 py-[17px] rounded-2xl
+                         font-bold text-[14.5px] tracking-[0.03em]
+                         flex items-center justify-center gap-3
+                         border-2 border-[#4a9e93]
+                         shadow-[0_6px_28px_rgba(28,63,57,0.45),0_2px_8px_rgba(28,63,57,0.2)]
                          transition-all duration-300
-                         hover:shadow-[0_8px_32px_rgba(28,63,57,0.42)] hover:-translate-y-[2px]
+                         hover:shadow-[0_10px_40px_rgba(28,63,57,0.55)] hover:-translate-y-[3px] hover:border-[#5bbcaf]
                          active:translate-y-0"
             >
               <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent
@@ -141,14 +132,15 @@ const Hero: React.FC<HeroProps> = ({ onStartTest, onStartCareerTest, onLearnMore
             <button
               onClick={onStartCareerTest}
               className="group relative overflow-hidden
-                         w-full sm:w-auto sm:min-w-[190px]
+                         w-full sm:w-auto sm:min-w-[210px]
                          bg-terracotta text-white
-                         px-5 py-[15px] rounded-2xl
-                         font-semibold text-[13.5px] tracking-[0.02em]
-                         flex items-center justify-center gap-2.5
-                         shadow-[0_4px_24px_rgba(193,155,108,0.32)]
+                         px-7 py-[17px] rounded-2xl
+                         font-bold text-[14.5px] tracking-[0.03em]
+                         flex items-center justify-center gap-3
+                         border-2 border-[#d9a870]
+                         shadow-[0_6px_28px_rgba(193,155,108,0.45),0_2px_8px_rgba(193,155,108,0.2)]
                          transition-all duration-300
-                         hover:shadow-[0_8px_32px_rgba(193,155,108,0.42)] hover:-translate-y-[2px]
+                         hover:shadow-[0_10px_40px_rgba(193,155,108,0.55)] hover:-translate-y-[3px] hover:border-[#e8bc88]
                          active:translate-y-0"
             >
               <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent
@@ -158,14 +150,15 @@ const Hero: React.FC<HeroProps> = ({ onStartTest, onStartCareerTest, onLearnMore
             </button>
             <button
               onClick={onLearnMore}
-              className="w-full sm:w-auto sm:min-w-[100px]
-                         bg-transparent text-[#1A1A1A]
-                         px-5 py-[15px] rounded-2xl
-                         font-semibold text-[13.5px] tracking-[0.02em]
-                         border border-[#1A1A1A]/20
+              className="w-full sm:w-auto sm:min-w-[120px]
+                         bg-white text-[#1A1A1A]
+                         px-7 py-[17px] rounded-2xl
+                         font-bold text-[14.5px] tracking-[0.03em]
+                         border-2 border-[#1A1A1A]/10
                          flex items-center justify-center
+                         shadow-[0_4px_12px_rgba(0,0,0,0.05)]
                          transition-all duration-300
-                         hover:border-[#1A1A1A]/50 hover:bg-[#1A1A1A]/[0.04] hover:-translate-y-[2px]
+                         hover:border-[#1A1A1A]/30 hover:bg-white hover:-translate-y-[3px] hover:shadow-[0_6px_20px_rgba(0,0,0,0.08)]
                          active:translate-y-0"
             >
               Learn More
@@ -209,14 +202,14 @@ const Hero: React.FC<HeroProps> = ({ onStartTest, onStartCareerTest, onLearnMore
             <div className="absolute inset-0 rounded-full overflow-hidden group
                             border-[5px] sm:border-[7px] md:border-[8px] border-[#1F1E1B]
                             shadow-[0_20px_60px_rgba(0,0,0,0.15),0_0_0_1px_rgba(28,63,57,0.08),inset_0_1px_0_rgba(255,255,255,0.2)]">
-              <img src="/assets/imgs/hero_img.png" alt="Intel Counselling therapy session"
-                   className="w-full h-full object-cover transition-transform duration-[3500ms] ease-out group-hover:scale-[1.04]" />
+               <LazyImage src="/assets/imgs/hero_img.png" alt="Intel Counselling therapy session"
+                    className="w-full h-full object-cover transition-transform duration-[3500ms] ease-out group-hover:scale-[1.04]" />
               <div className="absolute inset-0 rounded-full bg-gradient-to-br from-transparent via-transparent to-[#1C3F39]/12 pointer-events-none" />
             </div>
 
             {/* Badge — bottom left */}
             <div className="absolute -bottom-3 -left-3 sm:-bottom-5 sm:-left-7
-                            bg-white/96 backdrop-blur-2xl
+                            bg-white
                             px-3 py-2.5 sm:px-5 sm:py-3.5 rounded-[16px] sm:rounded-[18px]
                             shadow-[0_8px_32px_rgba(0,0,0,0.12),0_0_0_1px_rgba(0,0,0,0.05)]
                             flex items-center gap-2.5 sm:gap-3 z-20 animate-badge-float">
@@ -230,15 +223,6 @@ const Hero: React.FC<HeroProps> = ({ onStartTest, onStartCareerTest, onLearnMore
               </div>
             </div>
 
-            {/* Top-right pill */}
-            <div className="absolute -top-2 -right-2 sm:-top-3 sm:-right-4
-                            bg-[#1C3F39] text-white
-                            px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full z-20
-                            shadow-[0_4px_16px_rgba(28,63,57,0.4)]
-                            animate-badge-float-alt flex items-center gap-1.5">
-              <Star size={8} fill="white" className="text-white shrink-0" />
-              <span className="text-[8.5px] sm:text-[9.5px] font-bold tracking-wide">Top Rated</span>
-            </div>
           </div>
         </div>
       </div>
