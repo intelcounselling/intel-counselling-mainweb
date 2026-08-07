@@ -86,14 +86,6 @@ const Hero: React.FC<HeroProps> = ({ onStartTest, onLearnMore }) => {
             </h1>
           </div>
 
-          {/* Gold rule */}
-          <div className="hero-reveal mb-5 sm:mb-7 flex justify-center lg:justify-start"
-               style={{ '--d': '160ms' } as React.CSSProperties}>
-            <div className="flex items-center gap-3">
-              <div className="h-[2px] w-8 sm:w-10 bg-gradient-to-r from-[#C19B6C] to-[#C19B6C]/30 rounded-full" />
-              <div className="h-[5px] w-[5px] rounded-full bg-[#C19B6C]" />
-            </div>
-          </div>
 
           {/* Body */}
           <p className="hero-reveal text-[14px] sm:text-[15px] md:text-[16px] text-[#1A1A1A]/55
