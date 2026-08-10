@@ -2,6 +2,7 @@ const prisma = require('../prisma');
 const { parsePagination, buildPaginationMeta } = require('../utils/pagination');
 const { generateCredentials, regeneratePassword, syncUserToFirebase, updateFirebasePassword, deleteFirebaseUser } = require('../services/credential.service');
 const { sendCredentialsEmail } = require('../services/email.service');
+const { generateDetailedStudentReport } = require('../services/pdf.service');
 const logger = require('../utils/logger');
 const { handleError } = require('../utils/errorHandler');
 const crypto = require('crypto');
@@ -1013,6 +1014,36 @@ async function deleteSchool(req, res) {
   }
 }
 
+async function downloadStudentPDFReport(req, res) {
+  try {
+    const { id } = req.params;
+
+    const [student, results] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id },
+        include: { school: true },
+      }),
+      prisma.testResult.findMany({
+        where: { studentId: id },
+        orderBy: { takenAt: 'desc' },
+        include: { test: { select: { name: true, category: true, questions: true } } },
+      }),
+    ]);
+
+    if (!student) {
+      return res.status(404).json({ error: 'Student not found' });
+    }
+
+    if (student.role !== 'STUDENT') {
+      return res.status(400).json({ error: 'User is not a student' });
+    }
+
+    await generateDetailedStudentReport(res, { student, results });
+  } catch (err) {
+    handleError(res, err, 'downloadStudentPDFReport');
+  }
+}
+
 // ── Helper ────────────────────────────────────────────────────
 
 function generateAccessCode() {
@@ -1048,4 +1079,5 @@ module.exports = {
   batchDeleteUsers,
   deleteSchool,
   getSevereNoAppointment,
+  downloadStudentPDFReport,
 };

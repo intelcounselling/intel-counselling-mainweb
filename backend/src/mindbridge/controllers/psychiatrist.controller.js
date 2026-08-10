@@ -330,7 +330,7 @@ async function getStudentProfile(req, res) {
       prisma.testResult.findMany({
         where: { studentId: id },
         orderBy: { takenAt: 'desc' },
-        include: { test: { select: { name: true, category: true } } },
+        include: { test: { select: { name: true, category: true, questions: true } } },
       }),
       prisma.alert.findMany({
         where: { studentId: id },

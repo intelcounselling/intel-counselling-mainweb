@@ -46,5 +46,6 @@ router.post('/users/batch-delete', ...admin, ctrl.batchDeleteUsers);
 router.put('/users/:id/toggle-active', ...admin, validateUUID('id'), ctrl.toggleUserActive);
 router.post('/users/:id/reset-password', ...admin, validateUUID('id'), ctrl.resetUserPassword);
 router.delete('/users/:id', ...admin, validateUUID('id'), ctrl.deleteUser);
+router.get('/students/:id/pdf-report', ...superAdmin, validateUUID('id'), ctrl.downloadStudentPDFReport);
 
 module.exports = router;

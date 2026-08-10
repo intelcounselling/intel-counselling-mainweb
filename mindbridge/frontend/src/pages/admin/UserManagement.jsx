@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Search, ToggleLeft, ToggleRight, Trash2, School, Users, FileText } from 'lucide-react';
+import { Search, ToggleLeft, ToggleRight, Trash2, School, Users, FileText, ChevronDown, ChevronUp, Download } from 'lucide-react';
 import { Card, Select, Badge, Button, Modal, Spinner, EmptyState } from '../../components/ui';
 import SeverityBadge from '../../components/charts/SeverityBadge';
 import ScoreHistoryChart from '../../components/charts/ScoreHistoryChart';
@@ -313,6 +313,8 @@ export default function UserManagement() {
 }
 
 function StudentReportModal({ studentId, onClose }) {
+  const [expandedResultId, setExpandedResultId] = useState(null);
+
   const { data, isLoading, error } = useQuery({
     queryKey: ['admin-student-report', studentId],
     queryFn: () => api.get(`/psychiatrist/students/${studentId}`).then(r => r.data),
@@ -324,11 +326,15 @@ function StudentReportModal({ studentId, onClose }) {
 
   const { student, results = [] } = data;
 
+  const handleDownload = () => {
+    window.open(`${import.meta.env.VITE_API_URL || ''}/api/portal/api/admin/students/${studentId}/pdf-report`, '_blank');
+  };
+
   return (
     <div className="space-y-6 pt-2 max-h-[75vh] overflow-y-auto pr-1">
       {/* Student Details Card */}
-      <div className="bg-surface-50 border border-surface-200/60 rounded-2xl p-5">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="bg-surface-50 border border-surface-200/60 rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 flex-1">
           {[
             { label: 'Date of Birth', value: student?.dateOfBirth ? formatDate(student.dateOfBirth) : '—' },
             { label: 'Grade',         value: student?.grade || '—' },
@@ -341,6 +347,9 @@ function StudentReportModal({ studentId, onClose }) {
             </div>
           ))}
         </div>
+        <Button variant="primary" icon={<Download className="w-4 h-4" />} onClick={handleDownload}>
+          Download PDF
+        </Button>
       </div>
 
       {/* Score History Chart */}
@@ -374,14 +383,63 @@ function StudentReportModal({ studentId, onClose }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-100 text-sm">
-                {results.map(r => (
-                  <tr key={r.id} className="hover:bg-surface-50/30 transition-colors">
-                    <td className="px-5 py-3.5 font-medium text-surface-900">{r.test?.name}</td>
-                    <td className="px-5 py-3.5 text-surface-500">{formatDate(r.takenAt)}</td>
-                    <td className="px-5 py-3.5 text-surface-700 font-medium">{r.score}/{r.maxScore}</td>
-                    <td className="px-5 py-3.5"><SeverityBadge severity={r.severity} size="xs" /></td>
-                  </tr>
-                ))}
+                {results.map(r => {
+                  const isExpanded = expandedResultId === r.id;
+                  const questions = r.test?.questions || [];
+                  const answers = r.answers || {};
+                  const answerList = Array.isArray(answers)
+                    ? answers.map(a => ({ qId: a.questionId || a.id, val: a.value ?? a }))
+                    : Object.entries(answers).map(([qId, val]) => ({ qId, val }));
+
+                  const getAnswerLabel = (questionId, value) => {
+                    const q = questions.find(q => q.id === questionId || q.id === parseInt(questionId));
+                    if (!q) return value;
+                    const opt = q.options?.find(o => o.value === value);
+                    return opt?.label || value;
+                  };
+
+                  return (
+                    <React.Fragment key={r.id}>
+                      <tr 
+                        className="hover:bg-surface-50/30 transition-colors cursor-pointer"
+                        onClick={() => setExpandedResultId(isExpanded ? null : r.id)}
+                      >
+                        <td className="px-5 py-3.5 font-medium text-surface-900">
+                          <div className="flex items-center gap-2">
+                            {isExpanded ? <ChevronUp className="w-4 h-4 text-surface-400" /> : <ChevronDown className="w-4 h-4 text-surface-400" />}
+                            <span>{r.test?.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-5 py-3.5 text-surface-500">{formatDate(r.takenAt)}</td>
+                        <td className="px-5 py-3.5 text-surface-700 font-medium">{r.score}/{r.maxScore}</td>
+                        <td className="px-5 py-3.5"><SeverityBadge severity={r.severity} size="xs" /></td>
+                      </tr>
+                      {isExpanded && (
+                        <tr>
+                          <td colSpan={4} className="bg-surface-50/50 px-6 py-4 border-t border-b border-surface-100">
+                            <div className="space-y-3.5">
+                              <h5 className="font-semibold text-xs text-surface-400 uppercase tracking-wider mb-2">Question Breakdown</h5>
+                              <div className="space-y-3 bg-white border border-surface-200/60 rounded-xl p-4 shadow-sm">
+                                {answerList.map(({ qId, val }, idx) => {
+                                  const q = questions.find(q => q.id === parseInt(qId) || q.id === qId);
+                                  return (
+                                    <div key={qId} className="flex items-start gap-4 p-2.5 rounded-lg hover:bg-surface-50/50 transition-colors border border-transparent hover:border-surface-100">
+                                      <span className="text-surface-400 font-bold text-xs pt-0.5">{idx + 1}.</span>
+                                      <div className="flex-1 space-y-1">
+                                        <p className="text-surface-800 text-xs font-semibold leading-relaxed">{q?.text || `Question ${qId}`}</p>
+                                        <p className="text-primary-600 text-xs font-medium">Answer: <span className="font-semibold">{getAnswerLabel(qId, val)}</span> <span className="text-surface-400">({val} pts)</span></p>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
