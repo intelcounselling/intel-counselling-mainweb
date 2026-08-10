@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Search, ToggleLeft, ToggleRight, Trash2, School, Users } from 'lucide-react';
+import { Search, ToggleLeft, ToggleRight, Trash2, School, Users, FileText } from 'lucide-react';
 import { Card, Select, Badge, Button, Modal, Spinner, EmptyState } from '../../components/ui';
 import SeverityBadge from '../../components/charts/SeverityBadge';
+import ScoreHistoryChart from '../../components/charts/ScoreHistoryChart';
 import { useToast } from '../../components/ui/Toast';
 import api from '../../lib/axios';
 import { formatDate, getStatusColor } from '../../utils/formatters';
@@ -17,19 +18,52 @@ export default function UserManagement() {
   const [search, setSearch] = useState('');
   const [role, setRole] = useState('');
   const [isActive, setIsActive] = useState('');
+  const [schoolId, setSchoolId] = useState('');
+  const [classId, setClassId] = useState('');
   const [deleteUserModal, setDeleteUserModal] = useState(null);
+  const [selectedStudentReportId, setSelectedStudentReportId] = useState(null);
   
   const [selectedIds, setSelectedIds] = useState([]);
   const [batchDeleteModal, setBatchDeleteModal] = useState(false);
 
+  // Fetch schools list if SUPER_ADMIN
+  const { data: schoolsData } = useQuery({
+    queryKey: ['admin-schools-list'],
+    queryFn: () => api.get('/admin/schools', { params: { limit: 200 } }).then(r => r.data),
+    enabled: currentUser?.role === 'SUPER_ADMIN',
+  });
+
+  const targetSchoolId = currentUser?.role === 'SCHOOL_ADMIN' ? currentUser.schoolId : schoolId;
+
+  // Fetch classes list if a school is selected or current user is SCHOOL_ADMIN
+  const { data: classesData } = useQuery({
+    queryKey: ['admin-classes-list', targetSchoolId],
+    queryFn: () => api.get(`/admin/schools/${targetSchoolId}/classes`).then(r => r.data),
+    enabled: !!targetSchoolId,
+  });
+
+  const handleSchoolChange = (val) => {
+    setSchoolId(val);
+    setClassId('');
+  };
+
   // Reset selections when query changes
   useEffect(() => {
     setSelectedIds([]);
-  }, [search, role, isActive]);
+  }, [search, role, isActive, schoolId, classId]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-users', search, role, isActive],
-    queryFn: () => api.get('/admin/users', { params: { search, role: role || undefined, isActive: isActive || undefined, limit: 50 } }).then(r => r.data),
+    queryKey: ['admin-users', search, role, isActive, targetSchoolId, classId],
+    queryFn: () => api.get('/admin/users', {
+      params: {
+        search,
+        role: role || undefined,
+        isActive: isActive || undefined,
+        schoolId: targetSchoolId || undefined,
+        classId: classId || undefined,
+        limit: 50
+      }
+    }).then(r => r.data),
     placeholderData: (prev) => prev,
   });
 
@@ -115,7 +149,23 @@ export default function UserManagement() {
             <input className="w-full bg-surface-50 border border-surface-200 text-surface-900 text-sm rounded-xl focus:ring-primary-500 focus:border-primary-500 block pl-10 p-2.5 transition-colors" placeholder="Search by name or email..."
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <div className="flex gap-4 w-full sm:w-auto">
+          <div className="flex flex-wrap gap-4 w-full sm:w-auto">
+            {currentUser?.role === 'SUPER_ADMIN' && (
+              <Select label="" value={schoolId} onChange={e => handleSchoolChange(e.target.value)} className="min-w-[180px]">
+                <option value="">All Schools</option>
+                {schoolsData?.schools?.map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </Select>
+            )}
+            {(currentUser?.role === 'SCHOOL_ADMIN' || !!schoolId) && (
+              <Select label="" value={classId} onChange={e => setClassId(e.target.value)} className="min-w-[150px]">
+                <option value="">All Classes</option>
+                {classesData?.classes?.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </Select>
+            )}
             <Select label="" value={role} onChange={e => setRole(e.target.value)} className="min-w-[150px]">
               <option value="">All Roles</option>
               {ROLES.slice(1).map(r => <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>)}
@@ -178,7 +228,12 @@ export default function UserManagement() {
                     <td className="px-6 py-4">{roleBadge(user.role)}</td>
                     <td className="px-6 py-4 text-sm font-medium text-surface-700">
                       {user.school?.name ? (
-                         <span className="flex items-center gap-1.5"><School className="w-3.5 h-3.5 text-surface-400" /> {user.school.name}</span>
+                         <div className="flex flex-col gap-0.5">
+                           <span className="flex items-center gap-1.5"><School className="w-3.5 h-3.5 text-surface-400" /> {user.school.name}</span>
+                           {user.class?.name && (
+                             <span className="text-xs text-surface-500 font-normal pl-5">Class: {user.class.name}</span>
+                           )}
+                         </div>
                       ) : '—'}
                     </td>
                     <td className="px-6 py-4">
@@ -191,6 +246,10 @@ export default function UserManagement() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-2">
+                        {user.role === 'STUDENT' && currentUser?.role === 'SUPER_ADMIN' && (
+                          <Button variant="ghost" size="sm" className="text-primary-600 hover:bg-primary-50" icon={<FileText className="w-4 h-4" />}
+                            onClick={() => setSelectedStudentReportId(user.id)} title="View Student Report" />
+                        )}
                         <Button variant="ghost" size="sm" className={user.isActive ? "text-green-600 hover:bg-green-50" : "text-surface-500 hover:bg-surface-100"}
                           icon={user.isActive ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
                           onClick={() => toggleMutation.mutate(user.id)} title={user.isActive ? "Deactivate" : "Activate"} />
@@ -242,6 +301,96 @@ export default function UserManagement() {
           </div>
         </div>
       </Modal>
+
+      {/* Student Personal Report Modal */}
+      <Modal isOpen={!!selectedStudentReportId} onClose={() => setSelectedStudentReportId(null)} title="Student Personal Report" size="xl">
+        {selectedStudentReportId && (
+          <StudentReportModal studentId={selectedStudentReportId} onClose={() => setSelectedStudentReportId(null)} />
+        )}
+      </Modal>
+    </div>
+  );
+}
+
+function StudentReportModal({ studentId, onClose }) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['admin-student-report', studentId],
+    queryFn: () => api.get(`/psychiatrist/students/${studentId}`).then(r => r.data),
+    enabled: !!studentId,
+  });
+
+  if (isLoading) return <div className="flex justify-center py-12"><Spinner size="lg" /></div>;
+  if (error || !data) return <div className="text-center py-12 text-red-500">Failed to load student report.</div>;
+
+  const { student, results = [] } = data;
+
+  return (
+    <div className="space-y-6 pt-2 max-h-[75vh] overflow-y-auto pr-1">
+      {/* Student Details Card */}
+      <div className="bg-surface-50 border border-surface-200/60 rounded-2xl p-5">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { label: 'Date of Birth', value: student?.dateOfBirth ? formatDate(student.dateOfBirth) : '—' },
+            { label: 'Grade',         value: student?.grade || '—' },
+            { label: 'School',        value: student?.school?.name || '—' },
+            { label: 'Email',         value: student?.email || '—' },
+          ].map(i => (
+            <div key={i.label} className="space-y-0.5">
+              <span className="text-[11px] text-surface-400 font-semibold uppercase tracking-wider">{i.label}</span>
+              <p className="font-semibold text-surface-800 text-sm">{i.value}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Score History Chart */}
+      {results.length > 0 ? (
+        <div className="bg-white border border-surface-200/60 rounded-2xl p-5">
+          <h4 className="font-semibold text-surface-900 mb-4 text-xs uppercase tracking-wider text-surface-400">Score History</h4>
+          <div className="h-[260px] w-full">
+            <ScoreHistoryChart results={results} height={260} />
+          </div>
+        </div>
+      ) : (
+        <EmptyState icon="📈" title="No test scores yet" description="This student hasn't taken any assessments." />
+      )}
+
+      {/* Assessment History */}
+      <div className="bg-white border border-surface-200/60 rounded-2xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-surface-100">
+          <h4 className="font-semibold text-xs uppercase tracking-wider text-surface-400">Assessment History ({results.length})</h4>
+        </div>
+        {!results.length ? (
+          <EmptyState icon="📋" title="No assessments" className="py-6" />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-surface-50/50 border-b border-surface-150 text-[11px] uppercase tracking-wider text-surface-400 font-semibold">
+                  <th className="px-5 py-3">Test</th>
+                  <th className="px-5 py-3">Date</th>
+                  <th className="px-5 py-3">Score</th>
+                  <th className="px-5 py-3">Severity</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-surface-100 text-sm">
+                {results.map(r => (
+                  <tr key={r.id} className="hover:bg-surface-50/30 transition-colors">
+                    <td className="px-5 py-3.5 font-medium text-surface-900">{r.test?.name}</td>
+                    <td className="px-5 py-3.5 text-surface-500">{formatDate(r.takenAt)}</td>
+                    <td className="px-5 py-3.5 text-surface-700 font-medium">{r.score}/{r.maxScore}</td>
+                    <td className="px-5 py-3.5"><SeverityBadge severity={r.severity} size="xs" /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div className="flex justify-end pt-4">
+        <Button variant="outline" onClick={onClose}>Close Report</Button>
+      </div>
     </div>
   );
 }

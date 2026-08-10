@@ -431,11 +431,12 @@ async function createFamily(req, res) {
 async function getUsers(req, res) {
   try {
     const { skip, take, page, limit } = parsePagination(req.query);
-    const { role, schoolId, isActive, search } = req.query;
+    const { role, schoolId, classId, isActive, search } = req.query;
 
     const where = {
       role: (role && role !== 'SUPER_ADMIN') ? role : { notIn: ['SUPER_ADMIN', 'SCHOOL_ADMIN'] },
       schoolId: req.user.role === 'SCHOOL_ADMIN' ? req.user.schoolId : (schoolId || undefined),
+      ...(classId && { classId }),
       ...(isActive !== undefined && { isActive: isActive === 'true' }),
       ...(search && {
         OR: [
@@ -464,6 +465,7 @@ async function getUsers(req, res) {
           mustResetPassword: true,
           createdAt: true,
           school: { select: { id: true, name: true } },
+          class: { select: { id: true, name: true } },
         },
       }),
       prisma.user.count({ where }),
