@@ -314,6 +314,8 @@ export default function UserManagement() {
 
 function StudentReportModal({ studentId, onClose }) {
   const [expandedResultId, setExpandedResultId] = useState(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const { error: toastError } = useToast();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['admin-student-report', studentId],
@@ -326,8 +328,26 @@ function StudentReportModal({ studentId, onClose }) {
 
   const { student, results = [] } = data;
 
-  const handleDownload = () => {
-    window.open(`${import.meta.env.VITE_API_URL || ''}/api/portal/api/admin/students/${studentId}/pdf-report`, '_blank');
+  const handleDownload = async () => {
+    setIsDownloading(true);
+    try {
+      const response = await api.get(`/admin/students/${studentId}/pdf-report`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `MindBridge_Report_${student?.firstName}_${student?.lastName}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toastError('Failed to generate PDF report. Please try again.');
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   return (
@@ -347,8 +367,8 @@ function StudentReportModal({ studentId, onClose }) {
             </div>
           ))}
         </div>
-        <Button variant="primary" icon={<Download className="w-4 h-4" />} onClick={handleDownload}>
-          Download PDF
+        <Button variant="primary" icon={<Download className="w-4 h-4" />} onClick={handleDownload} loading={isDownloading} disabled={isDownloading}>
+          {isDownloading ? 'Generating…' : 'Download PDF'}
         </Button>
       </div>
 
