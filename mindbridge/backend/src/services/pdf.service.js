@@ -271,7 +271,13 @@ async function generateDetailedStudentReport(res, { student, results }) {
   drawTable(doc, 50, 190, studentInfo);
 
   // Score History / Trend Chart (Vector Drawn!)
-  if (results && results.length > 0) {
+  const validResults = (results || []).filter(r => {
+    const answers = r.answers || {};
+    const answerList = Array.isArray(answers) ? answers : Object.keys(answers);
+    return answerList.length > 0;
+  });
+
+  if (validResults.length > 0) {
     doc
       .fillColor('#4F46E5')
       .fontSize(13)
@@ -292,14 +298,15 @@ async function generateDetailedStudentReport(res, { student, results }) {
       .stroke();
 
     // Plot trend points (chronological order)
-    const sortedResults = [...results].sort((a, b) => new Date(a.takenAt) - new Date(b.takenAt));
+    const sortedResults = [...validResults].sort((a, b) => new Date(a.takenAt) - new Date(b.takenAt));
     if (sortedResults.length > 1) {
       const stepX = chartWidth / (sortedResults.length - 1);
       
       // Plot lines
       doc.lineWidth(2).strokeColor('#4F46E5');
       sortedResults.forEach((res, index) => {
-        const pct = res.score / res.maxScore;
+        const maxS = res.maxScore || 1;
+        const pct = res.score / maxS;
         const ptX = chartX + index * stepX;
         const ptY = chartY + chartHeight - (pct * chartHeight);
         
@@ -313,7 +320,8 @@ async function generateDetailedStudentReport(res, { student, results }) {
 
       // Plot data labels and circles
       sortedResults.forEach((res, index) => {
-        const pct = res.score / res.maxScore;
+        const maxS = res.maxScore || 1;
+        const pct = res.score / maxS;
         const ptX = chartX + index * stepX;
         const ptY = chartY + chartHeight - (pct * chartHeight);
 
@@ -331,7 +339,8 @@ async function generateDetailedStudentReport(res, { student, results }) {
       });
     } else if (sortedResults.length === 1) {
       const res = sortedResults[0];
-      const pct = res.score / res.maxScore;
+      const maxS = res.maxScore || 1;
+      const pct = res.score / maxS;
       const ptX = chartX + chartWidth / 2;
       const ptY = chartY + chartHeight - (pct * chartHeight);
       doc.circle(ptX, ptY, 5).fillColor('#4F46E5').fill();
@@ -344,8 +353,8 @@ async function generateDetailedStudentReport(res, { student, results }) {
   }
 
   // Detailed responses - page by page
-  if (results && results.length > 0) {
-    for (const result of results) {
+  if (validResults.length > 0) {
+    for (const result of validResults) {
       doc.addPage();
       
       // Branding Header on new page
@@ -371,17 +380,19 @@ async function generateDetailedStudentReport(res, { student, results }) {
         .font('Helvetica-Bold')
         .text(`${result.test?.name || 'Unknown Assessment'}`, 50, 80);
 
-      const severityColor = getSeverityColor(result.severity);
+      const sev = result.severity || 'low';
+      const severityColor = getSeverityColor(sev);
       doc
         .fillColor('#6B7280')
         .fontSize(10)
         .font('Helvetica')
         .text(`Date Taken: ${new Date(result.takenAt).toLocaleString()}  |  Score: ${result.score}/${result.maxScore}  |  Severity: `, 50, 102)
         .fillColor(severityColor)
-        .text(result.severity.toUpperCase(), { continued: false });
+        .text(sev.toUpperCase(), { continued: false });
 
       // Severity bar
-      const barWidth = Math.round((result.score / result.maxScore) * 300);
+      const maxS = result.maxScore || 1;
+      const barWidth = Math.round((result.score / maxS) * 300);
       doc
         .roundedRect(50, 118, 300, 8, 4)
         .fillColor('#F3F4F6')
@@ -426,7 +437,7 @@ async function generateDetailedStudentReport(res, { student, results }) {
             .fillColor('#4F46E5')
             .fontSize(10)
             .font('Helvetica-Bold')
-            .text(`${result.test?.name} — Responses Continued`, 50, 40);
+            .text(`${result.test?.name || 'Assessment'} — Responses Continued`, 50, 40);
           doc
             .moveTo(50, 52)
             .lineTo(545, 52)
