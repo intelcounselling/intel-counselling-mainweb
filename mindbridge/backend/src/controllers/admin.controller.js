@@ -112,7 +112,10 @@ async function getDashboard(req, res) {
       prisma.alert.findMany({
         take: 5,
         orderBy: { firedAt: 'desc' },
-        where: isSchoolAdmin ? { student: { schoolId } } : undefined,
+        where: {
+          status: { not: 'ACTIONED' },
+          ...(isSchoolAdmin && { student: { schoolId } }),
+        },
         include: {
           student: { select: { firstName: true, lastName: true, school: { select: { name: true } } } },
         },
@@ -964,6 +967,36 @@ async function downloadStudentPDFReport(req, res) {
   }
 }
 
+async function resolveAlert(req, res) {
+  try {
+    const { id } = req.params;
+    const isSchoolAdmin = req.user.role === 'SCHOOL_ADMIN';
+    const schoolId = req.user.schoolId;
+
+    const alert = await prisma.alert.findUnique({
+      where: { id },
+      include: { student: true },
+    });
+
+    if (!alert) {
+      return res.status(404).json({ error: 'Alert not found' });
+    }
+
+    if (isSchoolAdmin && alert.student.schoolId !== schoolId) {
+      return res.status(403).json({ error: 'Insufficient permissions' });
+    }
+
+    const updatedAlert = await prisma.alert.update({
+      where: { id },
+      data: { status: 'ACTIONED' },
+    });
+
+    res.json({ message: 'Alert resolved successfully', alert: updatedAlert });
+  } catch (err) {
+    handleError(res, err, 'resolveAlert');
+  }
+}
+
 module.exports = {
   getDashboard,
   createSchool,
@@ -987,4 +1020,5 @@ module.exports = {
   deleteSchool,
   getSevereNoAppointment,
   downloadStudentPDFReport,
+  resolveAlert,
 };

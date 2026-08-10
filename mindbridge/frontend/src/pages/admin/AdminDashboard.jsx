@@ -1,11 +1,12 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, Navigate } from 'react-router-dom';
-import { School, Users, AlertTriangle, ArrowRight, Activity, ShieldCheck, Brain, HeartPulse, Moon, Smartphone, Sparkles, Clock, CalendarPlus } from 'lucide-react';
+import { School, Users, AlertTriangle, ArrowRight, Activity, ShieldCheck, Brain, HeartPulse, Moon, Smartphone, Sparkles, Clock, CalendarPlus, Check } from 'lucide-react';
 import { Card, Spinner, EmptyState } from '../../components/ui';
 import SeverityBadge from '../../components/charts/SeverityBadge';
 import api from '../../lib/axios';
 import { formatRelative } from '../../utils/formatters';
 import useAuthStore from '../../store/authStore';
+import { useToast } from '../../components/ui/Toast';
 
 function StatCard({ title, value, icon: Icon, color, bgGradient }) {
   return (
@@ -25,8 +26,9 @@ function StatCard({ title, value, icon: Icon, color, bgGradient }) {
 }
 
 export default function AdminDashboard() {
-  const user = useAuthStore(s => s.user);
-  const isSchoolAdmin = user?.role === 'SCHOOL_ADMIN';
+  const { success, error: toastError } = useToast();
+  const qc = useQueryClient();
+
   const { data, isLoading } = useQuery({
     queryKey: ['admin-dashboard'],
     queryFn: () => api.get('/admin/dashboard').then(r => r.data),
@@ -38,9 +40,21 @@ export default function AdminDashboard() {
     refetchInterval: 60000,
   });
 
+  const resolveAlertMutation = useMutation({
+    mutationFn: (id) => api.put(`/admin/alerts/${id}/resolve`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-dashboard'] });
+      success('Alert resolved successfully');
+    },
+    onError: () => toastError('Failed to resolve alert'),
+  });
+
   const severeStudents = severeData?.students || [];
 
   if (isLoading) return <div className="flex justify-center pt-20"><Spinner size="xl" /></div>;
+
+  const user = useAuthStore(s => s.user);
+  const isSchoolAdmin = user?.role === 'SCHOOL_ADMIN';
 
   if (isSchoolAdmin && user?.schoolId) {
     return <Navigate to={`/admin/schools/${user.schoolId}/dashboard`} replace />;
@@ -172,8 +186,18 @@ export default function AdminDashboard() {
                       </p>
                       <p className="text-xs text-surface-500 truncate mt-0.5">{alert.student.school?.name}</p>
                     </div>
-                    <SeverityBadge severity={alert.severity} />
-                    <span className="text-xs font-medium text-surface-400 flex-shrink-0 w-24 text-right">
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <SeverityBadge severity={alert.severity} />
+                      <button
+                        title="Resolve alert"
+                        className="w-8 h-8 rounded-lg bg-green-50 hover:bg-green-600 text-green-600 hover:text-white flex items-center justify-center transition-colors border border-transparent"
+                        onClick={() => resolveAlertMutation.mutate(alert.id)}
+                        disabled={resolveAlertMutation.isPending}
+                      >
+                        <Check className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <span className="text-xs font-medium text-surface-400 flex-shrink-0 w-20 text-right">
                       {formatRelative(alert.firedAt)}
                     </span>
                   </div>

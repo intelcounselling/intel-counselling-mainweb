@@ -46,4 +46,7 @@ router.post('/users/:id/reset-password', ...admin, validateUUID('id'), ctrl.rese
 router.delete('/users/:id', ...admin, validateUUID('id'), ctrl.deleteUser);
 router.get('/students/:id/pdf-report', ...superAdmin, validateUUID('id'), ctrl.downloadStudentPDFReport);
 
+// Alerts
+router.put('/alerts/:id/resolve', ...admin, validateUUID('id'), ctrl.resolveAlert);
+
 module.exports = router;
