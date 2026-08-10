@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Trash2, UserPlus, Upload, Users, Key, AlertCircle } from 'lucide-react';
+import { Trash2, UserPlus, Upload, Users, Key, AlertCircle, FileText } from 'lucide-react';
 import { Modal, Button, Input, Spinner, EmptyState } from '../../components/ui';
 import { useToast } from '../../components/ui/Toast';
 import api from '../../lib/axios';
@@ -95,20 +95,31 @@ function CurrentStudents({ schoolId, cls }) {
             <p className="font-medium text-surface-900">{student.firstName} {student.lastName}</p>
             <p className="text-xs text-surface-500">{student.email}</p>
           </div>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="text-red-500 hover:text-red-600 hover:bg-red-50"
-            icon={<Trash2 className="w-4 h-4" />}
-            onClick={() => {
-              if (confirm(`Remove ${student.firstName} from ${cls.name}?`)) {
-                unassignMutation.mutate(student.id);
-              }
-            }}
-            loading={unassignMutation.isPending}
-          >
-            Remove
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-primary-600 hover:text-primary-700 hover:bg-primary-50"
+              icon={<FileText className="w-4 h-4" />}
+              onClick={() => window.open(`/admin/students/${student.id}/report`, '_blank')}
+            >
+              Report
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-red-500 hover:text-red-600 hover:bg-red-50"
+              icon={<Trash2 className="w-4 h-4" />}
+              onClick={() => {
+                if (confirm(`Remove ${student.firstName} from ${cls.name}?`)) {
+                  unassignMutation.mutate(student.id);
+                }
+              }}
+              loading={unassignMutation.isPending}
+            >
+              Remove
+            </Button>
+          </div>
         </div>
       ))}
     </div>
