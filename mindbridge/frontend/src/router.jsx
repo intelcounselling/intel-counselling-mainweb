@@ -34,6 +34,7 @@ const ClassAnalytics = Loadable(lazy(() => import('./pages/admin/ClassAnalytics'
 const CreateFamily = Loadable(lazy(() => import('./pages/admin/CreateFamily')));
 const UserManagement = Loadable(lazy(() => import('./pages/admin/UserManagement')));
 const GenerateCredentials = Loadable(lazy(() => import('./pages/admin/GenerateCredentials')));
+const StudentReportPage = Loadable(lazy(() => import('./pages/admin/StudentReportPage')));
 
 // ── Psychiatrist ──────────────────────────────────────────────
 const PsychiatristDashboard = Loadable(lazy(() => import('./pages/psychiatrist/PsychiatristDashboard')));
@@ -96,6 +97,7 @@ const router = createBrowserRouter([
       { path: 'schools/:id/create-family', element: <CreateFamily /> },
       { path: 'schools/:id/generate-credentials', element: <GenerateCredentials /> },
       { path: 'users', element: <UserManagement /> },
+      { path: 'students/:id/report', element: <StudentReportPage /> },
       { path: 'settings', element: <Settings /> },
     ],
   },

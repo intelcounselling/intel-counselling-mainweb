@@ -248,7 +248,7 @@ export default function UserManagement() {
                       <div className="flex items-center justify-end gap-2">
                         {user.role === 'STUDENT' && currentUser?.role === 'SUPER_ADMIN' && (
                           <Button variant="ghost" size="sm" className="text-primary-600 hover:bg-primary-50" icon={<FileText className="w-4 h-4" />}
-                            onClick={() => setSelectedStudentReportId(user.id)} title="View Student Report" />
+                            onClick={() => window.open(`/admin/students/${user.id}/report`, '_blank')} title="View Student Report" />
                         )}
                         <Button variant="ghost" size="sm" className={user.isActive ? "text-green-600 hover:bg-green-50" : "text-surface-500 hover:bg-surface-100"}
                           icon={user.isActive ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
