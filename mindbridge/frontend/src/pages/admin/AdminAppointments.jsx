@@ -407,7 +407,8 @@ function CreateAppointmentModal({ isOpen, onClose, prefillStudent }) {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
                 <input
                   type="text"
-                  className="form-input pl-9"
+                  className="form-input"
+                  style={{ paddingLeft: '2.5rem' }}
                   placeholder="Search by name or email…"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
