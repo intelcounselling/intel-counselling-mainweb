@@ -1038,6 +1038,206 @@ async function resolveAlert(req, res) {
   }
 }
 
+// ── Admin Appointments ────────────────────────────────────────
+
+async function getAdminAppointments(req, res) {
+  try {
+    const isSchoolAdmin = req.user.role === 'SCHOOL_ADMIN';
+    const schoolId = req.user.schoolId;
+    const { month, year } = req.query;
+
+    let dateFilter = {};
+    if (month && year) {
+      const start = new Date(parseInt(year), parseInt(month) - 1, 1);
+      const end = new Date(parseInt(year), parseInt(month), 0, 23, 59, 59);
+      dateFilter = { gte: start, lte: end };
+    }
+
+    const appointments = await prisma.appointment.findMany({
+      where: {
+        ...(Object.keys(dateFilter).length && { slot: dateFilter }),
+        ...(isSchoolAdmin && { patient: { schoolId } }),
+      },
+      orderBy: { slot: 'asc' },
+      include: {
+        patient: {
+          select: {
+            id: true, firstName: true, lastName: true, grade: true,
+            school: { select: { id: true, name: true } },
+            alerts: { where: { status: 'UNREAD' }, select: { id: true, severity: true } },
+          },
+        },
+        psychiatrist: { select: { id: true, firstName: true, lastName: true } },
+        results: {
+          include: { test: { select: { name: true, category: true } } },
+        },
+      },
+    });
+
+    res.json({ appointments });
+  } catch (err) {
+    handleError(res, err, 'getAdminAppointments');
+  }
+}
+
+async function createAdminAppointment(req, res) {
+  try {
+    const { patientId, psychiatristId, slot, notes, meetingLink, resultIds } = req.body;
+
+    if (!patientId || !psychiatristId || !slot) {
+      return res.status(400).json({ error: 'patientId, psychiatristId, and slot are required' });
+    }
+
+    const { sendAppointmentEmail } = require('../services/email.service');
+
+    const appointment = await prisma.appointment.create({
+      data: {
+        patientId,
+        psychiatristId,
+        slot: new Date(slot),
+        notes: notes || null,
+        meetingLink: meetingLink || null,
+        ...(resultIds?.length && {
+          results: { connect: resultIds.map(id => ({ id })) },
+        }),
+      },
+      include: {
+        patient: { include: { familyAsStudent: { include: { parents: true } } } },
+        psychiatrist: { select: { firstName: true, lastName: true } },
+      },
+    });
+
+    // Email parents
+    const parents = appointment.patient?.familyAsStudent?.parents || [];
+    for (const parent of parents) {
+      try {
+        await sendAppointmentEmail({
+          to: parent.email,
+          parentName: `${parent.firstName} ${parent.lastName}`,
+          studentName: `${appointment.patient.firstName} ${appointment.patient.lastName}`,
+          psychiatristName: `${appointment.psychiatrist.firstName} ${appointment.psychiatrist.lastName}`,
+          slot,
+          notes,
+          meetingLink,
+        });
+      } catch (e) {}
+    }
+
+    res.status(201).json({ appointment });
+  } catch (err) {
+    handleError(res, err, 'createAdminAppointment');
+  }
+}
+
+async function getStudentsForAppointment(req, res) {
+  try {
+    const isSchoolAdmin = req.user.role === 'SCHOOL_ADMIN';
+    const schoolId = req.user.schoolId;
+    const { search } = req.query;
+
+    const students = await prisma.user.findMany({
+      where: {
+        role: 'STUDENT',
+        isActive: true,
+        ...(isSchoolAdmin && { schoolId }),
+        ...(search && {
+          OR: [
+            { firstName: { contains: search, mode: 'insensitive' } },
+            { lastName: { contains: search, mode: 'insensitive' } },
+            { email: { contains: search, mode: 'insensitive' } },
+          ],
+        }),
+      },
+      take: 50,
+      orderBy: { lastName: 'asc' },
+      select: {
+        id: true, firstName: true, lastName: true, grade: true, email: true,
+        school: { select: { id: true, name: true } },
+        alerts: { where: { status: 'UNREAD' }, select: { id: true, severity: true } },
+        testResults: {
+          take: 3,
+          orderBy: { takenAt: 'desc' },
+          select: {
+            id: true, score: true, maxScore: true, severity: true, takenAt: true,
+            test: { select: { name: true, category: true } },
+          },
+        },
+        appointments: {
+          where: { slot: { gte: new Date() }, status: { in: ['PENDING', 'CONFIRMED'] } },
+          select: { id: true, slot: true },
+          take: 1,
+          orderBy: { slot: 'asc' },
+        },
+      },
+    });
+
+    res.json({ students });
+  } catch (err) {
+    handleError(res, err, 'getStudentsForAppointment');
+  }
+}
+
+async function getPsychiatristsForAdmin(req, res) {
+  try {
+    const isSchoolAdmin = req.user.role === 'SCHOOL_ADMIN';
+    const schoolId = req.user.schoolId;
+
+    const psychiatrists = await prisma.user.findMany({
+      where: {
+        role: 'PSYCHIATRIST',
+        isActive: true,
+        ...(isSchoolAdmin && { schools: { some: { id: schoolId } } }),
+      },
+      select: {
+        id: true, firstName: true, lastName: true, email: true,
+        schools: { select: { id: true, name: true } },
+      },
+      orderBy: { lastName: 'asc' },
+    });
+
+    res.json({ psychiatrists });
+  } catch (err) {
+    handleError(res, err, 'getPsychiatristsForAdmin');
+  }
+}
+
+async function getStudentTestHistory(req, res) {
+  try {
+    const { id } = req.params;
+    const isSchoolAdmin = req.user.role === 'SCHOOL_ADMIN';
+    const schoolId = req.user.schoolId;
+
+    const student = await prisma.user.findUnique({
+      where: { id, ...(isSchoolAdmin && { schoolId }) },
+      select: {
+        id: true, firstName: true, lastName: true, grade: true, email: true,
+        school: { select: { id: true, name: true } },
+        alerts: {
+          where: { status: 'UNREAD' },
+          select: { id: true, severity: true, firedAt: true },
+          orderBy: { firedAt: 'desc' },
+          take: 5,
+        },
+        testResults: {
+          orderBy: { takenAt: 'desc' },
+          include: { test: { select: { name: true, category: true } } },
+        },
+        appointments: {
+          orderBy: { slot: 'desc' },
+          take: 10,
+          include: { psychiatrist: { select: { firstName: true, lastName: true } } },
+        },
+      },
+    });
+
+    if (!student) return res.status(404).json({ error: 'Student not found' });
+
+    res.json({ student });
+  } catch (err) {
+    handleError(res, err, 'getStudentTestHistory');
+  }
+}
+
 module.exports = {
   getDashboard,
   createSchool,
@@ -1062,4 +1262,9 @@ module.exports = {
   getSevereNoAppointment,
   downloadStudentPDFReport,
   resolveAlert,
+  getAdminAppointments,
+  createAdminAppointment,
+  getStudentsForAppointment,
+  getPsychiatristsForAdmin,
+  getStudentTestHistory,
 };

@@ -49,4 +49,11 @@ router.get('/students/:id/pdf-report', ...superAdmin, validateUUID('id'), ctrl.d
 // Alerts
 router.put('/alerts/:id/resolve', ...admin, validateUUID('id'), ctrl.resolveAlert);
 
+// Admin Appointments
+router.get('/appointments', ...admin, ctrl.getAdminAppointments);
+router.post('/appointments', ...admin, ctrl.createAdminAppointment);
+router.get('/appointment-students', ...admin, ctrl.getStudentsForAppointment);
+router.get('/psychiatrists', ...admin, ctrl.getPsychiatristsForAdmin);
+router.get('/students/:id/history', ...admin, validateUUID('id'), ctrl.getStudentTestHistory);
+
 module.exports = router;

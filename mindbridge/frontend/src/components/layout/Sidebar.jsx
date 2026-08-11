@@ -32,12 +32,14 @@ const NAV_BY_ROLE = {
     { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
     { to: '/admin/schools', label: 'Schools', icon: School },
     { to: '/admin/users', label: 'Users', icon: Users },
+    { to: '/admin/appointments', label: 'Appointments', icon: Calendar },
     { to: '/admin/settings', label: 'Settings', icon: Settings },
   ],
   SCHOOL_ADMIN: [
     // This serves as a fallback; dynamic routing handled in component
     { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
     { to: '/admin/users', label: 'Users', icon: Users },
+    { to: '/admin/appointments', label: 'Appointments', icon: Calendar },
     { to: '/admin/settings', label: 'Settings', icon: Settings },
   ],
 };
@@ -60,6 +62,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
         { to: `/admin/schools/${user.schoolId}/dashboard`, label: 'Dashboard', icon: LayoutDashboard, exact: true },
         { to: `/admin/schools/${user.schoolId}/classes`, label: 'Classes', icon: Building2 },
         { to: '/admin/users', label: 'Users', icon: Users },
+        { to: '/admin/appointments', label: 'Appointments', icon: Calendar },
         { to: '/admin/settings', label: 'Settings', icon: Settings },
       ];
     }
