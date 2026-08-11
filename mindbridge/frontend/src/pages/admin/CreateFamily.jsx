@@ -48,7 +48,9 @@ export default function CreateFamily() {
 
   const handleDownload = () => downloadCSV(credentials, 'intel-counselling-credentials.csv');
 
-  const isValid = students.every(s => s.firstName && s.lastName && s.email) &&
+  // Student email is optional — if omitted a username is generated
+  // Parent email is always required
+  const isValid = students.every(s => s.firstName && s.lastName) &&
                   parents.every(p => p.firstName && p.lastName && p.email);
 
   return (
@@ -92,12 +94,15 @@ export default function CreateFamily() {
                   onChange={e => updateStudent(i, 'firstName', e.target.value)} placeholder="Alex" />
                 <Input label="Last Name" required value={s.lastName}
                   onChange={e => updateStudent(i, 'lastName', e.target.value)} placeholder="Johnson" />
-                <Input label="Email Address" required type="email" value={s.email || ''}
-                  onChange={e => updateStudent(i, 'email', e.target.value)} placeholder="alex.johnson@example.com" />
+                <div className="col-span-2">
+                  <Input label="Email Address (optional)" type="email" value={s.email || ''}
+                    onChange={e => updateStudent(i, 'email', e.target.value)} placeholder="Leave blank to auto-generate username" />
+                  <p className="mt-1 text-xs text-surface-400">If left blank, a username like <code>alex.johnson@class.school</code> will be created with password <code>changeme@123</code></p>
+                </div>
                 <Input label="Grade" value={s.grade}
                   onChange={e => updateStudent(i, 'grade', e.target.value)} placeholder="10" />
                 <Input label="Date of Birth" type="date" value={s.dateOfBirth}
-                  onChange={e => updateStudent(i, 'dateOfBirth', e.target.value)} className="col-span-2" />
+                  onChange={e => updateStudent(i, 'dateOfBirth', e.target.value)} />
               </div>
             </div>
           ))}
@@ -133,10 +138,13 @@ export default function CreateFamily() {
                   onChange={e => updateParent(i, 'firstName', e.target.value)} placeholder="Sarah" />
                 <Input label="Last Name" required value={p.lastName}
                   onChange={e => updateParent(i, 'lastName', e.target.value)} placeholder="Johnson" />
-                <Input label="Email Address" required type="email" value={p.email || ''}
-                  onChange={e => updateParent(i, 'email', e.target.value)} placeholder="sarah.johnson@example.com" />
+                <div className="col-span-2">
+                  <Input label="Email Address" required type="email" value={p.email || ''}
+                    onChange={e => updateParent(i, 'email', e.target.value)} placeholder="sarah.johnson@example.com" />
+                  <p className="mt-1 text-xs text-surface-400">Required. If this email already belongs to an existing parent, new students will be added to their family automatically.</p>
+                </div>
                 <Input label="Phone (for SMS alerts)" value={p.phone}
-                  onChange={e => updateParent(i, 'phone', e.target.value)} placeholder="+1-555-0101" />
+                  onChange={e => updateParent(i, 'phone', e.target.value)} placeholder="+1-555-0101" className="col-span-2" />
               </div>
             </div>
           ))}

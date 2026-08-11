@@ -22,6 +22,8 @@ export default function UserManagement() {
   const [classId, setClassId] = useState('');
   const [deleteUserModal, setDeleteUserModal] = useState(null);
   const [selectedStudentReportId, setSelectedStudentReportId] = useState(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   
   const [selectedIds, setSelectedIds] = useState([]);
   const [batchDeleteModal, setBatchDeleteModal] = useState(false);
@@ -47,13 +49,14 @@ export default function UserManagement() {
     setClassId('');
   };
 
-  // Reset selections when query changes
+  // Reset selections and page when query changes
   useEffect(() => {
     setSelectedIds([]);
-  }, [search, role, isActive, schoolId, classId]);
+    setPage(1);
+  }, [search, role, isActive, schoolId, classId, pageSize]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-users', search, role, isActive, targetSchoolId, classId],
+    queryKey: ['admin-users', search, role, isActive, targetSchoolId, classId, page, pageSize],
     queryFn: () => api.get('/admin/users', {
       params: {
         search,
@@ -61,7 +64,8 @@ export default function UserManagement() {
         isActive: isActive || undefined,
         schoolId: targetSchoolId || undefined,
         classId: classId || undefined,
-        limit: 50
+        limit: pageSize,
+        page,
       }
     }).then(r => r.data),
     placeholderData: (prev) => prev,
@@ -175,6 +179,12 @@ export default function UserManagement() {
               <option value="true">Active</option>
               <option value="false">Inactive</option>
             </Select>
+            <Select label="" value={pageSize} onChange={e => setPageSize(Number(e.target.value))} className="min-w-[110px]" title="Records per page">
+              <option value={10}>10 / page</option>
+              <option value={25}>25 / page</option>
+              <option value={50}>50 / page</option>
+              <option value={100}>100 / page</option>
+            </Select>
           </div>
         </div>
       </Card>
@@ -264,6 +274,28 @@ export default function UserManagement() {
           </div>
         )}
       </Card>
+
+      {/* Pagination controls */}
+      {data?.pagination && data.pagination.pages > 1 && (
+        <div className="flex items-center justify-between px-2 py-1">
+          <p className="text-sm text-surface-500">
+            Showing {((page - 1) * pageSize) + 1}–{Math.min(page * pageSize, data.pagination.total)} of <span className="font-semibold text-surface-800">{data.pagination.total}</span> users
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              disabled={!data.pagination.hasPrev}
+              onClick={() => setPage(p => p - 1)}
+              className="px-3 py-1.5 rounded-lg text-sm font-medium border border-surface-200 bg-white text-surface-700 hover:bg-surface-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >← Prev</button>
+            <span className="text-sm font-semibold text-surface-700 px-2">Page {page} / {data.pagination.pages}</span>
+            <button
+              disabled={!data.pagination.hasNext}
+              onClick={() => setPage(p => p + 1)}
+              className="px-3 py-1.5 rounded-lg text-sm font-medium border border-surface-200 bg-white text-surface-700 hover:bg-surface-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >Next →</button>
+          </div>
+        </div>
+      )}
 
       <Modal isOpen={!!deleteUserModal} onClose={() => setDeleteUserModal(null)} title="Confirm Deletion">
         {deleteUserModal && (

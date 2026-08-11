@@ -4,6 +4,7 @@ import { Card, Button, Input } from '../components/ui';
 import { useToast } from '../components/ui/Toast';
 import useAuthStore from '../store/authStore';
 import api from '../lib/axios';
+import { auth } from '../lib/firebase';
 
 const requirements = [
   { label: 'At least 8 characters', test: (p) => p.length >= 8 },
@@ -14,6 +15,9 @@ const requirements = [
 export default function Settings() {
   const { success, error: toastError } = useToast();
   const { user, updateUser } = useAuthStore();
+
+  // Detect if signed in via Google (Firebase) — hide password change for OAuth users
+  const isGoogleUser = auth.currentUser?.providerData?.some(p => p.providerId === 'google.com') ?? false;
 
   // Profile Details Form State
   const [profile, setProfile] = useState({
@@ -141,6 +145,24 @@ export default function Settings() {
         </Card>
 
         {/* Change password */}
+        {isGoogleUser ? (
+          <Card>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 rounded-lg bg-green-50 text-green-600">
+                <Shield className="w-5 h-5" />
+              </div>
+              <h3 className="text-lg font-semibold text-surface-900">Security</h3>
+            </div>
+            <div className="flex flex-col items-center justify-center py-6 text-center gap-3">
+              <img src="https://www.google.com/favicon.ico" alt="Google" className="w-8 h-8" />
+              <p className="text-sm font-semibold text-surface-800">Signed in with Google</p>
+              <p className="text-sm text-surface-500">
+                Your password is managed by your Google Account. To change it, visit your
+                <a href="https://myaccount.google.com/security" target="_blank" rel="noreferrer" className="text-primary-600 underline ml-1">Google Account settings</a>.
+              </p>
+            </div>
+          </Card>
+        ) : (
         <Card>
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 rounded-lg bg-accent-50 text-accent-600">
@@ -260,6 +282,8 @@ export default function Settings() {
             </Button>
           </form>
         </Card>
+        )}
+
       </div>
     </div>
   );

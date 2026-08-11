@@ -1,35 +1,28 @@
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 
-/**
- * Generate a username: firstname.lastname@schoolcode (lowercase, no spaces)
- */
-function generateUsername(firstName, lastName, schoolCode) {
-  const clean = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
-  return `${clean(firstName)}.${clean(lastName)}@${clean(schoolCode)}.com`;
-}
+const DEFAULT_PASSWORD = 'changeme@123';
 
 /**
- * Generate a random 10-character alphanumeric password
+ * Generate a username: firstname.lastname@classname.schoolname (lowercase, no spaces)
+ * Falls back to @schoolcode.ac if className/schoolName not provided.
  */
-function generatePassword(length = 10) {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-  let password = '';
-  const randomBytes = crypto.randomBytes(length);
-  for (let i = 0; i < length; i++) {
-    password += chars.charAt(randomBytes[i] % chars.length);
-  }
-  return password;
+function generateUsername(firstName, lastName, schoolCode, className, schoolName) {
+  const clean = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const domain = (className && schoolName)
+    ? `${clean(className)}.${clean(schoolName)}`
+    : `${clean(schoolCode)}.ac`;
+  return `${clean(firstName)}.${clean(lastName)}@${domain}`;
 }
 
 /**
  * Generate credentials for a new user.
- * Also registers the user in Firebase Auth if Firebase Admin is initialized.
+ * Uses a fixed default password that the user must change on first login.
  * @returns {{ email, plainPassword, passwordHash }}
  */
-async function generateCredentials(firstName, lastName, schoolCode) {
-  const email = generateUsername(firstName, lastName, schoolCode);
-  const plainPassword = generatePassword(10);
+async function generateCredentials(firstName, lastName, schoolCode, className, schoolName) {
+  const email = generateUsername(firstName, lastName, schoolCode, className, schoolName);
+  const plainPassword = DEFAULT_PASSWORD;
   const passwordHash = await bcrypt.hash(plainPassword, 12);
   return { email, plainPassword, passwordHash };
 }

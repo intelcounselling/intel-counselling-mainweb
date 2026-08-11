@@ -315,19 +315,95 @@ async function createFamily(req, res) {
     const school = await prisma.school.findUnique({ where: { id: schoolId } });
     if (!school) return res.status(404).json({ error: 'School not found' });
 
+    // Validate all parents have email (required for real accounts)
+    for (const p of parentData) {
+      if (!p.email?.trim()) {
+        return res.status(400).json({ error: `Parent email is required for ${p.firstName || 'each parent'}` });
+      }
+    }
+
     const generatedCredentials = [];
 
-    const family = await prisma.family.create({ data: { schoolId } });
+    // ── Resolve or create parents first, so we can share a family ──────
+    let resolvedFamily = null;
 
-    // Create students
+    for (const p of parentData) {
+      const email = p.email.trim().toLowerCase();
+      const existingParent = await prisma.user.findUnique({ where: { email } });
+
+      if (existingParent) {
+        // Parent account already exists — reuse their family
+        if (existingParent.role !== 'PARENT') {
+          return res.status(400).json({ error: `${email} is already registered as a ${existingParent.role}` });
+        }
+        if (!resolvedFamily) {
+          resolvedFamily = { id: existingParent.familyParentId };
+        }
+        // No credential entry — parent already has an account
+        generatedCredentials.push({
+          id: existingParent.id,
+          name: `${existingParent.firstName} ${existingParent.lastName}`,
+          email,
+          password: '(existing account)',
+          role: 'PARENT',
+          note: 'Already registered — new student(s) linked to their family',
+        });
+      } else {
+        // Create the family row if not yet done
+        if (!resolvedFamily) {
+          resolvedFamily = await prisma.family.create({ data: { schoolId } });
+        }
+
+        const creds = await generateCredentials(p.firstName, p.lastName, school.accessCode);
+        const parent = await prisma.user.create({
+          data: {
+            email,
+            passwordHash: creds.passwordHash,
+            role: 'PARENT',
+            firstName: p.firstName,
+            lastName: p.lastName,
+            phone: p.phone,
+            schoolId,
+            familyParentId: resolvedFamily.id,
+            mustResetPassword: true,
+          },
+        });
+        syncUserToFirebase(email, creds.plainPassword, `${p.firstName} ${p.lastName}`).catch(() => {});
+        generatedCredentials.push({
+          id: parent.id,
+          name: `${p.firstName} ${p.lastName}`,
+          email,
+          password: creds.plainPassword,
+          role: 'PARENT',
+        });
+      }
+    }
+
+    // Ensure we have a family to attach students to
+    if (!resolvedFamily) {
+      resolvedFamily = await prisma.family.create({ data: { schoolId } });
+    }
+
+    // ── Create students ───────────────────────────────────────────────
     for (const s of studentData) {
       let email = s.email?.trim().toLowerCase();
+
       if (email) {
         const existing = await prisma.user.findUnique({ where: { email } });
         if (existing) return res.status(400).json({ error: `Email ${email} is already registered` });
       }
 
-      const creds = await generateCredentials(s.firstName, s.lastName, school.accessCode);
+      // Resolve class info for username generation
+      let className = null;
+      let classObj = null;
+      if (s.classId) {
+        classObj = await prisma.class.findUnique({ where: { id: s.classId }, select: { name: true } });
+        className = classObj?.name || null;
+      }
+
+      const creds = await generateCredentials(
+        s.firstName, s.lastName, school.accessCode, className, school.name
+      );
       const studentEmail = email || creds.email;
 
       const student = await prisma.user.create({
@@ -340,65 +416,30 @@ async function createFamily(req, res) {
           grade: s.grade,
           dateOfBirth: s.dateOfBirth ? new Date(s.dateOfBirth) : null,
           schoolId,
-          familyStudentId: family.id,
+          classId: s.classId || undefined,
+          familyStudentId: resolvedFamily.id,
           mustResetPassword: true,
         },
       });
 
-      // Sync to Firebase Auth (non-blocking — silently skipped if Firebase not configured)
       syncUserToFirebase(studentEmail, creds.plainPassword, `${s.firstName} ${s.lastName}`).catch(() => {});
 
       generatedCredentials.push({
         id: student.id,
         name: `${s.firstName} ${s.lastName}`,
         email: studentEmail,
-        password: creds.plainPassword,
+        password: email ? creds.plainPassword : creds.plainPassword,
         role: 'STUDENT',
+        note: email ? undefined : 'Auto-generated username — password must be changed on first login',
       });
     }
 
-    // Create parents
-    for (const p of parentData) {
-      let email = p.email?.trim().toLowerCase();
-      if (email) {
-        const existing = await prisma.user.findUnique({ where: { email } });
-        if (existing) return res.status(400).json({ error: `Email ${email} is already registered` });
-      }
-
-      const creds = await generateCredentials(p.firstName, p.lastName, school.accessCode);
-      const parentEmail = email || creds.email;
-
-      const parent = await prisma.user.create({
-        data: {
-          email: parentEmail,
-          passwordHash: creds.passwordHash,
-          role: 'PARENT',
-          firstName: p.firstName,
-          lastName: p.lastName,
-          phone: p.phone,
-          schoolId,
-          familyParentId: family.id,
-          mustResetPassword: true,
-        },
-      });
-
-      // Sync to Firebase Auth (non-blocking)
-      syncUserToFirebase(parentEmail, creds.plainPassword, `${p.firstName} ${p.lastName}`).catch(() => {});
-
-      generatedCredentials.push({
-        id: parent.id,
-        name: `${p.firstName} ${p.lastName}`,
-        email: parentEmail,
-        password: creds.plainPassword,
-        role: 'PARENT',
-      });
-    }
-
-    res.status(201).json({ family, credentials: generatedCredentials });
+    res.status(201).json({ family: resolvedFamily, credentials: generatedCredentials });
   } catch (err) {
     handleError(res, err, 'createFamily');
   }
 }
+
 
 // ── Users ─────────────────────────────────────────────────────
 

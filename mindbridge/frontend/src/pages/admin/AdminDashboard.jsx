@@ -28,6 +28,7 @@ function StatCard({ title, value, icon: Icon, color, bgGradient }) {
 export default function AdminDashboard() {
   const { success, error: toastError } = useToast();
   const qc = useQueryClient();
+  const user = useAuthStore(s => s.user);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-dashboard'],
@@ -50,15 +51,13 @@ export default function AdminDashboard() {
   });
 
   const severeStudents = severeData?.students || [];
-
-  if (isLoading) return <div className="flex justify-center pt-20"><Spinner size="xl" /></div>;
-
-  const user = useAuthStore(s => s.user);
   const isSchoolAdmin = user?.role === 'SCHOOL_ADMIN';
 
   if (isSchoolAdmin && user?.schoolId) {
     return <Navigate to={`/admin/schools/${user.schoolId}/dashboard`} replace />;
   }
+
+  if (isLoading) return <div className="flex justify-center pt-20"><Spinner size="xl" /></div>;
 
   const { stats, recentAlerts } = data || {};
 
