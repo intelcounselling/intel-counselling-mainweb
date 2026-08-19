@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
 import { Users, Plus, ArrowLeft, Trash2, Search, UserPlus } from 'lucide-react';
-import { Card, Button, Spinner, EmptyState, Badge, Modal, Input } from '../../components/ui';
+import { Card, Button, Spinner, EmptyState, Badge, Modal, Input, PageHeader, StatCard } from '../../components/ui';
 import SeverityBadge from '../../components/charts/SeverityBadge';
 import { useToast } from '../../components/ui/Toast';
 import api from '../../lib/axios';
@@ -67,54 +67,36 @@ export default function ClassAnalytics() {
   if (isLoading) return <div className="flex justify-center pt-20"><Spinner size="xl" /></div>;
 
   return (
-    <div className="space-y-8 animate-slide-up max-w-7xl">
+    <div className="space-y-6 animate-slide-up max-w-7xl">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link to={`/admin/schools/${id}`} className="p-2.5 bg-white border border-surface-200 hover:border-primary-300 hover:bg-primary-50 hover:text-primary-600 rounded-xl text-surface-600 transition-all shadow-sm">
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-          <div>
-            <div className="flex items-center gap-3">
-              <h2 className="text-3xl font-bold text-surface-900 tracking-tight">{className}</h2>
-            </div>
-            <p className="text-surface-500 mt-1 flex items-center gap-2">
-              Detailed Analytics & Roster
-            </p>
-          </div>
-        </div>
-        
-        <div className="flex gap-3">
-          <Button variant="outline" icon={<UserPlus className="w-4 h-4" />} onClick={() => setAssignModalOpen(true)}>
-            Assign Student
-          </Button>
-          <Link to={`/admin/schools/${id}/create-family`}>
-            <Button variant="primary" icon={<Plus className="w-4 h-4" />}>Create Student</Button>
-          </Link>
-        </div>
-      </div>
+      <PageHeader
+        backTo={`/admin/schools/${id}`}
+        title={className}
+        description="Detailed analytics and class roster"
+        actions={(
+          <>
+            <Button variant="outline" icon={<UserPlus className="w-4 h-4" />} onClick={() => setAssignModalOpen(true)}>
+              Assign Student
+            </Button>
+            <Link to={`/admin/schools/${id}/create-family`}>
+              <Button variant="primary" icon={<Plus className="w-4 h-4" />}>Create Student</Button>
+            </Link>
+          </>
+        )}
+      />
 
       {/* Mini Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-2xl border border-surface-200 p-5 shadow-sm">
-          <p className="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-1">Total Students</p>
-          <p className="font-bold text-lg text-surface-900">{students.length}</p>
-        </div>
-        <div className="bg-white rounded-2xl border border-surface-200 p-5 shadow-sm">
-          <p className="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-1">Tested</p>
-          <p className="font-bold text-lg text-surface-900">{testedStudents}</p>
-        </div>
-        <div className="bg-white rounded-2xl border border-surface-200 p-5 shadow-sm">
-          <p className="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-1">Active Alerts</p>
-          <p className={`font-bold text-lg ${totalAlerts > 0 ? 'text-red-600' : 'text-surface-900'}`}>{totalAlerts}</p>
-        </div>
+        <StatCard label="Total Students" value={students.length} icon={Users} tone="primary" />
+        <StatCard label="Tested" value={testedStudents} tone="success" />
+        <StatCard label="Active Alerts" value={totalAlerts} tone={totalAlerts > 0 ? 'danger' : 'default'} />
       </div>
 
       {/* Roster Table */}
-      <Card padding={false} className="border-surface-200/50 shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-surface-100 bg-surface-50/50 flex flex-wrap gap-4 items-center justify-between">
-          <h3 className="text-lg font-semibold text-surface-900 flex items-center gap-2">
-            <Users className="w-5 h-5 text-primary-500" />
+      <Card padding={false} className="overflow-hidden">
+        <div className="px-6 py-4 border-b border-surface-100 flex flex-wrap gap-4 items-center justify-between">
+          <h3 className="text-base font-semibold text-surface-900 flex items-center gap-2">
+            <Users className="w-4 h-4 text-primary-600" />
             Class Roster
           </h3>
         </div>
@@ -142,7 +124,7 @@ export default function ClassAnalytics() {
                     <tr key={student.id} className={`hover:bg-surface-50/50 transition-colors ${alertCount > 0 ? 'bg-red-50/30' : ''}`}>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-100 to-accent-100 text-primary-700 font-bold flex items-center justify-center flex-shrink-0">
+                          <div className="w-10 h-10 rounded-full bg-primary-50 text-primary-700 font-semibold text-sm flex items-center justify-center flex-shrink-0">
                             {student.firstName[0]}{student.lastName[0]}
                           </div>
                           <div>
@@ -169,14 +151,14 @@ export default function ClassAnalytics() {
                       </td>
                       <td className="px-6 py-4">
                         {alertCount > 0
-                          ? <Badge variant="danger" size="sm" className="animate-pulse">{alertCount} Active Alert{alertCount > 1 ? 's' : ''}</Badge>
+                          ? <Badge variant="danger" size="sm">{alertCount} Active Alert{alertCount > 1 ? 's' : ''}</Badge>
                           : <span className="text-surface-400 text-sm">None</span>
                         }
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-end gap-2">
                           <Button variant="ghost" size="sm" className="text-surface-500 hover:text-red-600 hover:bg-red-50" icon={<Trash2 className="w-4 h-4" />}
-                            onClick={() => setDeleteUserModal(student)} title="Delete Student" />
+                            onClick={() => setDeleteUserModal(student)} title="Delete Student" aria-label="Delete student" />
                         </div>
                       </td>
                     </tr>
@@ -197,7 +179,7 @@ export default function ClassAnalytics() {
             </p>
             <div className="flex justify-end gap-3 pt-4">
               <Button variant="outline" onClick={() => setDeleteUserModal(null)}>Cancel</Button>
-              <Button variant="primary" className="bg-red-600 hover:bg-red-700 text-white border-transparent"
+              <Button variant="danger"
                 onClick={() => deleteMutation.mutate(deleteUserModal.id)} loading={deleteMutation.isPending}>
                 Delete Student
               </Button>

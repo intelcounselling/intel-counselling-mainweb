@@ -67,7 +67,7 @@ export default function ConcernForm() {
                 disabled={!message.trim() || mutation.isPending}
                 onClick={() => mutation.mutate()}
               >
-                {mutation.isPending ? <Spinner size="sm" color="white" /> : <Send className="w-5 h-5" />}
+                {mutation.isPending ? <Spinner size="sm" className="!text-white" /> : <Send className="w-5 h-5" />}
                 Send Concern
               </button>
             </div>
@@ -79,7 +79,7 @@ export default function ConcernForm() {
           <h3 className="text-2xl font-bold text-white mb-6" style={{ fontFamily: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif' }}>Your Previous Concerns</h3>
 
           {isLoading ? (
-            <div className="flex justify-center py-8"><Spinner color="white" /></div>
+            <div className="flex justify-center py-8"><Spinner className="!text-white" /></div>
           ) : !concerns.length ? (
             <div className="flex flex-col items-center justify-center p-12 text-center border-dashed border-2 border-[#8c8270]/30 bg-white/5 rounded-[2rem]">
               <div className="text-4xl mb-4 opacity-50">💭</div>

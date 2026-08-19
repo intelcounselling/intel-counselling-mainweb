@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, CalendarPlus, X, Clock } from 'lucide-react';
-import { Card, Button, Modal, Input, Spinner, EmptyState, Badge } from '../../components/ui';
+import { Card, Button, Modal, Input, Spinner, EmptyState, Badge, PageHeader, StatRowSkeleton } from '../../components/ui';
 import ScoreHistoryChart from '../../components/charts/ScoreHistoryChart';
 import SeverityBadge from '../../components/charts/SeverityBadge';
 import { useToast } from '../../components/ui/Toast';
@@ -19,9 +19,9 @@ function ChildSelector({ children, selected, onSelect }) {
         <button
           key={child.id}
           onClick={() => onSelect(child)}
-          className={`flex items-center gap-2.5 px-4 py-2.5 rounded-2xl font-medium text-sm transition-all ${
+          className={`flex items-center gap-2.5 px-3.5 py-2 rounded-lg font-medium text-sm transition-colors ${
             selected?.id === child.id
-              ? 'bg-primary-600 text-white shadow-md'
+              ? 'bg-primary-700 text-white shadow-sm'
               : 'bg-white text-surface-600 border border-surface-200 hover:border-primary-300 hover:text-primary-700'
           }`}
         >
@@ -120,7 +120,14 @@ export default function ParentDashboard() {
     a => a.patientId === currentChild?.id && (a.status === 'SCHEDULED' || a.status === 'CONFIRMED')
   ) || false;
 
-  if (isLoading) return <div className="flex justify-center pt-20"><Spinner size="xl" /></div>;
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Parent Dashboard" description="Track your child's wellbeing and assessments" />
+        <StatRowSkeleton count={3} />
+      </div>
+    );
+  }
 
   if (!children.length) return (
     <EmptyState icon="👶" title="No children linked" description="Contact your school admin to link children to your account." />
@@ -128,19 +135,22 @@ export default function ParentDashboard() {
 
   return (
     <div className="space-y-6 animate-slide-up">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h2 className="text-2xl font-bold text-surface-900">Parent Dashboard</h2>
-        <div className="flex gap-2">
-          {currentChild && (
-            <Link to={`/parent/children/${currentChild.id}/comparison`}>
-              <Button variant="outline" size="sm">📊 Comparison Report</Button>
-            </Link>
-          )}
-          <Button variant="primary" icon={<CalendarPlus className="w-4 h-4" />} onClick={() => setShowBook(true)}>
-            Book Appointment
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Parent Dashboard"
+        description="Track your child's wellbeing and assessments"
+        actions={(
+          <>
+            {currentChild && (
+              <Link to={`/parent/children/${currentChild.id}/comparison`}>
+                <Button variant="outline" size="sm">Comparison Report</Button>
+              </Link>
+            )}
+            <Button variant="primary" icon={<CalendarPlus className="w-4 h-4" />} onClick={() => setShowBook(true)}>
+              Book Appointment
+            </Button>
+          </>
+        )}
+      />
 
       {/* Child Selector */}
       {children.length > 1 && (
@@ -149,11 +159,11 @@ export default function ParentDashboard() {
 
       {/* Alert Banner */}
       {hasAlert && (
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="font-semibold text-red-800">
-              ⚠️ We recommend booking a session for {currentChild?.firstName}
+              We recommend booking a session for {currentChild?.firstName}
             </p>
             <p className="text-sm text-red-600 mt-0.5">
               Their school's psychiatrist has been notified. Please book an appointment as soon as possible.
@@ -166,11 +176,11 @@ export default function ParentDashboard() {
       {/* Child Overview */}
       <Card>
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center text-white text-xl font-bold">
+          <div className="w-14 h-14 rounded-xl bg-primary-700 flex items-center justify-center text-white text-lg font-semibold">
             {getInitials(currentChild)}
           </div>
           <div>
-            <h3 className="text-xl font-bold text-surface-900">{currentChild?.firstName} {currentChild?.lastName}</h3>
+            <h3 className="text-lg font-semibold text-surface-900">{currentChild?.firstName} {currentChild?.lastName}</h3>
             <p className="text-surface-500">Grade {currentChild?.grade} · {currentChild?.school?.name}</p>
             {lastResult && (
               <p className="text-sm text-surface-400 mt-0.5">Last assessed: {formatRelative(lastResult.takenAt)}</p>
@@ -182,7 +192,7 @@ export default function ParentDashboard() {
       {/* Score Chart */}
       {results.length > 0 && (
         <Card>
-          <h3 className="font-semibold text-surface-900 mb-4">Assessment History</h3>
+          <h3 className="text-base font-semibold text-surface-900 mb-4">Assessment History</h3>
           <ScoreHistoryChart results={results} height={240} />
         </Card>
       )}
@@ -190,7 +200,7 @@ export default function ParentDashboard() {
       {/* Latest Result */}
       {lastResult && (
         <Card>
-          <h3 className="font-semibold text-surface-900 mb-4">Latest Result</h3>
+          <h3 className="text-base font-semibold text-surface-900 mb-4">Latest Result</h3>
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
               <p className="text-sm text-surface-500">{lastResult.test?.name} · {formatDate(lastResult.takenAt)}</p>

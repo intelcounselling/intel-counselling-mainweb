@@ -161,7 +161,7 @@ function StudentDetailPanel({ studentId, onClose, onSchedule }) {
   const student = data;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0">
       <div className="flex items-center justify-between px-5 py-4 border-b border-surface-100 flex-shrink-0">
         <h3 className="font-semibold text-surface-900 text-sm flex items-center gap-2">
           <User className="w-4 h-4 text-primary-500" />
@@ -184,7 +184,7 @@ function StudentDetailPanel({ studentId, onClose, onSchedule }) {
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
           {/* Identity */}
           <div className="flex items-start gap-3">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-400 to-accent-500 flex items-center justify-center text-white font-bold flex-shrink-0 text-sm">
+            <div className="w-12 h-12 rounded-full bg-primary-700 flex items-center justify-center text-white font-bold flex-shrink-0 text-sm">
               {student.firstName?.[0]}{student.lastName?.[0]}
             </div>
             <div className="flex-1 min-w-0">
@@ -443,8 +443,8 @@ function CreateAppointmentModal({ isOpen, onClose, prefillStudent }) {
                         ].join(' ')}
                       >
                         <div className={[
-                          'w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 bg-gradient-to-br',
-                          isAt ? 'from-red-400 to-red-600' : 'from-primary-400 to-accent-500',
+                          'w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0',
+                          isAt ? 'bg-red-500' : 'bg-primary-700',
                         ].join(' ')}>
                           {student.firstName?.[0]}{student.lastName?.[0]}
                         </div>
@@ -482,7 +482,7 @@ function CreateAppointmentModal({ isOpen, onClose, prefillStudent }) {
               {/* Selected student */}
               {selectedStudent && (
                 <div className="flex items-center gap-3 p-4 bg-primary-50 border border-primary-100 rounded-xl">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-accent-500 flex items-center justify-center text-white font-bold flex-shrink-0 text-sm">
+                  <div className="w-10 h-10 rounded-full bg-primary-700 flex items-center justify-center text-white font-bold flex-shrink-0 text-sm">
                     {selectedStudent.firstName?.[0]}{selectedStudent.lastName?.[0]}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -533,7 +533,7 @@ function CreateAppointmentModal({ isOpen, onClose, prefillStudent }) {
                   <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
                   <input
                     type="url"
-                    className="form-input pl-9"
+                    className="form-input !pl-9"
                     placeholder="https://meet.google.com/..."
                     value={meetingLink}
                     onChange={e => setMeetingLink(e.target.value)}
@@ -639,7 +639,7 @@ function DayPanel({ year, month, day, appointments, onClose, onSelectStudent, on
     : '';
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0">
       <div className="flex items-center justify-between px-5 py-4 border-b border-surface-100 flex-shrink-0">
         <div>
           <h3 className="font-semibold text-surface-900 text-sm">{dateLabel}</h3>
@@ -687,8 +687,8 @@ function DayPanel({ year, month, day, appointments, onClose, onSelectStudent, on
                 >
                   <div className="flex items-center gap-3 mb-3">
                     <div className={[
-                      'w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 bg-gradient-to-br',
-                      hasAlert ? 'from-red-400 to-red-600' : 'from-primary-400 to-accent-500',
+                      'w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0',
+                      hasAlert ? 'bg-red-500' : 'bg-primary-700',
                     ].join(' ')}>
                       {appt.patient?.firstName?.[0]}{appt.patient?.lastName?.[0]}
                     </div>
@@ -832,13 +832,13 @@ export default function AdminAppointments() {
   return (
     <div className="space-y-6 animate-slide-up max-w-7xl">
       {/* Page header */}
-      <div className="flex items-end justify-between flex-wrap gap-4">
+      <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-surface-900 tracking-tight">Appointments</h2>
-          <p className="text-surface-500 mt-1.5 text-base flex items-center gap-3 flex-wrap">
+          <h1 className="text-2xl font-semibold tracking-tight text-surface-900">Appointments</h1>
+          <p className="text-surface-500 mt-1 text-sm flex items-center gap-3 flex-wrap">
             <span>{appointments.length} this month</span>
             {alertCount > 0 && (
-              <span className="inline-flex items-center gap-1 text-sm text-red-600 font-medium bg-red-50 px-2.5 py-0.5 rounded-full border border-red-200">
+              <span className="inline-flex items-center gap-1 text-xs text-red-600 font-medium bg-red-50 px-2.5 py-0.5 rounded-full border border-red-200">
                 <AlertTriangle className="w-3.5 h-3.5" />
                 {alertCount} at-risk
               </span>
@@ -849,15 +849,17 @@ export default function AdminAppointments() {
           <div className="flex bg-surface-100 rounded-xl p-1 gap-1">
             <button
               onClick={() => setView('calendar')}
-              className={['p-2 rounded-lg transition-all', view === 'calendar' ? 'bg-white shadow-sm text-primary-600' : 'text-surface-500 hover:text-surface-700'].join(' ')}
+              className={['p-2 rounded-lg transition-all', view === 'calendar' ? 'bg-white shadow-sm text-primary-700' : 'text-surface-500 hover:text-surface-700'].join(' ')}
               title="Calendar view"
+              aria-label="Calendar view"
             >
               <CalendarDays className="w-4 h-4" />
             </button>
             <button
               onClick={() => setView('list')}
-              className={['p-2 rounded-lg transition-all', view === 'list' ? 'bg-white shadow-sm text-primary-600' : 'text-surface-500 hover:text-surface-700'].join(' ')}
+              className={['p-2 rounded-lg transition-all', view === 'list' ? 'bg-white shadow-sm text-primary-700' : 'text-surface-500 hover:text-surface-700'].join(' ')}
               title="List view"
+              aria-label="List view"
             >
               <List className="w-4 h-4" />
             </button>
@@ -875,7 +877,7 @@ export default function AdminAppointments() {
           <Card padding={false} className="overflow-hidden">
             {/* Month navigation */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-surface-100">
-              <button onClick={prevMonth} className="p-2 hover:bg-surface-100 rounded-xl text-surface-600 transition-colors">
+              <button onClick={prevMonth} aria-label="Previous month" className="p-2 hover:bg-surface-100 rounded-lg text-surface-600 transition-colors">
                 <ChevronLeft className="w-5 h-5" />
               </button>
               <div className="text-center">
@@ -887,7 +889,7 @@ export default function AdminAppointments() {
                   Today
                 </button>
               </div>
-              <button onClick={nextMonth} className="p-2 hover:bg-surface-100 rounded-xl text-surface-600 transition-colors">
+              <button onClick={nextMonth} aria-label="Next month" className="p-2 hover:bg-surface-100 rounded-lg text-surface-600 transition-colors">
                 <ChevronRight className="w-5 h-5" />
               </button>
             </div>

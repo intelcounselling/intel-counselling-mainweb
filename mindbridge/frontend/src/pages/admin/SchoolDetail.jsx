@@ -2,7 +2,7 @@ import { useState, Fragment } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
 import { Users, Plus, Download, School, ArrowLeft, Trash2, Mail, Phone, MoreVertical, LayoutDashboard, ChevronDown, ChevronRight } from 'lucide-react';
-import { Card, Button, Spinner, EmptyState, Badge, Modal } from '../../components/ui';
+import { Card, Button, Spinner, EmptyState, Badge, Modal, PageHeader, StatCard } from '../../components/ui';
 import SeverityBadge from '../../components/charts/SeverityBadge';
 import { useToast } from '../../components/ui/Toast';
 import api from '../../lib/axios';
@@ -69,75 +69,64 @@ export default function SchoolDetail() {
   if (isLoading) return <div className="flex justify-center pt-20"><Spinner size="xl" /></div>;
 
   return (
-    <div className="space-y-8 animate-slide-up max-w-7xl">
+    <div className="space-y-6 animate-slide-up max-w-7xl">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link to="/admin/schools" className="p-2.5 bg-white border border-surface-200 hover:border-primary-300 hover:bg-primary-50 hover:text-primary-600 rounded-xl text-surface-600 transition-all shadow-sm">
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-          <div>
-            <div className="flex items-center gap-3">
-              <h2 className="text-3xl font-bold text-surface-900 tracking-tight">{school?.name || 'School Detail'}</h2>
-              {!school?.isActive && <Badge variant="danger">Inactive</Badge>}
-            </div>
-            <p className="text-surface-500 mt-1 flex items-center gap-2">
-              <School className="w-4 h-4" /> {school?.address || 'No address provided'}
-            </p>
-          </div>
-        </div>
-        
-        <div className="flex gap-3">
-          {isSuperAdmin && (
-            <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50" icon={<Trash2 className="w-4 h-4" />}
-              onClick={() => setDeleteSchoolModal(true)}>
-              Delete School
-            </Button>
-          )}
-          <Link to={`/admin/schools/${id}/dashboard`}>
-            <Button variant="primary" icon={<LayoutDashboard className="w-4 h-4" />} className="shadow-sm">Analytics</Button>
-          </Link>
-        </div>
-      </div>
+      <PageHeader
+        backTo="/admin/schools"
+        title={(
+          <span className="inline-flex items-center gap-3">
+            {school?.name || 'School Detail'}
+            {!school?.isActive && <Badge variant="danger">Inactive</Badge>}
+          </span>
+        )}
+        description={school?.address || 'No address provided'}
+        actions={(
+          <>
+            {isSuperAdmin && (
+              <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300" icon={<Trash2 className="w-4 h-4" />}
+                onClick={() => setDeleteSchoolModal(true)}>
+                Delete School
+              </Button>
+            )}
+            <Link to={`/admin/schools/${id}/dashboard`}>
+              <Button variant="primary" icon={<LayoutDashboard className="w-4 h-4" />}>Analytics</Button>
+            </Link>
+          </>
+        )}
+      />
 
       {/* Stats Cards */}
       {school && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="bg-white rounded-2xl border border-surface-200 p-5 shadow-sm flex items-start gap-4">
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-xl"><Mail className="w-5 h-5" /></div>
-            <div>
-              <p className="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-1">Contact Email</p>
-              <p className="font-medium text-surface-900 truncate">{school.contactEmail}</p>
+          <div className="stat-card flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-xs font-medium uppercase tracking-wider text-surface-500">Contact Email</p>
+              <p className="font-medium text-surface-900 mt-1.5 truncate">{school.contactEmail}</p>
             </div>
+            <div className="w-10 h-10 rounded-lg bg-primary-50 text-primary-700 flex items-center justify-center flex-shrink-0"><Mail className="w-5 h-5" /></div>
           </div>
-          
-          <div className="bg-white rounded-2xl border border-surface-200 p-5 shadow-sm flex items-start gap-4">
-            <div className="p-3 bg-green-50 text-green-600 rounded-xl"><Phone className="w-5 h-5" /></div>
-            <div>
-              <p className="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-1">Phone</p>
-              <p className="font-medium text-surface-900 truncate">{school.contactPhone || '—'}</p>
+
+          <div className="stat-card flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-xs font-medium uppercase tracking-wider text-surface-500">Phone</p>
+              <p className="font-medium text-surface-900 mt-1.5 truncate">{school.contactPhone || '—'}</p>
             </div>
+            <div className="w-10 h-10 rounded-lg bg-primary-50 text-primary-700 flex items-center justify-center flex-shrink-0"><Phone className="w-5 h-5" /></div>
           </div>
-          
-          <div className="bg-white rounded-2xl border border-surface-200 p-5 shadow-sm flex items-start gap-4">
-            <div className="p-3 bg-accent-50 text-accent-600 rounded-xl"><Users className="w-5 h-5" /></div>
-            <div>
-              <p className="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-1">Total Students</p>
-              <p className="font-bold text-lg text-surface-900">{school._count?.users || 0}</p>
-            </div>
-          </div>
+
+          <StatCard label="Total Students" value={school._count?.users || 0} icon={Users} tone="primary" />
         </div>
       )}
 
       {/* Classes Grid */}
-      <div className="mt-8">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-surface-900 flex items-center gap-2">
-            <School className="w-5 h-5 text-primary-500" />
+      <div>
+        <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
+          <h3 className="text-base font-semibold text-surface-900 flex items-center gap-2">
+            <School className="w-4 h-4 text-primary-600" />
             Classes & Analytics
           </h3>
           
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Link to={`/admin/schools/${id}/classes`}>
               <Button variant="outline" size="sm" icon={<School className="w-4 h-4" />}>Manage Classes</Button>
             </Link>
@@ -163,10 +152,10 @@ export default function SchoolDetail() {
 
               return (
                 <Link key={className} to={`/admin/schools/${id}/classes/${classIdParam}/analytics`} className="block group">
-                  <Card padding={false} className="h-full border-surface-200 hover:border-primary-300 hover:shadow-md transition-all flex flex-col">
+                  <Card padding={false} className="h-full hover:border-primary-300 hover:shadow-card-hover transition-all flex flex-col">
                     <div className="p-5 flex-1">
                       <div className="flex justify-between items-start mb-4">
-                        <h4 className="text-lg font-bold text-surface-900 group-hover:text-primary-600 transition-colors">{className}</h4>
+                        <h4 className="font-semibold text-surface-900 group-hover:text-primary-700 transition-colors">{className}</h4>
                         <Badge variant="primary">{classStudents.length} Students</Badge>
                       </div>
                       
@@ -178,7 +167,7 @@ export default function SchoolDetail() {
                         <div className="flex justify-between items-center text-sm">
                           <span className="text-surface-500">Active Alerts</span>
                           {totalAlerts > 0 ? (
-                            <Badge variant="danger" size="xs" className="animate-pulse">{totalAlerts}</Badge>
+                            <Badge variant="danger" size="xs">{totalAlerts}</Badge>
                           ) : (
                             <span className="text-surface-400">0</span>
                           )}

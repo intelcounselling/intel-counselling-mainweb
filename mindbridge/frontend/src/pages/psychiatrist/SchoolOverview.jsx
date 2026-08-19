@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { School, Users, AlertTriangle, ChevronRight } from 'lucide-react';
-import { Card, Spinner, EmptyState, Badge } from '../../components/ui';
+import { Card, Spinner, EmptyState, Badge, PageHeader } from '../../components/ui';
 import api from '../../lib/axios';
 import { formatRelative } from '../../utils/formatters';
 
@@ -10,10 +10,10 @@ function SchoolCard({ school }) {
     <Link to={`/psychiatrist/schools/${school.id}`}>
       <Card hover className="flex flex-col gap-4">
         <div className="flex items-start justify-between">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-lg bg-primary-50 border border-primary-100 flex items-center justify-center overflow-hidden">
             {school.logoUrl
-              ? <img src={school.logoUrl} className="w-full h-full object-cover rounded-xl" alt="" />
-              : <School className="w-6 h-6 text-white" />
+              ? <img src={school.logoUrl} className="w-full h-full object-cover" alt="" />
+              : <School className="w-6 h-6 text-primary-600" />
             }
           </div>
           {school.alertCount > 0 && (
@@ -62,14 +62,11 @@ export default function SchoolOverview() {
 
     return (
       <div className="space-y-6 animate-slide-up">
-        <div>
-          <h2 className="text-2xl font-bold text-surface-900">{school?.name}</h2>
-          <p className="text-surface-500">{school?.address}</p>
-        </div>
+        <PageHeader backTo="/psychiatrist/schools" title={school?.name} description={school?.address} />
 
         <Card padding={false}>
           <div className="px-6 py-4 border-b border-surface-100">
-            <h3 className="font-semibold">Students ({students.length})</h3>
+            <h3 className="text-base font-semibold text-surface-900">Students ({students.length})</h3>
           </div>
           {studentsLoading ? <div className="flex justify-center py-12"><Spinner /></div> : (
             <div className="overflow-x-auto">
@@ -106,10 +103,7 @@ export default function SchoolOverview() {
   const schools = data?.schools || [];
   return (
     <div className="space-y-6 animate-slide-up">
-      <div>
-        <h2 className="text-2xl font-bold text-surface-900">My Schools</h2>
-        <p className="text-surface-500">{schools.length} assigned schools</p>
-      </div>
+      <PageHeader title="My Schools" description={`${schools.length} assigned school${schools.length !== 1 ? 's' : ''}`} />
       {!schools.length
         ? <EmptyState icon="🏫" title="No schools assigned" description="Contact your admin to assign schools." />
         : <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-5">

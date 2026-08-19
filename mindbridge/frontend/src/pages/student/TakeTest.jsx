@@ -76,7 +76,7 @@ export default function TakeTest() {
                 <span className="text-2xl text-indigo-300 font-medium">/ {result.result?.maxScore}</span>
               </div>
               <div className="mt-6 flex justify-center">
-                <SeverityBadge severity={result.severity} size="lg" className="shadow-lg" />
+                <SeverityBadge severity={result.severity} size="md" />
               </div>
             </div>
 
@@ -98,7 +98,10 @@ export default function TakeTest() {
               </div>
               <button
                 onClick={() => setShareWithTherapist(v => !v)}
-                className={`relative w-14 h-7 rounded-full transition-colors ${shareWithTherapist ? 'bg-indigo-500' : 'bg-white/20'}`}
+                role="switch"
+                aria-checked={shareWithTherapist}
+                aria-label="Share result with therapist"
+                className={`relative w-14 h-7 rounded-full transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/70 ${shareWithTherapist ? 'bg-indigo-500' : 'bg-white/20'}`}
               >
                 <span className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform ${shareWithTherapist ? 'translate-x-8' : 'translate-x-1'}`} />
               </button>
@@ -128,7 +131,7 @@ export default function TakeTest() {
         {/* Header */}
         <div className="mb-8">
           <div className="inline-block bg-[#eff0ff] text-[#5551ff] text-[10px] font-bold px-3 py-1.5 rounded-full mb-4 uppercase tracking-widest">
-            Assessment {currentQ === 0 ? 1 : 1} of 5
+            Assessment
           </div>
           
           <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between border-b border-[#f0eee9] pb-6 gap-4">
@@ -137,7 +140,9 @@ export default function TakeTest() {
             </h2>
             <div className="text-right flex-shrink-0">
               <p className="text-[#8c8270] text-sm font-bold tracking-wide">Question {currentQ + 1} of {totalQ}</p>
-              <div className="w-full h-1 bg-[#e4dcd0] mt-2 rounded-full" />
+              <div className="w-full h-1 bg-[#e4dcd0] mt-2 rounded-full overflow-hidden">
+                <div className="h-full bg-[#8c8270] rounded-full transition-all duration-300" style={{ width: `${progressPct}%` }} />
+              </div>
             </div>
           </div>
         </div>

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Calendar, CalendarPlus } from 'lucide-react';
-import { Card, Button, Input, Spinner, EmptyState, Badge } from '../../components/ui';
+import { Card, Button, Input, Spinner, EmptyState, Badge, PageHeader } from '../../components/ui';
 import { useToast } from '../../components/ui/Toast';
 import ScoreHistoryChart from '../../components/charts/ScoreHistoryChart';
 import SeverityBadge from '../../components/charts/SeverityBadge';
@@ -23,8 +23,8 @@ function BookAppointmentInline({ patientId, onSuccess }) {
   });
 
   return (
-    <div className="bg-primary-50 border border-primary-200 rounded-2xl p-5 space-y-4">
-      <h4 className="font-semibold text-primary-900">📅 Book Appointment</h4>
+    <div className="bg-primary-50 border border-primary-100 rounded-xl p-5 space-y-4">
+      <h4 className="text-sm font-semibold text-primary-900 flex items-center gap-2"><Calendar className="w-4 h-4" /> Book Appointment</h4>
       <div className="grid sm:grid-cols-2 gap-4">
         <Input label="Date & Time" type="datetime-local" value={slot} onChange={e => setSlot(e.target.value)} required />
         <Input label="Meeting Link" value={meetingLink} onChange={e => setMeetingLink(e.target.value)} placeholder="https://meet.google.com/..." />
@@ -56,21 +56,17 @@ export default function StudentProfile() {
 
   return (
     <div className="space-y-6 max-w-5xl animate-slide-up">
-      <div className="flex items-center gap-4">
-        <Link to="/psychiatrist/schools" className="p-2 hover:bg-surface-200 rounded-xl text-surface-600">
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-        <div className="flex-1">
-          <h2 className="text-2xl font-bold text-surface-900">
-            {student?.firstName} {student?.lastName}
-          </h2>
-          <p className="text-surface-500">Grade {student?.grade} · {student?.school?.name}</p>
-        </div>
-        <Button variant="primary" icon={<CalendarPlus className="w-4 h-4" />}
-          onClick={() => setShowBook(v => !v)}>
-          {showBook ? 'Cancel' : 'Book Appointment'}
-        </Button>
-      </div>
+      <PageHeader
+        backTo="/psychiatrist/schools"
+        title={`${student?.firstName || ''} ${student?.lastName || ''}`.trim() || 'Student Profile'}
+        description={`Grade ${student?.grade || '—'} · ${student?.school?.name || ''}`}
+        actions={(
+          <Button variant="primary" icon={<CalendarPlus className="w-4 h-4" />}
+            onClick={() => setShowBook(v => !v)}>
+            {showBook ? 'Cancel' : 'Book Appointment'}
+          </Button>
+        )}
+      />
 
       {/* Patient info */}
       <Card>
@@ -100,7 +96,7 @@ export default function StudentProfile() {
       {/* Score History Chart */}
       {results.length > 0 && (
         <Card>
-          <h3 className="font-semibold text-surface-900 mb-4">Score History</h3>
+          <h3 className="text-base font-semibold text-surface-900 mb-4">Score History</h3>
           <ScoreHistoryChart results={results} height={260} />
         </Card>
       )}
@@ -109,7 +105,7 @@ export default function StudentProfile() {
         {/* Active Alerts */}
         <Card padding={false}>
           <div className="px-5 py-4 border-b border-surface-100">
-            <h3 className="font-semibold">Alerts ({alerts.length})</h3>
+            <h3 className="text-base font-semibold text-surface-900">Alerts ({alerts.length})</h3>
           </div>
           {!alerts.length ? (
             <EmptyState icon="✅" title="No alerts" />
@@ -129,7 +125,7 @@ export default function StudentProfile() {
         {/* Appointments */}
         <Card padding={false}>
           <div className="px-5 py-4 border-b border-surface-100">
-            <h3 className="font-semibold">Appointments ({appointments.length})</h3>
+            <h3 className="text-base font-semibold text-surface-900">Appointments ({appointments.length})</h3>
           </div>
           {!appointments.length ? (
             <EmptyState icon="📭" title="No appointments" />
@@ -154,7 +150,7 @@ export default function StudentProfile() {
       {/* All Results */}
       <Card padding={false}>
         <div className="px-5 py-4 border-b border-surface-100">
-          <h3 className="font-semibold">Assessment History ({results.length})</h3>
+          <h3 className="text-base font-semibold text-surface-900">Assessment History ({results.length})</h3>
         </div>
         {!results.length ? (
           <EmptyState icon="📋" title="No assessments taken" />

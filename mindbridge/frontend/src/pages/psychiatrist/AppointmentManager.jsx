@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, List, LayoutGrid, X, Edit2, Trash2 } from 'lucide-react';
-import { Card, Button, Modal, Input, Select, Spinner, Badge } from '../../components/ui';
+import { Card, Button, Modal, Input, Select, Spinner, Badge, PageHeader } from '../../components/ui';
 import SeverityBadge from '../../components/charts/SeverityBadge';
 import { useToast } from '../../components/ui/Toast';
 import api from '../../lib/axios';
@@ -160,31 +160,31 @@ export default function AppointmentManager() {
 
   return (
     <div className="space-y-6 animate-slide-up">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-surface-900">Appointment Manager</h2>
-          <p className="text-surface-500">{appointments.length} appointments this month</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setView('calendar')}
-            className={`p-2 rounded-lg ${view === 'calendar' ? 'bg-primary-600 text-white' : 'hover:bg-surface-200 text-surface-600'}`}>
-            <LayoutGrid className="w-4 h-4" />
-          </button>
-          <button onClick={() => setView('list')}
-            className={`p-2 rounded-lg ${view === 'list' ? 'bg-primary-600 text-white' : 'hover:bg-surface-200 text-surface-600'}`}>
-            <List className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Appointment Manager"
+        description={`${appointments.length} appointment${appointments.length !== 1 ? 's' : ''} this month`}
+        actions={(
+          <div className="flex bg-surface-100 rounded-lg p-1 gap-1">
+            <button onClick={() => setView('calendar')} aria-label="Calendar view" title="Calendar view"
+              className={`p-2 rounded-md transition-colors ${view === 'calendar' ? 'bg-white shadow-sm text-primary-700' : 'text-surface-500 hover:text-surface-700'}`}>
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button onClick={() => setView('list')} aria-label="List view" title="List view"
+              className={`p-2 rounded-md transition-colors ${view === 'list' ? 'bg-white shadow-sm text-primary-700' : 'text-surface-500 hover:text-surface-700'}`}>
+              <List className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+      />
 
       <Card>
         {/* Month Navigation */}
         <div className="flex items-center justify-between mb-5">
-          <button onClick={prevMonth} className="p-2 hover:bg-surface-100 rounded-xl text-surface-600">
+          <button onClick={prevMonth} aria-label="Previous month" className="p-2 hover:bg-surface-100 rounded-lg text-surface-600">
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <h3 className="font-semibold text-surface-900">{MONTHS[month]} {year}</h3>
-          <button onClick={nextMonth} className="p-2 hover:bg-surface-100 rounded-xl text-surface-600">
+          <h3 className="text-base font-semibold text-surface-900">{MONTHS[month]} {year}</h3>
+          <button onClick={nextMonth} aria-label="Next month" className="p-2 hover:bg-surface-100 rounded-lg text-surface-600">
             <ChevronRight className="w-5 h-5" />
           </button>
         </div>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { User, Lock, Phone, Save, CheckCircle, Eye, EyeOff, Shield } from 'lucide-react';
-import { Card, Button, Input } from '../components/ui';
+import { Card, Button, Input, PageHeader } from '../components/ui';
 import { useToast } from '../components/ui/Toast';
 import useAuthStore from '../store/authStore';
 import api from '../lib/axios';
@@ -93,10 +93,7 @@ export default function Settings() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-slide-up py-4">
-      <div>
-        <h2 className="text-2xl font-bold text-surface-900">Settings</h2>
-        <p className="text-surface-500">Manage your profile details and security settings.</p>
-      </div>
+      <PageHeader title="Settings" description="Manage your profile details and security settings." />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Profile details */}
@@ -105,7 +102,7 @@ export default function Settings() {
             <div className="p-2 rounded-lg bg-primary-50 text-primary-600">
               <User className="w-5 h-5" />
             </div>
-            <h3 className="text-lg font-semibold text-surface-900">Profile Details</h3>
+            <h3 className="text-base font-semibold text-surface-900">Profile Details</h3>
           </div>
 
           <form onSubmit={handleUpdateProfile} className="space-y-4">
@@ -151,7 +148,7 @@ export default function Settings() {
               <div className="p-2 rounded-lg bg-green-50 text-green-600">
                 <Shield className="w-5 h-5" />
               </div>
-              <h3 className="text-lg font-semibold text-surface-900">Security</h3>
+              <h3 className="text-base font-semibold text-surface-900">Security</h3>
             </div>
             <div className="flex flex-col items-center justify-center py-6 text-center gap-3">
               <img src="https://www.google.com/favicon.ico" alt="Google" className="w-8 h-8" />
@@ -168,7 +165,7 @@ export default function Settings() {
             <div className="p-2 rounded-lg bg-accent-50 text-accent-600">
               <Shield className="w-5 h-5" />
             </div>
-            <h3 className="text-lg font-semibold text-surface-900">Change Password</h3>
+            <h3 className="text-base font-semibold text-surface-900">Change Password</h3>
           </div>
 
           {pwdError && (
@@ -194,6 +191,7 @@ export default function Settings() {
                 <button
                   type="button"
                   onClick={() => setShowCurrent((v) => !v)}
+                  aria-label={showCurrent ? 'Hide current password' : 'Show current password'}
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600"
                 >
                   {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -219,6 +217,7 @@ export default function Settings() {
                 <button
                   type="button"
                   onClick={() => setShowNew((v) => !v)}
+                  aria-label={showNew ? 'Hide new password' : 'Show new password'}
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600"
                 >
                   {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -261,6 +260,7 @@ export default function Settings() {
                 <button
                   type="button"
                   onClick={() => setShowConfirm((v) => !v)}
+                  aria-label={showConfirm ? 'Hide confirmation password' : 'Show confirmation password'}
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600"
                 >
                   {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}

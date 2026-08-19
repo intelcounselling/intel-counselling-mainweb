@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Search, ToggleLeft, ToggleRight, Trash2, School, Users, FileText, ChevronDown, ChevronUp, Download } from 'lucide-react';
-import { Card, Select, Badge, Button, Modal, Spinner, EmptyState } from '../../components/ui';
+import { Card, Select, Badge, Button, Modal, Spinner, EmptyState, PageHeader, ListSkeleton } from '../../components/ui';
 import SeverityBadge from '../../components/charts/SeverityBadge';
 import ScoreHistoryChart from '../../components/charts/ScoreHistoryChart';
 import { useToast } from '../../components/ui/Toast';
@@ -123,16 +123,16 @@ export default function UserManagement() {
 
   return (
     <div className="space-y-6 animate-slide-up max-w-7xl">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-3xl font-bold text-surface-900 tracking-tight">User Directory</h2>
-          <p className="text-surface-500 mt-1 text-lg">Manage all platform users and permissions</p>
-        </div>
-        <div className="px-4 py-2 bg-surface-100 rounded-lg border border-surface-200 flex items-center gap-2">
-          <Users className="w-5 h-5 text-surface-500" />
-          <span className="font-semibold text-surface-700">{data?.pagination?.total || 0} Total Users</span>
-        </div>
-      </div>
+      <PageHeader
+        title="User Directory"
+        description="Manage all platform users and permissions"
+        actions={(
+          <div className="px-3 py-1.5 bg-white rounded-lg border border-surface-200 flex items-center gap-2 text-sm">
+            <Users className="w-4 h-4 text-surface-500" />
+            <span className="font-medium text-surface-700 tabular-nums">{data?.pagination?.total || 0} users</span>
+          </div>
+        )}
+      />
 
       {selectedIds.length > 0 && (
         <div className="flex items-center justify-between p-4 bg-red-50 border border-red-100 rounded-2xl animate-fade-in">
@@ -191,7 +191,7 @@ export default function UserManagement() {
 
       <Card padding={false} className="border-surface-200/50 shadow-sm overflow-hidden">
         {isLoading ? (
-          <div className="flex justify-center py-16"><Spinner size="lg" /></div>
+          <ListSkeleton rows={8} />
         ) : !users.length ? (
           <EmptyState icon="👥" title="No users found" description="Try adjusting your search or filters." className="py-16" />
         ) : (
@@ -226,7 +226,7 @@ export default function UserManagement() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-surface-100 to-surface-200 text-surface-700 font-bold flex items-center justify-center flex-shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-surface-100 text-surface-600 font-semibold text-sm flex items-center justify-center flex-shrink-0">
                           {user.firstName[0]}{user.lastName[0]}
                         </div>
                         <div>
@@ -247,7 +247,7 @@ export default function UserManagement() {
                       ) : '—'}
                     </td>
                     <td className="px-6 py-4">
-                      <Badge variant={user.isActive ? 'success' : 'danger'} size="xs" className={user.isActive ? 'animate-pulse-slow' : ''}>
+                      <Badge variant={user.isActive ? 'success' : 'danger'} size="xs">
                         {user.isActive ? 'Active' : 'Disabled'}
                       </Badge>
                     </td>
@@ -258,13 +258,13 @@ export default function UserManagement() {
                       <div className="flex items-center justify-end gap-2">
                         {user.role === 'STUDENT' && currentUser?.role === 'SUPER_ADMIN' && (
                           <Button variant="ghost" size="sm" className="text-primary-600 hover:bg-primary-50" icon={<FileText className="w-4 h-4" />}
-                            onClick={() => window.open(`/admin/students/${user.id}/report`, '_blank')} title="View Student Report" />
+                            onClick={() => window.open(`/admin/students/${user.id}/report`, '_blank')} title="View Student Report" aria-label="View student report" />
                         )}
                         <Button variant="ghost" size="sm" className={user.isActive ? "text-green-600 hover:bg-green-50" : "text-surface-500 hover:bg-surface-100"}
                           icon={user.isActive ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
-                          onClick={() => toggleMutation.mutate(user.id)} title={user.isActive ? "Deactivate" : "Activate"} />
+                          onClick={() => toggleMutation.mutate(user.id)} title={user.isActive ? "Deactivate" : "Activate"} aria-label={user.isActive ? "Deactivate user" : "Activate user"} />
                         <Button variant="ghost" size="sm" className="text-surface-500 hover:text-red-600 hover:bg-red-50" icon={<Trash2 className="w-4 h-4" />}
-                          onClick={() => setDeleteUserModal(user)} title="Delete User" />
+                          onClick={() => setDeleteUserModal(user)} title="Delete User" aria-label="Delete user" />
                       </div>
                     </td>
                   </tr>
@@ -306,7 +306,7 @@ export default function UserManagement() {
             </p>
             <div className="flex justify-end gap-3 pt-4">
               <Button variant="outline" onClick={() => setDeleteUserModal(null)}>Cancel</Button>
-              <Button variant="primary" className="bg-red-600 hover:bg-red-700 text-white border-transparent"
+              <Button variant="danger"
                 onClick={() => deleteMutation.mutate(deleteUserModal.id)} loading={deleteMutation.isPending}>
                 Yes, Delete User
               </Button>
@@ -326,7 +326,7 @@ export default function UserManagement() {
           </div>
           <div className="flex justify-end gap-3 pt-4">
             <Button variant="outline" onClick={() => setBatchDeleteModal(false)}>Cancel</Button>
-            <Button variant="primary" className="bg-red-600 hover:bg-red-700 text-white border-transparent"
+            <Button variant="danger"
               onClick={() => batchDeleteMutation.mutate()} loading={batchDeleteMutation.isPending}>
               Yes, Delete Users
             </Button>
@@ -427,7 +427,7 @@ function StudentReportModal({ studentId, onClose }) {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-surface-50/50 border-b border-surface-150 text-[11px] uppercase tracking-wider text-surface-400 font-semibold">
+                <tr className="bg-surface-50/50 border-b border-surface-100 text-[11px] uppercase tracking-wider text-surface-400 font-semibold">
                   <th className="px-5 py-3">Test</th>
                   <th className="px-5 py-3">Date</th>
                   <th className="px-5 py-3">Score</th>

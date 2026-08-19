@@ -329,7 +329,7 @@ function BulkUploadStudents({ schoolId, cls }) {
             )}
           </div>
           
-          <div className="max-h-[300px] overflow-y-auto">
+          <div className="max-h-[300px] overflow-y-auto overflow-x-auto">
             <table className="w-full text-sm text-left">
               <thead className="bg-surface-50 sticky top-0">
                 <tr>

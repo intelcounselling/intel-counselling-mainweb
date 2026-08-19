@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Plus, Pencil, Trash2, Users } from 'lucide-react';
-import { Card, Button, Input, Spinner, EmptyState } from '../../components/ui';
+import { Card, Button, Input, Spinner, EmptyState, PageHeader } from '../../components/ui';
 import { useToast } from '../../components/ui/Toast';
 import api from '../../lib/axios';
 import ClassStudentModal from './ClassStudentModal';
@@ -94,19 +94,16 @@ export default function ClassManager() {
 
   return (
     <div className="space-y-6 animate-slide-up max-w-4xl">
-      <div className="flex items-center gap-4">
-        <Link to={`/admin/schools/${schoolId}/dashboard`}
-          className="p-2 hover:bg-surface-200 rounded-xl text-surface-600 transition-colors">
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-        <div className="flex-1">
-          <h2 className="text-2xl font-bold text-surface-900">Manage Classes</h2>
-          <p className="text-surface-500 text-sm">Create and manage class sections for student grouping</p>
-        </div>
-        <Button variant="primary" icon={<Plus className="w-4 h-4" />} onClick={() => { setShowForm(v => !v); setEditClass(null); }}>
-          {showForm ? 'Cancel' : 'Add Class'}
-        </Button>
-      </div>
+      <PageHeader
+        backTo={`/admin/schools/${schoolId}/dashboard`}
+        title="Manage Classes"
+        description="Create and manage class sections for student grouping"
+        actions={(
+          <Button variant="primary" icon={<Plus className="w-4 h-4" />} onClick={() => { setShowForm(v => !v); setEditClass(null); }}>
+            {showForm ? 'Cancel' : 'Add Class'}
+          </Button>
+        )}
+      />
 
       {showForm && (
         <Card>
@@ -151,6 +148,7 @@ export default function ClassManager() {
                     onClick={() => setSelectedClassForStudents(cls)}
                     className="p-2 hover:bg-primary-50 rounded-lg text-primary-600 hover:text-primary-700 transition-colors"
                     title="Manage Students"
+                    aria-label="Manage students"
                   >
                     <Users className="w-4 h-4" />
                   </button>
@@ -158,6 +156,7 @@ export default function ClassManager() {
                     onClick={() => setEditClass(cls)}
                     className="p-2 hover:bg-surface-100 rounded-lg text-surface-500 hover:text-surface-900 transition-colors"
                     title="Edit Class"
+                    aria-label="Edit class"
                   >
                     <Pencil className="w-4 h-4" />
                   </button>
@@ -165,6 +164,7 @@ export default function ClassManager() {
                     onClick={() => { if (confirm(`Delete class "${cls.name}"?`)) deleteMutation.mutate(cls.id); }}
                     className="p-2 hover:bg-red-50 rounded-lg text-surface-500 hover:text-red-600 transition-colors"
                     title="Delete Class"
+                    aria-label="Delete class"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

@@ -26,8 +26,8 @@ function NoteForm({ patientId, appointmentId, onSuccess, onCancel }) {
   });
 
   return (
-    <div className="bg-primary-50 border border-primary-200 rounded-2xl p-5 space-y-4">
-      <h4 className="font-semibold text-primary-900">📝 New Session Note</h4>
+    <div className="bg-primary-50 border border-primary-100 rounded-xl p-5 space-y-4">
+      <h4 className="text-sm font-semibold text-primary-900 flex items-center gap-2"><FileText className="w-4 h-4" /> New Session Note</h4>
       <div className="grid sm:grid-cols-2 gap-4">
         <Input label="Session Date & Time" type="datetime-local" value={sessionDate} onChange={e => setSessionDate(e.target.value)} required />
         <div className="flex items-center gap-3 pt-6">
@@ -83,7 +83,7 @@ function NoteCard({ note, onDelete }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className={`border rounded-2xl overflow-hidden ${note.isConfidential ? 'border-amber-200 bg-amber-50/30' : 'border-surface-200'}`}>
+    <div className={`border rounded-xl overflow-hidden ${note.isConfidential ? 'border-amber-200 bg-amber-50/30' : 'border-surface-200'}`}>
       <button
         onClick={() => setExpanded(v => !v)}
         className="w-full flex items-center gap-4 px-5 py-4 hover:bg-black/[0.02] transition-colors text-left"
@@ -150,7 +150,7 @@ function ProgressSection({ progress }) {
     <Card>
       <div className="flex items-center gap-2 mb-4">
         <TrendingUp className="w-5 h-5 text-primary-600" />
-        <h3 className="font-semibold text-surface-900">Assessment Progress (Before → After)</h3>
+        <h3 className="text-base font-semibold text-surface-900">Assessment Progress (Before → After)</h3>
       </div>
       <div className="space-y-4">
         {categories.map(cat => {
@@ -225,7 +225,7 @@ export default function CounsellingPanel({ patientId, appointmentId }) {
       {/* Notes */}
       <Card padding={false}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-surface-100">
-          <h3 className="font-semibold text-surface-900">Session Notes (Package 3)</h3>
+          <h3 className="text-base font-semibold text-surface-900">Session Notes (Package 3)</h3>
           <Button variant="outline" size="sm" icon={<Plus className="w-4 h-4" />} onClick={() => setShowForm(v => !v)}>
             {showForm ? 'Cancel' : 'Add Note'}
           </Button>

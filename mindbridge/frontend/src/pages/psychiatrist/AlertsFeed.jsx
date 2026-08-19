@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Eye, CheckCircle, Filter } from 'lucide-react';
-import { Card, Button, Select, Spinner, EmptyState, Badge } from '../../components/ui';
+import { Card, Button, Select, Spinner, EmptyState, Badge, PageHeader, ListSkeleton } from '../../components/ui';
 import SeverityBadge from '../../components/charts/SeverityBadge';
 import { useToast } from '../../components/ui/Toast';
 import api from '../../lib/axios';
-import { formatRelative } from '../../utils/formatters';
+import { formatRelative, getAlertCardClass } from '../../utils/formatters';
 
 const SEVERITY_ORDER = { severe: 0, 'moderately severe': 1, moderate: 2, high: 2, mild: 3, minimal: 4, low: 4 };
 
@@ -32,27 +32,27 @@ export default function AlertsFeed() {
 
   return (
     <div className="space-y-6 animate-slide-up">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-surface-900">Alerts</h2>
-          <p className="text-surface-500">{alerts.length} alerts</p>
-        </div>
-        <Select value={filter} onChange={e => setFilter(e.target.value)} className="w-36">
-          <option value="">All</option>
-          <option value="UNREAD">Unread</option>
-          <option value="READ">Read</option>
-          <option value="ACTIONED">Actioned</option>
-        </Select>
-      </div>
+      <PageHeader
+        title="Alerts"
+        description={`${alerts.length} alert${alerts.length !== 1 ? 's' : ''} in view`}
+        actions={(
+          <Select value={filter} onChange={e => setFilter(e.target.value)} className="w-36" aria-label="Filter alerts by status">
+            <option value="">All</option>
+            <option value="UNREAD">Unread</option>
+            <option value="READ">Read</option>
+            <option value="ACTIONED">Actioned</option>
+          </Select>
+        )}
+      />
 
       {isLoading ? (
-        <div className="flex justify-center pt-12"><Spinner size="lg" /></div>
+        <Card padding={false}><ListSkeleton rows={4} /></Card>
       ) : !alerts.length ? (
         <EmptyState icon="✅" title="No alerts" description="No alerts match the selected filter." />
       ) : (
         <div className="space-y-4">
           {alerts.map(alert => (
-            <Card key={alert.id} className={`alert-card-${alert.severity.toLowerCase()} !p-0 overflow-hidden`} padding={false}>
+            <Card key={alert.id} className={`${getAlertCardClass(alert.severity)} !p-0 overflow-hidden`} padding={false}>
               <div className="p-5">
                 <div className="flex items-start gap-4">
                   <div className="flex-1">
@@ -67,8 +67,8 @@ export default function AlertsFeed() {
                         'bg-surface-100 text-surface-600 border-surface-200'
                       }`}>{alert.status}</span>
                     </div>
-                    <p className="text-sm text-surface-600 mb-1">
-                      🏫 {alert.student.school?.name} &nbsp;|&nbsp; 📚 Grade {alert.student.grade || 'N/A'}
+                    <p className="text-sm text-surface-500 mb-1">
+                      {alert.student.school?.name} · Grade {alert.student.grade || 'N/A'}
                     </p>
                     <p className="text-sm text-surface-700">{alert.message}</p>
                     <p className="text-xs text-surface-400 mt-2">{formatRelative(alert.firedAt)}</p>

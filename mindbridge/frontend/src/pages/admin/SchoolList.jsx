@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Plus, School, ChevronRight, Search, X, Upload, Users, Check, Key } from 'lucide-react';
-import { Card, Button, Input, Spinner, EmptyState, Badge } from '../../components/ui';
+import { Card, Button, Input, Spinner, EmptyState, Badge, PageHeader, Skeleton } from '../../components/ui';
 import { useToast } from '../../components/ui/Toast';
 import api from '../../lib/axios';
 import { formatDate } from '../../utils/formatters';
@@ -51,7 +51,7 @@ function CreateSchoolPanel({ onClose, onSuccess }) {
               {createdCreds ? 'Admin Credentials' : 'Add New School'}
             </h2>
             {!createdCreds && (
-              <button onClick={onClose} className="p-2 hover:bg-surface-200 rounded-full transition-colors">
+              <button onClick={onClose} aria-label="Close panel" className="p-2 hover:bg-surface-200 rounded-full transition-colors">
                 <X className="w-5 h-5 text-surface-500" />
               </button>
             )}
@@ -74,12 +74,12 @@ function CreateSchoolPanel({ onClose, onSuccess }) {
                     <p className="font-mono font-bold text-lg text-surface-900 mt-0.5">{createdCreds.accessCode}</p>
                   </div>
                   
-                  <div className="border-t border-surface-150 pt-4">
+                  <div className="border-t border-surface-100 pt-4">
                     <span className="text-xs font-semibold text-surface-400 uppercase tracking-wider">Admin Username / Email</span>
                     <p className="font-medium text-surface-900 mt-0.5">{createdCreds.email}</p>
                   </div>
 
-                  <div className="border-t border-surface-150 pt-4">
+                  <div className="border-t border-surface-100 pt-4">
                     <span className="text-xs font-semibold text-surface-400 uppercase tracking-wider">Temporary Password</span>
                     <p className="font-mono font-bold text-lg text-primary-700 tracking-wider bg-white py-2 px-3 rounded-xl border border-surface-200 text-center mt-1">
                       {createdCreds.password}
@@ -160,67 +160,70 @@ export default function SchoolList() {
 
   return (
     <div className="space-y-6 animate-slide-up">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-surface-900">Schools</h2>
-          <p className="text-surface-500 mt-1">{data?.schools?.length || 0} schools registered</p>
-        </div>
-        {!isSchoolAdmin && (
+      <PageHeader
+        title="Schools"
+        description={`${data?.schools?.length || 0} schools registered`}
+        actions={!isSchoolAdmin && (
           <Button variant="primary" icon={<Plus className="w-4 h-4" />} onClick={() => setShowCreate(true)}>
             Add School
           </Button>
         )}
-      </div>
+      />
 
       <div className="relative">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
         <input
           className="form-input !pl-10 max-w-xs"
           placeholder="Search schools..."
+          aria-label="Search schools"
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center pt-20"><Spinner size="xl" /></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="bg-white rounded-xl border border-surface-200/70 p-5 space-y-4">
+              <Skeleton className="w-12 h-12 rounded-lg" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+              <Skeleton className="h-3 w-1/3" />
+            </div>
+          ))}
+        </div>
       ) : !schools.length ? (
         <EmptyState icon="🏫" title="No schools found" description={isSchoolAdmin ? "You haven't been assigned to a school yet." : "Add your first school to get started."} action={
           !isSchoolAdmin ? <Button variant="primary" onClick={() => setShowCreate(true)} icon={<Plus className="w-4 h-4" />}>Add School</Button> : null
         } className="py-20" />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {schools.map(school => (
-            <Link key={school.id} to={`/admin/schools/${school.id}`} className="group block h-full">
-              <div className="h-full bg-white rounded-3xl border border-surface-200 p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col relative overflow-hidden">
-                {/* Decorative background element */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary-100 to-accent-100 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-50 group-hover:opacity-100 transition-opacity" />
-                
-                <div className="flex items-start justify-between mb-6 relative z-10">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-50 to-primary-100 border border-primary-100 flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden group-hover:scale-105 transition-transform">
+            <Link key={school.id} to={`/admin/schools/${school.id}`} className="group block h-full rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">
+              <div className="h-full bg-white rounded-xl border border-surface-200/70 p-5 shadow-card hover:shadow-card-hover hover:border-primary-300 transition-all duration-200 flex flex-col">
+                <div className="flex items-start justify-between mb-5">
+                  <div className="w-12 h-12 rounded-lg bg-primary-50 border border-primary-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
                     {school.logoUrl
                       ? <img src={school.logoUrl} alt={school.name} className="w-full h-full object-cover" />
-                      : <School className="w-8 h-8 text-primary-500" />
+                      : <School className="w-6 h-6 text-primary-600" />
                     }
                   </div>
                   {!school.isActive && <Badge variant="danger" size="xs">Inactive</Badge>}
                 </div>
-                
-                <div className="flex-1 relative z-10">
-                  <h3 className="font-bold text-lg text-surface-900 group-hover:text-primary-600 transition-colors line-clamp-1">{school.name}</h3>
+
+                <div className="flex-1">
+                  <h3 className="font-semibold text-surface-900 group-hover:text-primary-700 transition-colors line-clamp-1">{school.name}</h3>
                   <p className="text-sm text-surface-500 mt-1 line-clamp-2">{school.address || school.contactEmail}</p>
                 </div>
-                
-                <div className="mt-6 pt-5 border-t border-surface-100 flex items-center justify-between relative z-10">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-surface-100 flex items-center justify-center">
-                      <Users className="w-4 h-4 text-surface-600" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium text-surface-900">{school._count?.users || 0}</p>
-                      <p className="text-[10px] text-surface-500 uppercase tracking-wider">Students</p>
-                    </div>
+
+                <div className="mt-5 pt-4 border-t border-surface-100 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-surface-500">
+                    <Users className="w-3.5 h-3.5" />
+                    <span className="text-xs font-medium tabular-nums">{school._count?.users || 0} students</span>
                   </div>
+                  <ChevronRight className="w-4 h-4 text-surface-300 group-hover:text-primary-600 transition-colors" />
                 </div>
               </div>
             </Link>

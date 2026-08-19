@@ -74,6 +74,17 @@ export function getSeverityBg(severity) {
   return map[severity?.toLowerCase()] || 'bg-gray-50 text-gray-600 border-gray-200';
 }
 
+// Maps a severity value (e.g. "SEVERE", "moderately severe", "high") to one of
+// the alert-card-* CSS classes defined in index.css. Values with spaces or
+// unknown values would otherwise produce invalid/undefined class names.
+export function getAlertCardClass(severity) {
+  const s = severity?.toLowerCase() || '';
+  if (s === 'minimal' || s === 'low') return 'alert-card-minimal';
+  if (s === 'mild') return 'alert-card-mild';
+  if (s === 'moderate') return 'alert-card-moderate';
+  return 'alert-card-severe'; // severe, moderately severe, high, unknown
+}
+
 export function getStatusColor(status) {
   const map = {
     PENDING:   'bg-yellow-50 text-yellow-700 border-yellow-200',

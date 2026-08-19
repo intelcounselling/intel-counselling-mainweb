@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { Upload, Download, ArrowLeft, FileText, CheckCircle } from 'lucide-react';
-import { Card, Button } from '../../components/ui';
+import { Card, Button, PageHeader } from '../../components/ui';
 import { useToast } from '../../components/ui/Toast';
 import api from '../../lib/axios';
 import { downloadCSV } from '../../utils/formatters';
@@ -30,12 +30,11 @@ export default function GenerateCredentials() {
 
   return (
     <div className="max-w-2xl space-y-6 animate-slide-up">
-      <div className="flex items-center gap-4">
-        <Link to={`/admin/schools/${schoolId}`} className="p-2 hover:bg-surface-200 rounded-xl text-surface-600">
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-        <h2 className="text-2xl font-bold text-surface-900">Bulk Generate Credentials</h2>
-      </div>
+      <PageHeader
+        backTo={`/admin/schools/${schoolId}`}
+        title="Bulk Generate Credentials"
+        description="Upload a CSV to create student, parent, or psychiatrist accounts in bulk"
+      />
 
       <Card>
         <h3 className="font-semibold text-surface-900 mb-2">CSV Format</h3>

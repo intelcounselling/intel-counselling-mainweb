@@ -1,4 +1,100 @@
 import { clsx } from 'clsx';
+import { Link } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
+
+// ── Page Header ───────────────────────────────────────────────
+// Standard page-level header: back link, eyebrow meta, title,
+// description, and primary actions aligned right.
+
+export function PageHeader({ title, description, actions, backTo, meta, className = '' }) {
+  return (
+    <div className={clsx('flex flex-wrap items-start justify-between gap-4', className)}>
+      <div className="flex items-start gap-3 min-w-0">
+        {backTo && (
+          <Link
+            to={backTo}
+            aria-label="Go back"
+            className="mt-1 p-2 rounded-lg bg-white border border-surface-200 text-surface-500 hover:text-surface-900 hover:border-surface-300 transition-colors flex-shrink-0"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Link>
+        )}
+        <div className="min-w-0">
+          {meta && <div className="mb-1.5">{meta}</div>}
+          <h1 className="text-2xl font-semibold tracking-tight text-surface-900">{title}</h1>
+          {description && <p className="text-sm text-surface-500 mt-1">{description}</p>}
+        </div>
+      </div>
+      {actions && <div className="flex items-center gap-2 flex-wrap">{actions}</div>}
+    </div>
+  );
+}
+
+// ── Stat Card ─────────────────────────────────────────────────
+// Uniform metric tile: caption label, large tabular value,
+// optional icon chip and hint line.
+
+export function StatCard({ label, value, icon: Icon, tone = 'default', hint, className = '' }) {
+  const tones = {
+    default: 'bg-surface-100 text-surface-600',
+    primary: 'bg-primary-50 text-primary-700',
+    accent:  'bg-accent-100 text-accent-800',
+    success: 'bg-green-50 text-green-700',
+    warning: 'bg-amber-50 text-amber-700',
+    danger:  'bg-red-50 text-red-600',
+    info:    'bg-blue-50 text-blue-600',
+  };
+  return (
+    <div className={clsx('stat-card flex items-start justify-between gap-4 min-h-[96px]', className)}>
+      <div className="min-w-0">
+        <p className="text-xs font-medium uppercase tracking-wider text-surface-500">{label}</p>
+        <p className="text-2xl font-semibold text-surface-900 mt-1.5 tabular-nums">{value ?? '—'}</p>
+        {hint && <p className="text-xs text-surface-400 mt-1">{hint}</p>}
+      </div>
+      {Icon && (
+        <div className={clsx('w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0', tones[tone] || tones.default)}>
+          <Icon className="w-5 h-5" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Skeletons ─────────────────────────────────────────────────
+
+export function Skeleton({ className = '' }) {
+  return <div aria-hidden="true" className={clsx('animate-pulse rounded-lg bg-surface-100', className)} />;
+}
+
+export function StatRowSkeleton({ count = 4 }) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="stat-card min-h-[96px] space-y-3">
+          <Skeleton className="h-3 w-24" />
+          <Skeleton className="h-7 w-16" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function ListSkeleton({ rows = 5, className = '' }) {
+  return (
+    <div className={clsx('space-y-0 divide-y divide-surface-100', className)}>
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className="flex items-center gap-4 px-6 py-4">
+          <Skeleton className="w-10 h-10 rounded-full flex-shrink-0" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-3.5 w-1/3" />
+            <Skeleton className="h-3 w-1/2" />
+          </div>
+          <Skeleton className="h-6 w-16 rounded-full" />
+        </div>
+      ))}
+    </div>
+  );
+}
 
 // ── Button ────────────────────────────────────────────────────
 
@@ -12,15 +108,15 @@ export function Button({
   icon,
   ...props
 }) {
-  const base = 'inline-flex items-center justify-center gap-2 font-medium rounded-xl transition-all duration-150 focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed select-none';
+  const base = 'inline-flex items-center justify-center gap-2 font-medium rounded-lg transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed select-none';
 
   const variants = {
-    primary: 'bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800 shadow-sm hover:shadow-md',
-    secondary: 'bg-white text-primary-700 border border-primary-200 hover:bg-primary-50 hover:border-primary-300',
+    primary: 'bg-primary-700 text-white hover:bg-primary-800 active:bg-primary-900 shadow-sm',
+    secondary: 'bg-primary-50 text-primary-800 border border-primary-100 hover:bg-primary-100',
     ghost: 'text-surface-600 hover:bg-surface-100 hover:text-surface-900',
     danger: 'bg-red-600 text-white hover:bg-red-700',
     success: 'bg-green-600 text-white hover:bg-green-700',
-    outline: 'border border-surface-300 text-surface-700 hover:bg-surface-50',
+    outline: 'bg-white border border-surface-200 text-surface-700 hover:bg-surface-50 hover:border-surface-300',
   };
 
   const sizes = {
@@ -50,16 +146,17 @@ export function Button({
 
 // ── Card ──────────────────────────────────────────────────────
 
-export function Card({ children, className = '', padding = true, hover = false }) {
+export function Card({ children, className = '', padding = true, hover = false, ...props }) {
   return (
     <div
       className={clsx(
-        'bg-white rounded-2xl border border-surface-100',
+        'bg-white rounded-xl border border-surface-200/70',
         padding && 'p-6',
-        hover && 'transition-all duration-200 hover:-translate-y-0.5 cursor-pointer',
+        hover && 'transition-shadow duration-200 cursor-pointer hover:border-surface-300',
         hover ? 'shadow-card hover:shadow-card-hover' : 'shadow-card',
         className
       )}
+      {...props}
     >
       {children}
     </div>
@@ -93,7 +190,7 @@ export function Badge({ children, variant = 'default', size = 'sm', className = 
 
 // ── Input ──────────────────────────────────────────────────────
 
-export function Input({ label, error, hint, className = '', ...props }) {
+export function Input({ label, error, hint, icon, className = '', ...props }) {
   return (
     <div className="flex flex-col gap-1.5">
       {label && (
@@ -102,14 +199,22 @@ export function Input({ label, error, hint, className = '', ...props }) {
           {props.required && <span className="text-red-500 ml-1">*</span>}
         </label>
       )}
-      <input
-        className={clsx(
-          'form-input',
-          error && 'border-red-400 focus:border-red-500 focus:ring-red-100',
-          className
+      <div className={clsx(icon && 'relative')}>
+        {icon && (
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none flex items-center">
+            {icon}
+          </span>
         )}
-        {...props}
-      />
+        <input
+          className={clsx(
+            'form-input',
+            icon && '!pl-11',
+            error && 'border-red-400 focus:border-red-500 focus:ring-red-100',
+            className
+          )}
+          {...props}
+        />
+      </div>
       {error && <p className="text-xs text-red-600">{error}</p>}
       {hint && !error && <p className="text-xs text-surface-500">{hint}</p>}
     </div>
@@ -180,7 +285,7 @@ export function LoadingPage() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-surface-50">
       <div className="flex flex-col items-center gap-4">
-        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-600 to-accent-500 flex items-center justify-center">
+        <div className="w-12 h-12 rounded-xl bg-primary-800 flex items-center justify-center">
           <span className="text-white text-xl">🧠</span>
         </div>
         <Spinner size="lg" />
@@ -206,10 +311,11 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', footer })
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className={clsx('modal-panel w-full', sizes[size])}>
-        <div className="flex items-center justify-between p-6 border-b border-surface-100">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-surface-100">
           <h2 className="text-lg font-semibold text-surface-900">{title}</h2>
           <button
             onClick={onClose}
+            aria-label="Close dialog"
             className="w-8 h-8 flex items-center justify-center rounded-lg text-surface-400 hover:text-surface-600 hover:bg-surface-100 transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -218,7 +324,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', footer })
           </button>
         </div>
         <div className="p-6">{children}</div>
-        {footer && <div className="px-6 pb-6 border-t border-surface-100 pt-4">{footer}</div>}
+        {footer && <div className="px-6 py-4 border-t border-surface-100 bg-surface-50/60 rounded-b-2xl">{footer}</div>}
       </div>
     </div>
   );
@@ -226,12 +332,12 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', footer })
 
 // ── Empty State ───────────────────────────────────────────────
 
-export function EmptyState({ icon = '📭', title, description, action }) {
+export function EmptyState({ icon = '📭', title, description, action, className = '' }) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="text-5xl mb-4">{icon}</div>
-      <h3 className="text-lg font-semibold text-surface-700 mb-2">{title}</h3>
-      {description && <p className="text-surface-500 text-sm max-w-sm mb-6">{description}</p>}
+    <div className={clsx('flex flex-col items-center justify-center py-14 px-6 text-center', className)}>
+      <div className="w-12 h-12 rounded-xl bg-surface-100 flex items-center justify-center text-2xl mb-4" aria-hidden="true">{icon}</div>
+      <h3 className="text-base font-semibold text-surface-800 mb-1.5">{title}</h3>
+      {description && <p className="text-surface-500 text-sm max-w-sm mb-5">{description}</p>}
       {action}
     </div>
   );
@@ -262,7 +368,7 @@ export function Avatar({ user, size = 'md' }) {
   return (
     <div
       className={clsx(
-        'rounded-full bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center text-white font-semibold flex-shrink-0',
+        'rounded-full bg-primary-700 flex items-center justify-center text-white font-semibold flex-shrink-0',
         sizes[size]
       )}
     >

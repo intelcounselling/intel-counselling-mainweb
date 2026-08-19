@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Download, Calendar } from 'lucide-react';
-import { Card, Button, Spinner, EmptyState, Badge } from '../../components/ui';
+import { Card, Button, Spinner, EmptyState, Badge, PageHeader, ListSkeleton } from '../../components/ui';
 import SeverityBadge from '../../components/charts/SeverityBadge';
 import api from '../../lib/axios';
 import { formatDateTime, getStatusColor } from '../../utils/formatters';
@@ -17,14 +17,21 @@ export default function AppointmentList() {
     window.open(`${import.meta.env.VITE_API_URL || ''}/api/portal/api/appointments/${apptId}/report`, '_blank');
   };
 
-  if (isLoading) return <div className="flex justify-center pt-20"><Spinner size="xl" /></div>;
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Appointments" description="Sessions booked for your children" />
+        <Card padding={false}><ListSkeleton rows={4} /></Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-slide-up">
-      <div>
-        <h2 className="text-2xl font-bold text-surface-900">Appointments</h2>
-        <p className="text-surface-500">{appointments.length} total appointments</p>
-      </div>
+      <PageHeader
+        title="Appointments"
+        description={`${appointments.length} total appointment${appointments.length !== 1 ? 's' : ''}`}
+      />
 
       {!appointments.length ? (
         <Card>

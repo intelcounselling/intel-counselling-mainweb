@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Plus, Trash2, ArrowLeft, Download, UserPlus } from 'lucide-react';
-import { Card, Button, Input, Modal, EmptyState } from '../../components/ui';
+import { Card, Button, Input, Modal, EmptyState, PageHeader } from '../../components/ui';
 import { useToast } from '../../components/ui/Toast';
 import api from '../../lib/axios';
 import { downloadCSV } from '../../utils/formatters';
@@ -55,15 +55,11 @@ export default function CreateFamily() {
 
   return (
     <div className="max-w-3xl space-y-6 animate-slide-up">
-      <div className="flex items-center gap-4">
-        <Link to={`/admin/schools/${schoolId}`} className="p-2 hover:bg-surface-200 rounded-xl text-surface-600">
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-        <div>
-          <h2 className="text-2xl font-bold text-surface-900">Create Family</h2>
-          <p className="text-surface-500">School: {school?.name}</p>
-        </div>
-      </div>
+      <PageHeader
+        backTo={`/admin/schools/${schoolId}`}
+        title="Create Family"
+        description={`School: ${school?.name || '—'}`}
+      />
 
       {/* Students Section */}
       <Card>
@@ -158,7 +154,7 @@ export default function CreateFamily() {
 
       {/* Credential Modal */}
       <Modal isOpen={showCredentials} onClose={() => { setShowCredentials(false); navigate(`/admin/schools/${schoolId}`); }}
-        title="🎉 Family Created — Login Credentials"
+        title="Family Created — Login Credentials"
         size="lg"
         footer={
           <div className="flex gap-3">
@@ -174,6 +170,7 @@ export default function CreateFamily() {
           <p className="text-sm text-surface-500 mb-4">
             Share these credentials securely. All users must change their password on first login.
           </p>
+          <div className="overflow-x-auto">
           <table className="data-table">
             <thead>
               <tr><th>Name</th><th>Role</th><th>Email</th><th>Password</th></tr>
@@ -189,6 +186,7 @@ export default function CreateFamily() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       </Modal>
     </div>

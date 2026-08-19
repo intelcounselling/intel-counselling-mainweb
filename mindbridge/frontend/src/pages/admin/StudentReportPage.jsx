@@ -274,7 +274,7 @@ export default function StudentReportPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-surface-50 via-white to-primary-50/20 flex items-center justify-center">
+      <div className="min-h-screen bg-surface-50 flex items-center justify-center">
         <div className="text-center space-y-4">
           <Spinner size="lg" />
           <p className="text-surface-500 font-medium">Loading student report…</p>
@@ -339,10 +339,10 @@ export default function StudentReportPage() {
   ).length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 p-6">
+    <div className="min-h-screen bg-surface-50 p-6">
 
       {/* ── Sticky top bar ───────────────────────────────────────── */}
-      <div className="bg-white/90 backdrop-blur-md border border-surface-250 rounded-2xl p-4 shadow-sm mb-6 flex items-center justify-between gap-4">
+      <div className="bg-white/90 backdrop-blur-md border border-surface-200 rounded-2xl p-4 shadow-sm mb-6 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate(-1)}
@@ -372,11 +372,11 @@ export default function StudentReportPage() {
         {/* ── Hero card ─────────────────────────────────────────── */}
         <div className="bg-white rounded-3xl border border-surface-200/60 shadow-sm overflow-hidden">
           {/* Gradient banner */}
-          <div className="h-3 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
+          <div className="h-2 bg-primary-800" />
           <div className="p-6 md:p-8">
             <div className="flex flex-col md:flex-row md:items-start gap-6">
               {/* Avatar */}
-              <div className="flex-shrink-0 w-20 h-20 rounded-2xl bg-gradient-to-br from-primary-400 to-purple-500 text-white font-black text-2xl flex items-center justify-center shadow-lg">
+              <div className="flex-shrink-0 w-20 h-20 rounded-xl bg-primary-700 text-white font-bold text-2xl flex items-center justify-center shadow-sm">
                 {student?.firstName?.[0]}{student?.lastName?.[0]}
               </div>
               {/* Info */}

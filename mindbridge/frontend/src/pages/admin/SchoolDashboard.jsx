@@ -5,7 +5,7 @@ import {
   ArrowLeft, Brain, BookOpen, Heart, Wifi, User,
   Users, CheckCircle, Clock, TrendingUp, Filter
 } from 'lucide-react';
-import { Card, Button, Spinner, EmptyState, Badge } from '../../components/ui';
+import { Card, Button, Spinner, EmptyState, Badge, PageHeader, StatCard, StatRowSkeleton } from '../../components/ui';
 import DonutChart from '../../components/charts/DonutChart';
 import BarChart from '../../components/charts/BarChart';
 import RadarChart from '../../components/charts/RadarChart';
@@ -186,42 +186,47 @@ export default function SchoolDashboard() {
     queryFn: () => api.get(`/admin/schools/${schoolId}/analytics${selectedClass ? `?classId=${selectedClass}` : ''}`).then(r => r.data),
   });
 
-  if (isLoading) return <div className="flex justify-center pt-20"><Spinner size="xl" /></div>;
+  if (isLoading) {
+    return (
+      <div className="space-y-6 max-w-7xl">
+        <PageHeader title="Analytics Dashboard" description="Loading school insights…" />
+        <StatRowSkeleton count={4} />
+      </div>
+    );
+  }
 
   const { school, completion, classes = [], analytics = {}, counsellingNeeds = {} } = data || {};
 
   return (
-    <div className="space-y-8 animate-slide-up max-w-7xl">
+    <div className="space-y-6 animate-slide-up max-w-7xl">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        {!isSchoolAdmin && (
-          <Link to="/admin/schools" className="p-2 hover:bg-surface-200 rounded-xl text-surface-600 transition-colors">
-            <ArrowLeft className="w-5 h-5" />
+      <PageHeader
+        backTo={!isSchoolAdmin ? '/admin/schools' : undefined}
+        meta={(
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary-100 text-primary-700">
+            Package 1 — School Insight
+          </span>
+        )}
+        title={`${school?.name || 'School'} — Analytics`}
+        description="Intel Student Success System™ — Group-level assessment insights"
+        actions={(
+          <Link to={`/admin/schools/${schoolId}/classes`}>
+            <Button variant="outline" size="sm" icon={<Users className="w-4 h-4" />}>Manage Classes</Button>
           </Link>
         )}
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary-100 text-primary-700">
-              Package 1 — School Insight
-            </span>
-          </div>
-          <h2 className="text-2xl font-bold text-surface-900">{school?.name} — Analytics Dashboard</h2>
-          <p className="text-surface-500 text-sm mt-0.5">Intel Student Success System™ — Group-level assessment insights</p>
-        </div>
-        <Link to={`/admin/schools/${schoolId}/classes`}>
-          <Button variant="outline" size="sm" icon={<Users className="w-4 h-4" />}>Manage Classes</Button>
-        </Link>
-      </div>
+      />
 
       {/* Class Filter */}
       {classes.length > 0 && (
-        <div className="flex items-center gap-3 flex-wrap">
-          <Filter className="w-4 h-4 text-surface-400" />
-          <span className="text-sm text-surface-600">Filter by class:</span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="flex items-center gap-1.5 text-sm text-surface-500 mr-1">
+            <Filter className="w-4 h-4 text-surface-400" />
+            Class:
+          </span>
           <button
             onClick={() => setSelectedClass('')}
-            className={`text-sm px-3 py-1.5 rounded-xl border transition-all ${
-              !selectedClass ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-surface-700 border-surface-200 hover:border-primary-300'
+            className={`text-sm px-3 py-1.5 rounded-lg border transition-colors ${
+              !selectedClass ? 'bg-primary-700 text-white border-primary-700' : 'bg-white text-surface-700 border-surface-200 hover:border-primary-300'
             }`}
           >
             All Classes
@@ -230,8 +235,8 @@ export default function SchoolDashboard() {
             <button
               key={cls.id}
               onClick={() => setSelectedClass(cls.id)}
-              className={`text-sm px-3 py-1.5 rounded-xl border transition-all ${
-                selectedClass === cls.id ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-surface-700 border-surface-200 hover:border-primary-300'
+              className={`text-sm px-3 py-1.5 rounded-lg border transition-colors ${
+                selectedClass === cls.id ? 'bg-primary-700 text-white border-primary-700' : 'bg-white text-surface-700 border-surface-200 hover:border-primary-300'
               }`}
             >
               {cls.name} ({cls._count?.students || 0})
@@ -247,42 +252,30 @@ export default function SchoolDashboard() {
           <p className="text-xs text-surface-500 text-center mt-3">Assessment Completion Rate</p>
         </Card>
 
-        <div className="sm:col-span-3 grid grid-cols-3 gap-4">
-          {[
-            { label: 'Total Students', value: completion?.total, icon: Users, color: 'bg-primary-600' },
-            { label: 'Assessments Completed', value: completion?.completed, icon: CheckCircle, color: 'bg-green-600' },
-            { label: 'Pending', value: completion?.pending, icon: Clock, color: 'bg-amber-500' },
-          ].map(s => (
-            <div key={s.label} className="stat-card">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-surface-500 mb-1">{s.label}</p>
-                  <p className="text-3xl font-bold text-surface-900">{s.value ?? '—'}</p>
-                </div>
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${s.color}`}>
-                  <s.icon className="w-6 h-6 text-white" />
-                </div>
-              </div>
-            </div>
-          ))}
+        <div className="sm:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <StatCard label="Total Students" value={completion?.total} icon={Users} tone="primary" />
+          <StatCard label="Assessments Completed" value={completion?.completed} icon={CheckCircle} tone="success" />
+          <StatCard label="Pending" value={completion?.pending} icon={Clock} tone="warning" />
         </div>
       </div>
 
-      {/* Counselling Planning Banner */}
-      <Card className="bg-gradient-to-br from-slate-800 to-slate-900 text-white" padding={false}>
-        <div className="px-6 pt-5 pb-2">
-          <div className="flex items-center gap-2 mb-1">
-            <TrendingUp className="w-5 h-5 text-amber-400" />
-            <h3 className="font-bold text-lg">Counselling Planning Overview</h3>
-          </div>
-          <p className="text-slate-400 text-sm">Students who may benefit from additional support based on their assessment results.</p>
+      {/* Counselling Planning Overview */}
+      <Card padding={false}>
+        <div className="px-6 py-4 border-b border-surface-100">
+          <h3 className="text-base font-semibold text-surface-900 flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-primary-600" />
+            Counselling Planning Overview
+          </h3>
+          <p className="text-surface-500 text-sm mt-0.5">Students who may benefit from additional support based on their assessment results.</p>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-0 divide-x divide-y sm:divide-y-0 divide-white/10">
+        <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-surface-100">
           {COUNSELLING_NEEDS.map(n => (
             <div key={n.key} className="px-6 py-5 text-center">
-              <p className="text-3xl mb-1">{n.icon}</p>
-              <p className="text-3xl font-bold text-white">{counsellingNeeds[n.key] ?? 0}</p>
-              <p className="text-xs text-slate-400 mt-1">{n.label}</p>
+              <p className="text-2xl font-semibold text-surface-900 tabular-nums">{counsellingNeeds[n.key] ?? 0}</p>
+              <p className="text-xs font-medium text-surface-500 mt-1 flex items-center justify-center gap-1.5">
+                <span aria-hidden="true">{n.icon}</span>
+                {n.label}
+              </p>
             </div>
           ))}
         </div>
@@ -290,7 +283,7 @@ export default function SchoolDashboard() {
 
       {/* Assessment Analytics Grid */}
       <div>
-        <h3 className="text-lg font-bold text-surface-900 mb-4">Assessment Results by Tool</h3>
+        <h3 className="text-base font-semibold text-surface-900 mb-4">Assessment Results by Tool</h3>
         {Object.keys(analytics).length === 0 ? (
           <EmptyState
             icon="📊"

@@ -1,7 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, CalendarPlus } from 'lucide-react';
-import { Card, Button, Spinner, EmptyState } from '../../components/ui';
+import { Card, Button, Spinner, EmptyState, PageHeader } from '../../components/ui';
 import RadarChart from '../../components/charts/RadarChart';
 import api from '../../lib/axios';
 import { formatDate } from '../../utils/formatters';
@@ -166,27 +166,25 @@ export default function ComparisonReport() {
   return (
     <div className="space-y-6 animate-slide-up max-w-4xl">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link to="/parent" className="p-2 hover:bg-surface-200 rounded-xl text-surface-600 transition-colors">
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-accent-100 text-accent-700">
-              Package 2 — Parent Insight
-            </span>
-          </div>
-          <h2 className="text-2xl font-bold text-surface-900">Parent–Child Comparison Report</h2>
-          <p className="text-surface-500 text-sm">Understanding your child's world vs. your perspective</p>
-        </div>
-        <Link to="/parent/appointments">
-          <Button variant="primary" icon={<CalendarPlus className="w-4 h-4" />} size="sm">Book Counselling</Button>
-        </Link>
-      </div>
+      <PageHeader
+        backTo="/parent"
+        meta={(
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-accent-100 text-accent-800">
+            Package 2 — Parent Insight
+          </span>
+        )}
+        title="Parent–Child Comparison Report"
+        description="Understanding your child's world vs. your perspective"
+        actions={(
+          <Link to="/parent/appointments">
+            <Button variant="primary" icon={<CalendarPlus className="w-4 h-4" />} size="sm">Book Counselling</Button>
+          </Link>
+        )}
+      />
 
       {/* Overall Understanding Score */}
       {overallIndex && (
-        <div className={`rounded-2xl p-5 border ${
+        <div className={`rounded-xl p-5 border ${
           overallIndex === 'STRONG' ? 'bg-green-50 border-green-200' :
           overallIndex === 'MODERATE' ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'
         }`}>
@@ -211,7 +209,7 @@ export default function ComparisonReport() {
       {/* Radar Overview Chart */}
       {(Object.keys(studentRadar).length > 0 || Object.keys(parentRadar).length > 0) && (
         <Card>
-          <h3 className="font-semibold text-surface-900 mb-4">Overview: All Dimensions</h3>
+          <h3 className="text-base font-semibold text-surface-900 mb-4">Overview: All Dimensions</h3>
           <RadarChart
             maxScore={100}
             height={300}

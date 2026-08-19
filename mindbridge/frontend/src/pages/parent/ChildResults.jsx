@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import { Card, Spinner, EmptyState } from '../../components/ui';
+import { Card, Spinner, EmptyState, PageHeader } from '../../components/ui';
 import SeverityBadge from '../../components/charts/SeverityBadge';
 import ScoreHistoryChart from '../../components/charts/ScoreHistoryChart';
 import api from '../../lib/axios';
@@ -27,21 +27,15 @@ export default function ChildResults() {
 
   return (
     <div className="space-y-6 animate-slide-up max-w-4xl">
-      <div className="flex items-center gap-4">
-        <Link to="/parent" className="p-2 hover:bg-surface-200 rounded-xl text-surface-600">
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-        <div>
-          <h2 className="text-2xl font-bold text-surface-900">
-            {child ? `${child.firstName}'s Results` : 'Assessment Results'}
-          </h2>
-          <p className="text-surface-500">{results.length} assessments taken</p>
-        </div>
-      </div>
+      <PageHeader
+        backTo="/parent"
+        title={child ? `${child.firstName}'s Results` : 'Assessment Results'}
+        description={`${results.length} assessment${results.length !== 1 ? 's' : ''} taken`}
+      />
 
       {results.length > 0 && (
         <Card>
-          <h3 className="font-semibold text-surface-900 mb-4">Score History</h3>
+          <h3 className="text-base font-semibold text-surface-900 mb-4">Score History</h3>
           <ScoreHistoryChart results={results} height={220} />
         </Card>
       )}

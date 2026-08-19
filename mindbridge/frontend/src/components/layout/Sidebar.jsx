@@ -91,15 +91,17 @@ export default function Sidebar({ mobileOpen, onClose }) {
       <aside className={clsx('sidebar', mobileOpen && 'open')}>
         {/* Logo */}
         <div className="sidebar-logo">
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <img src="/assets/logo_full.png" alt="Intel Counselling" className="h-10 w-auto object-contain self-start" />
-            <p className="text-primary-300 text-xs">{ROLE_LABELS[user?.role]}</p>
+            <span className="self-start text-[11px] font-medium uppercase tracking-wider text-accent-600/90 bg-white/5 border border-white/10 rounded-md px-2 py-0.5">
+              {ROLE_LABELS[user?.role]}
+            </span>
           </div>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 py-4 overflow-y-auto">
-          <p className="text-primary-400 text-xs font-semibold uppercase tracking-wider px-6 mb-2">Navigation</p>
+        <nav className="flex-1 py-4 overflow-y-auto" aria-label="Main navigation">
+          <p className="text-white/35 text-[11px] font-semibold uppercase tracking-wider px-6 mb-2">Menu</p>
           {navItems.map((item) => (
             <NavLink
               key={item.to}
@@ -110,7 +112,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
                 clsx('sidebar-nav-item', isActive && 'active')
               }
             >
-              <item.icon className="w-4.5 h-4.5 flex-shrink-0" size={18} />
+              <item.icon className="flex-shrink-0" size={18} />
               <span>{item.label}</span>
             </NavLink>
           ))}
@@ -119,12 +121,12 @@ export default function Sidebar({ mobileOpen, onClose }) {
         {/* User info + logout */}
         <div className="border-t border-white/10 p-4">
           <div className="flex items-center gap-3 px-2 mb-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-400 to-accent-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+            <div className="w-8 h-8 rounded-full bg-accent-600/90 flex items-center justify-center text-primary-950 text-xs font-bold flex-shrink-0">
               {user?.firstName?.[0]}{user?.lastName?.[0]}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-white text-sm font-medium truncate">{user?.firstName} {user?.lastName}</p>
-              <p className="text-primary-400 text-xs truncate">{user?.email}</p>
+              <p className="text-white/45 text-xs truncate">{user?.email}</p>
             </div>
           </div>
           <button
