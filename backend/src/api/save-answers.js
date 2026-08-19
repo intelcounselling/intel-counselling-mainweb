@@ -1,11 +1,12 @@
 import crypto from 'crypto';
 import { encrypt } from '../encryption.js';
 import { insertResult } from '../db.js';
+import { getAuthenticatedUserId } from '../token.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') {
     res.status(200).end();
@@ -17,11 +18,15 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { answers, userId, testId } = req.body;
+    const { answers, testId } = req.body;
 
     if (!answers || typeof answers !== 'string') {
       return res.status(400).json({ error: 'Invalid answers payload' });
     }
+
+    // Owner identity comes only from the auth token — a client-supplied userId
+    // could attach a result to someone else's account.
+    const userId = getAuthenticatedUserId(req);
 
     const { encrypted, iv } = encrypt(answers);
     const id = crypto.randomUUID();

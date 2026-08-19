@@ -1,4 +1,5 @@
 import PDFDocument from 'pdfkit';
+import { escapeHtml, plainText } from '../escape.js';
 
 function createCareerPdfBufferBase64(registration, appointment, result) {
   return new Promise((resolve, reject) => {
@@ -231,7 +232,6 @@ function createPdfBufferBase64(details) {
 }
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader(
@@ -266,6 +266,12 @@ export default async function handler(req, res) {
     } = req.body;
 
     console.log('Received booking body payload:', JSON.stringify({ shareAssessmentResult, hasCareerResult: !!careerResult, hasClinicalResult: !!clinicalResult }, null, 2));
+
+    // Validate required fields before sending anything (avoids a crash after
+    // the customer email is already sent, which caused double-sends on retry).
+    if (!toName || typeof toName !== 'string' || !customerEmail || typeof customerEmail !== 'string') {
+      return res.status(400).json({ error: 'Missing required fields: toName and customerEmail' });
+    }
 
     const details = fullDetails || {};
 
@@ -305,7 +311,7 @@ export default async function handler(req, res) {
       <h1>Intel Counselling</h1>
     </div>
     <div class="body">
-      <div class="greeting">Thank You, ${toName}.</div>
+      <div class="greeting">Thank You, ${escapeHtml(toName)}.</div>
       <p class="message">
         We have received your booking request and payment. Thank you for choosing <strong>Intel Counselling</strong> as your partner in healing.<br/><br/>
         Our team is reviewing your intake details now. <strong>We will contact you shortly</strong> to finalize your session and provide any necessary details.
@@ -347,12 +353,12 @@ export default async function handler(req, res) {
       <h1>🔔 New Session Booking</h1>
     </div>
     <div class="body">
-      <div style="font-size: 18px; font-weight: 600; margin-bottom: 20px;">Patient: ${toName}</div>
+      <div style="font-size: 18px; font-weight: 600; margin-bottom: 20px;">Patient: ${escapeHtml(toName)}</div>
       
       <div class="summary-card">
         <div class="row">
           <span class="lbl">Timing</span>
-          <span class="val highlight">${appointmentDate} at ${appointmentTime}</span>
+          <span class="val highlight">${escapeHtml(appointmentDate)} at ${escapeHtml(appointmentTime)}</span>
         </div>
         <div class="row">
           <span class="lbl">Mode</span>
@@ -360,7 +366,7 @@ export default async function handler(req, res) {
         </div>
         <div class="row">
           <span class="lbl">Reason (Concerns)</span>
-          <span class="val">${details.mainConcerns?.join(', ') || 'General'}</span>
+          <span class="val">${escapeHtml(details.mainConcerns?.join(', ')) || 'General'}</span>
         </div>
       </div>
 
@@ -391,7 +397,7 @@ export default async function handler(req, res) {
     });
 
     if (!customerRes.ok) {
-      const err = await customerRes.json();
+      const err = await customerRes.json().catch(() => ({}));
       console.error('Failed to send customer email:', err);
       // We don't abort immediately so admin could still potentially get an email, but typically it returns
       return res.status(500).json({ error: 'Failed to send customer confirmation email' });
@@ -421,9 +427,9 @@ export default async function handler(req, res) {
         const registrationObj = {
           name: toName,
           email: customerEmail,
-          phone: fullDetails.phone || '',
-          age: fullDetails.age || '',
-          gender: fullDetails.gender || ''
+          phone: details.phone || '',
+          age: details.age || '',
+          gender: details.gender || ''
         };
         careerPdfBase64 = await createCareerPdfBufferBase64(registrationObj, appointmentObj, careerResult);
       } catch (careerPdfErr) {
@@ -443,9 +449,9 @@ export default async function handler(req, res) {
         const registrationObj = {
           name: toName,
           email: customerEmail,
-          phone: fullDetails.phone || '',
-          age: fullDetails.age || '',
-          gender: fullDetails.gender || ''
+          phone: details.phone || '',
+          age: details.age || '',
+          gender: details.gender || ''
         };
         clinicalPdfBase64 = await createClinicalPdfBufferBase64(registrationObj, appointmentObj, clinicalResult);
       } catch (clinicalPdfErr) {
@@ -456,7 +462,7 @@ export default async function handler(req, res) {
     const adminPayload = {
       to: [{ email: 'intelcounselling@gmail.com', name: 'Intel Counselling Admin' }],
       sender: { email: 'intelcounselling@gmail.com', name: 'Intel Counselling Bookings' },
-      subject: `🔔 New Session Booking: ${toName} (${sessionMode})`,
+      subject: `🔔 New Session Booking: ${plainText(toName)} (${plainText(sessionMode)})`,
       htmlContent: adminHtml,
       attachment: []
     };
@@ -481,7 +487,7 @@ export default async function handler(req, res) {
     if (clinicalPdfBase64) {
       adminPayload.attachment.push({
         content: clinicalPdfBase64,
-        name: `${safeName}_${clinicalResult.title.replace(/[^a-zA-Z0-9]/g, '_')}_Report.pdf`
+        name: `${safeName}_${String(clinicalResult?.title || 'Clinical').replace(/[^a-zA-Z0-9]/g, '_')}_Report.pdf`
       });
     }
 
@@ -497,7 +503,7 @@ export default async function handler(req, res) {
     });
 
     if (!adminRes.ok) {
-      const err = await adminRes.json();
+      const err = await adminRes.json().catch(() => ({}));
       console.error('Failed to send admin email:', err);
       return res.status(500).json({ error: 'Failed to send admin notification email' });
     }

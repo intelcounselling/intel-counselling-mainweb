@@ -1,6 +1,7 @@
+import { escapeHtml, plainText } from './_escape.js';
+
 export default async function handler(req, res) {
   // CORS headers
-  res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader(
@@ -49,17 +50,17 @@ export default async function handler(req, res) {
           
           <div class="field">
             <div class="label">From</div>
-            <div class="val"><strong>${name}</strong> (<a href="mailto:${email}">${email}</a>)</div>
+            <div class="val"><strong>${escapeHtml(name)}</strong> (<a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a>)</div>
           </div>
-          
+
           <div class="field">
             <div class="label">Interested Service</div>
-            <div class="val">${service}</div>
+            <div class="val">${escapeHtml(service)}</div>
           </div>
-          
+
           <div class="field">
             <div class="label">Message</div>
-            <div class="message-box">${message}</div>
+            <div class="message-box">${escapeHtml(message)}</div>
           </div>
         </div>
       </body>
@@ -70,7 +71,7 @@ export default async function handler(req, res) {
       to: [{ email: 'intelcounselling@gmail.com', name: 'Intel Counselling Admin' }],
       sender: { email: 'intelcounselling@gmail.com', name: 'Intel Counselling Website' },
       replyTo: { email: email, name: name },
-      subject: `New Inquiry via Website: ${service}`,
+      subject: `New Inquiry via Website: ${plainText(service)}`,
       htmlContent: adminHtml
     };
 
@@ -87,7 +88,7 @@ export default async function handler(req, res) {
     });
 
     if (!response.ok) {
-      const err = await response.json();
+      const err = await response.json().catch(() => ({}));
       console.error('Failed to send inquiry email:', err);
       return res.status(500).json({ error: 'Failed to send communication' });
     }

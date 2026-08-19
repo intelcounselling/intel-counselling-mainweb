@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { CheckCircle2, ChevronRight, ArrowLeft, Video, ShieldCheck, MapPin, Monitor, Loader2 } from 'lucide-react';
 import { MI_QUESTIONS, INTEREST_QUESTIONS, PERSONALITY_QUESTIONS } from './TestQuestions';
 import { CLINICAL_CONFIGS } from './ClinicalQuestions';
+import { authHeaders } from '../utils/auth';
 
 const ALL_QUESTIONS = [...MI_QUESTIONS, ...INTEREST_QUESTIONS, ...PERSONALITY_QUESTIONS];
 
@@ -21,8 +22,19 @@ interface BookingModalProps {
 
 const loadCashfreeScript = () => {
   return new Promise((resolve) => {
+    const src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
+    if ((window as any).Cashfree) {
+      resolve(true);
+      return;
+    }
+    const existing = document.querySelector(`script[src="${src}"]`) as HTMLScriptElement | null;
+    if (existing) {
+      existing.addEventListener('load', () => resolve(true));
+      existing.addEventListener('error', () => resolve(false));
+      return;
+    }
     const script = document.createElement('script');
-    script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
+    script.src = src;
     script.onload = () => resolve(true);
     script.onerror = () => resolve(false);
     document.body.appendChild(script);
@@ -54,7 +66,7 @@ const CashfreePaymentStep: React.FC<{
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          amount: bookingDetails.service.price,
+          serviceId: bookingDetails.service.id,
           serviceName: bookingDetails.service.name,
           customerName: bookingDetails.name,
           customerEmail: bookingDetails.email,
@@ -77,23 +89,40 @@ const CashfreePaymentStep: React.FC<{
         redirectTarget: "_modal",
       };
 
-      cashfree.checkout(checkoutOptions).then((result: any) => {
+      const orderId = data.orderId;
+
+      cashfree.checkout(checkoutOptions).then(async (result: any) => {
         if (result.error) {
           setError(result.error.message || "Payment has failed or was cancelled.");
           setIsProcessing(false);
-        } else if (result.redirect) {
+          return;
+        }
+
+        if (result.redirect) {
           console.log("Payment will be redirected");
-        } else if (result.paymentDetails) {
-          console.log("Payment completed via modal", result.paymentDetails);
-          setIsProcessing(false);
-          onSuccess('');
-        } else {
-          console.log("Unknown result from cashfree", result);
-          // If cashfree resolves without error, assume success or at least reset state to prevent infinite load
-          setIsProcessing(false);
-          if (result && Object.keys(result).length > 0) {
-             onSuccess('');
+        }
+
+        // Never trust the client-side checkout result alone — confirm the
+        // order status with the server before confirming the booking.
+        try {
+          const verifyRes = await fetch('/api/verify-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderId })
+          });
+          const verifyData = await verifyRes.json().catch(() => ({}));
+
+          if (verifyRes.ok && verifyData.paid === true) {
+            setIsProcessing(false);
+            onSuccess('');
+          } else {
+            setIsProcessing(false);
+            setError("Payment was not completed or is pending verification. Please try again or contact us if you were charged.");
           }
+        } catch (verifyErr) {
+          console.error("Payment verification failed:", verifyErr);
+          setIsProcessing(false);
+          setError("Payment was not completed or is pending verification. Please try again or contact us if you were charged.");
         }
       }).catch((err: any) => {
         setError(err.message || "Payment encountered an error.");
@@ -185,7 +214,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
         if (testId === 'career') {
           const id = url.searchParams.get('id') || '';
           if (id) {
-            fetch(`/api/load-answers?id=${encodeURIComponent(id)}`)
+            fetch(`/api/load-answers?id=${encodeURIComponent(id)}`, { headers: authHeaders() })
               .then(res => res.json())
               .then(data => {
                 if (data.answers && data.answers.length === ALL_QUESTIONS.length) {
@@ -278,7 +307,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
         // Fallback for direct IDs or legacy references
         const id = assessmentRef;
         if (id && id.length > 10) {
-          fetch(`/api/load-answers?id=${encodeURIComponent(id)}`)
+          fetch(`/api/load-answers?id=${encodeURIComponent(id)}`, { headers: authHeaders() })
             .then(res => res.json())
             .then(data => {
               if (data.answers && data.answers.length === ALL_QUESTIONS.length) {
@@ -668,7 +697,9 @@ const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
             bookingDetails={{
               ...details,
               service: {
+                id: details.sessionMode === 'online' ? 'session_online' : 'session_inperson',
                 name: details.mainConcerns.length ? details.mainConcerns.join(', ') : 'General Consultation',
+                // Display only — the charged amount is decided server-side from the id
                 price: details.sessionMode === 'online' ? SESSION_PRICES.online : SESSION_PRICES.inperson
               }
             }}

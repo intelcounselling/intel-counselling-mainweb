@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Loader2, ShieldCheck, Mail, Lock, User, Phone } from 'lucide-react';
+import { setAuthSession } from '../utils/auth';
 
 interface AuthModalProps {
   onClose: () => void;
@@ -116,8 +117,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess, initialMode =
 
       const data = await response.json();
 
+      if (!data.user) {
+        throw new Error(data.error || 'Authentication failed. Please try again.');
+      }
+
       if (data.success || data.user) {
-        localStorage.setItem('auth_user', JSON.stringify(data.user));
+        setAuthSession(data.user, data.token);
         // Also pre-populate assessment registration details
         localStorage.setItem('assessment_registration', JSON.stringify({
           name: data.user.name,

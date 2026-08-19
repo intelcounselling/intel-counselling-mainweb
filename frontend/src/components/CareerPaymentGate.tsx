@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ShieldCheck, Loader2, Sparkles, Brain, Target, UserCheck, PhoneCall, Check, Monitor, MapPin } from 'lucide-react';
+import { setAuthSession } from '../utils/auth';
 
 interface CareerPaymentGateProps {
   registration: any;
@@ -9,8 +10,19 @@ interface CareerPaymentGateProps {
 
 const loadCashfreeScript = () => {
   return new Promise((resolve) => {
+    const src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
+    if ((window as any).Cashfree) {
+      resolve(true);
+      return;
+    }
+    const existing = document.querySelector(`script[src="${src}"]`) as HTMLScriptElement | null;
+    if (existing) {
+      existing.addEventListener('load', () => resolve(true));
+      existing.addEventListener('error', () => resolve(false));
+      return;
+    }
     const script = document.createElement('script');
-    script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
+    script.src = src;
     script.onload = () => resolve(true);
     script.onerror = () => resolve(false);
     document.body.appendChild(script);
@@ -69,7 +81,11 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
       }
       const data = await response.json();
 
-      localStorage.setItem('auth_user', JSON.stringify(data.user));
+      if (!data.user) {
+        throw new Error(data.error || 'Authentication failed. Please try again.');
+      }
+
+      setAuthSession(data.user, data.token);
       // update registration state
       registration.name = data.user.name;
       registration.email = data.user.email;
@@ -105,7 +121,7 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
     }
 
     try {
-      const amount = selectedPackage === 'assessment_only' ? 2999 : 4999;
+      const serviceId = selectedPackage === 'assessment_only' ? 'career_assessment' : 'career_assessment_plus';
       const serviceName = selectedPackage === 'assessment_only'
         ? 'Career Guidance Assessment (Assessment Only)'
         : 'Career Guidance Assessment (Assessment + Result Explanation)';
@@ -115,7 +131,7 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount: amount,
+          serviceId: serviceId,
           serviceName: serviceName,
           customerName: registration.name,
           customerEmail: registration.email,
@@ -145,31 +161,50 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
         redirectTarget: "_modal",
       };
 
-      cashfree.checkout(checkoutOptions).then((result: any) => {
+      const orderId = data.orderId;
+
+      cashfree.checkout(checkoutOptions).then(async (result: any) => {
         if (result.error) {
           setError(result.error.message || "Payment transaction failed.");
           setIsProcessing(false);
-        } else if (result.redirect) {
+          return;
+        }
+
+        if (result.redirect) {
           console.log("Payment redirecting...");
-        } else if (result.paymentDetails) {
-          // Success! Save selected appointment slot to localStorage
-          if (selectedPackage === 'assessment_explanation') {
-            localStorage.setItem('career_booked_session_mode', sessionMode);
-            localStorage.setItem('career_booked_date', date);
-            localStorage.setItem('career_booked_time', time);
+        }
+
+        // Never trust the client-side checkout result alone — confirm the
+        // order status with the server before unlocking the assessment.
+        try {
+          const verifyRes = await fetch('/api/verify-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderId })
+          });
+          const verifyData = await verifyRes.json().catch(() => ({}));
+
+          if (verifyRes.ok && verifyData.paid === true) {
+            // Success! Save selected appointment slot to localStorage
+            if (selectedPackage === 'assessment_explanation') {
+              localStorage.setItem('career_booked_session_mode', sessionMode);
+              localStorage.setItem('career_booked_date', date);
+              localStorage.setItem('career_booked_time', time);
+            } else {
+              localStorage.removeItem('career_booked_session_mode');
+              localStorage.removeItem('career_booked_date');
+              localStorage.removeItem('career_booked_time');
+            }
+            setIsProcessing(false);
+            onSuccess();
           } else {
-            localStorage.removeItem('career_booked_session_mode');
-            localStorage.removeItem('career_booked_date');
-            localStorage.removeItem('career_booked_time');
+            setIsProcessing(false);
+            setError("Payment was not completed or is pending verification. Please try again or contact us if you were charged.");
           }
+        } catch (verifyErr) {
+          console.error("Payment verification failed:", verifyErr);
           setIsProcessing(false);
-          onSuccess();
-        } else {
-          console.log("Unknown result from cashfree", result);
-          setIsProcessing(false);
-          if (result && Object.keys(result).length > 0) {
-             onSuccess();
-          }
+          setError("Payment was not completed or is pending verification. Please try again or contact us if you were charged.");
         }
       }).catch((err: any) => {
         setError(err.message || "Payment encountered an error.");

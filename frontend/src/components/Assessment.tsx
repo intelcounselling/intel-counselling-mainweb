@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { X, ArrowRight, ArrowLeft, Loader2, Sparkles, Download, CheckCircle, Brain, Target, UserCheck } from 'lucide-react';
 import { MI_QUESTIONS, INTEREST_QUESTIONS, PERSONALITY_QUESTIONS, Question } from './TestQuestions';
+import { authHeaders } from '../utils/auth';
 
 interface AssessmentProps {
   type?: string;
@@ -22,6 +23,8 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any | null>(null);
   const [showSectionIntro, setShowSectionIntro] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const shouldSendEmailRef = useRef(false);
 
   useEffect(() => {
     const resultId = searchParams.get('id');
@@ -30,7 +33,7 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
     if (resultId) {
       // Load from DB using UUID
       setLoading(true);
-      fetch(`/api/load-answers?id=${encodeURIComponent(resultId)}`)
+      fetch(`/api/load-answers?id=${encodeURIComponent(resultId)}`, { headers: authHeaders() })
         .then(res => {
           if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
           return res.json();
@@ -44,11 +47,13 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
             processResults(parsedAnswers, true);
           } else {
             setLoading(false);
+            setLoadError('Could not load this saved result.');
           }
         })
         .catch(err => {
           console.error('Failed to load answers from DB:', err);
           setLoading(false);
+          setLoadError('Could not load this saved result.');
         });
     } else if (rawAnswers && rawAnswers.length === ALL_QUESTIONS.length) {
       // Legacy URL fallback: save to DB and update URL
@@ -57,15 +62,10 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
       setStep(ALL_QUESTIONS.length);
       setShowSectionIntro(false);
       setLoading(true);
-      let userId = null;
-      try {
-        const savedUser = localStorage.getItem('auth_user');
-        if (savedUser) userId = JSON.parse(savedUser).id;
-      } catch (e) {}
       fetch('/api/save-answers', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ answers: rawAnswers, userId })
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ answers: rawAnswers })
       })
         .then(res => {
           if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
@@ -85,7 +85,8 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
   }, []);
 
   useEffect(() => {
-    if (result) {
+    if (result && shouldSendEmailRef.current) {
+      shouldSendEmailRef.current = false;
       let registration = null;
       try {
         const savedReg = localStorage.getItem('assessment_registration');
@@ -176,16 +177,13 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
     setLoading(true);
 
     if (!isInitialLoad) {
-      let userId = null;
-      try {
-        const savedUser = localStorage.getItem('auth_user');
-        if (savedUser) userId = JSON.parse(savedUser).id;
-      } catch (e) {}
+      // Only send the results email for a live test completion, not saved-result loads
+      shouldSendEmailRef.current = true;
       // Save encrypted answers to DB and update URL with UUID
       fetch('/api/save-answers', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ answers: finalAnswers.join(''), userId })
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ answers: finalAnswers.join('') })
       })
         .then(res => {
           if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
@@ -256,6 +254,26 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
     { label: "Agree / High Interest", value: 3 },
     { label: "Strongly Agree / Very High", value: 4 },
   ];
+
+  if (loadError) {
+    return (
+      <div className="min-h-screen bg-[#F6F7F9] pt-24 pb-12 px-4 flex items-center justify-center">
+        <div className="relative bg-white w-full max-w-2xl p-8 md:p-16 rounded-[40px] shadow-xl text-center animate-in fade-in duration-500">
+          <div className="w-20 h-20 bg-intel-dark text-white rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-xl">
+            <X size={40} />
+          </div>
+          <h2 className="text-3xl md:text-4xl font-black serif text-intel-dark mb-6">Result Not Found</h2>
+          <p className="text-intel-dark/60 leading-relaxed mb-10">{loadError} The link may be invalid or the saved result is no longer available.</p>
+          <button
+            onClick={onClose}
+            className="w-full bg-terracotta text-white py-5 rounded-2xl font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-lg"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (showSectionIntro && !result && !loading) {
     return (

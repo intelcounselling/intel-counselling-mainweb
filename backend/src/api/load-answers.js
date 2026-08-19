@@ -1,10 +1,11 @@
 import { decrypt } from '../encryption.js';
 import { getResultById } from '../db.js';
+import { getAuthenticatedUserId } from '../token.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') {
     res.status(200).end();
@@ -26,6 +27,16 @@ export default async function handler(req, res) {
 
     if (!row) {
       return res.status(404).json({ error: 'Result not found' });
+    }
+
+    // Anonymous results (no owner yet) are viewable by anyone holding the
+    // unguessable UUID — needed right after taking a test while logged out.
+    // Once a result is linked to an account, only that user may read it.
+    if (row.user_id) {
+      const authenticatedUserId = getAuthenticatedUserId(req);
+      if (!authenticatedUserId || authenticatedUserId !== row.user_id) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
     }
 
     const answers = decrypt(row.encrypted_answers, row.iv);

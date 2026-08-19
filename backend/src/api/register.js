@@ -1,5 +1,7 @@
 import crypto from 'crypto';
 import { createUser, getUserByEmail } from '../db.js';
+import { hashPassword } from '../password.js';
+import { signToken } from '../token.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -28,12 +30,13 @@ export default async function handler(req, res) {
     }
 
     const userId = crypto.randomUUID();
-    const hashedPassword = crypto.createHash('sha256').update(password).digest('hex');
+    const hashedPassword = hashPassword(password);
 
     await createUser(userId, name, email, hashedPassword, phone);
 
     res.status(200).json({
       success: true,
+      token: signToken(userId),
       user: { id: userId, name, email, phone }
     });
   } catch (error) {

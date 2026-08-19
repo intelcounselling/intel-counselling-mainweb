@@ -42,6 +42,9 @@ function getDb() {
           if (!rows.some(r => r.name === 'otp_expires_at')) {
             db.run('ALTER TABLE users ADD COLUMN otp_expires_at DATETIME', () => {});
           }
+          if (!rows.some(r => r.name === 'otp_attempts')) {
+            db.run('ALTER TABLE users ADD COLUMN otp_attempts INTEGER DEFAULT 0', () => {});
+          }
         }
       });
     });
@@ -128,11 +131,12 @@ export function linkResultToUser(resultId, userId) {
   return new Promise((resolve, reject) => {
     const database = getDb();
     database.run(
-      'UPDATE assessment_results SET user_id = ? WHERE id = ?',
+      // Only claim unowned results — never re-assign a result that already belongs to a user
+      'UPDATE assessment_results SET user_id = ? WHERE id = ? AND user_id IS NULL',
       [userId, resultId],
       function (err) {
         if (err) reject(err);
-        else resolve();
+        else resolve(this.changes > 0);
       }
     );
   });
@@ -142,7 +146,7 @@ export function getUserResults(userId) {
   return new Promise((resolve, reject) => {
     const database = getDb();
     database.all(
-      'SELECT id, created_at FROM assessment_results WHERE user_id = ? ORDER BY created_at DESC',
+      'SELECT id, test_id, created_at FROM assessment_results WHERE user_id = ? ORDER BY created_at DESC',
       [userId],
       (err, rows) => {
         if (err) reject(err);
@@ -156,8 +160,53 @@ export function updateUserOTP(email, otpCode, expiresAt) {
   return new Promise((resolve, reject) => {
     const database = getDb();
     database.run(
-      'UPDATE users SET otp_code = ?, otp_expires_at = ? WHERE email = ?',
+      'UPDATE users SET otp_code = ?, otp_expires_at = ?, otp_attempts = 0 WHERE email = ?',
       [otpCode, expiresAt, email],
+      function (err) {
+        if (err) reject(err);
+        else resolve();
+      }
+    );
+  });
+}
+
+export function incrementOtpAttempts(email) {
+  return new Promise((resolve, reject) => {
+    const database = getDb();
+    database.run(
+      'UPDATE users SET otp_attempts = COALESCE(otp_attempts, 0) + 1 WHERE email = ?',
+      [email],
+      function (err) {
+        if (err) return reject(err);
+        database.get('SELECT otp_attempts FROM users WHERE email = ?', [email], (err2, row) => {
+          if (err2) reject(err2);
+          else resolve(row ? row.otp_attempts : 0);
+        });
+      }
+    );
+  });
+}
+
+export function clearUserOTP(email) {
+  return new Promise((resolve, reject) => {
+    const database = getDb();
+    database.run(
+      'UPDATE users SET otp_code = NULL, otp_expires_at = NULL, otp_attempts = 0 WHERE email = ?',
+      [email],
+      function (err) {
+        if (err) reject(err);
+        else resolve();
+      }
+    );
+  });
+}
+
+export function updateUserPassword(email, newPasswordHash) {
+  return new Promise((resolve, reject) => {
+    const database = getDb();
+    database.run(
+      'UPDATE users SET password = ? WHERE email = ?',
+      [newPasswordHash, email],
       function (err) {
         if (err) reject(err);
         else resolve();

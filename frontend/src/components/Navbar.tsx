@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Home, Info, Users, Calendar, Heart, Layers, LogIn, Menu, X, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { clearAuthSession } from '../utils/auth';
 
 interface NavbarProps {
   onBookClick: () => void;
@@ -25,6 +26,7 @@ const Navbar: React.FC<NavbarProps> = ({ onBookClick, onAssessmentClick, onLogin
         const saved = localStorage.getItem('auth_user');
         setUser(saved ? JSON.parse(saved) : null);
       } catch (e) {
+        clearAuthSession();
         setUser(null);
       }
     };
@@ -35,7 +37,7 @@ const Navbar: React.FC<NavbarProps> = ({ onBookClick, onAssessmentClick, onLogin
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('auth_user');
+    clearAuthSession();
     setUser(null);
     navigate('/');
   };

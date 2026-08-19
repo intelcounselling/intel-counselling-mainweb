@@ -3,7 +3,15 @@ import crypto from 'crypto';
 const ALGORITHM = 'aes-256-cbc';
 
 function getKey() {
-  const rawKey = process.env.ENCRYPTION_KEY || 'intel_counselling_default_dev_key_32b!';
+  const rawKey = process.env.ENCRYPTION_KEY;
+  if (!rawKey) {
+    // Refuse to encrypt real data with a key that lives in git history.
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('ENCRYPTION_KEY environment variable must be set in production');
+    }
+    console.warn('WARNING: ENCRYPTION_KEY not set — using insecure dev-only fallback key');
+    return crypto.createHash('sha256').update('intel_counselling_default_dev_key_32b!').digest();
+  }
   return crypto.createHash('sha256').update(rawKey).digest();
 }
 

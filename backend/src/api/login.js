@@ -1,5 +1,6 @@
-import crypto from 'crypto';
-import { getUserByEmail } from '../db.js';
+import { getUserByEmail, updateUserPassword } from '../db.js';
+import { hashPassword, verifyPassword } from '../password.js';
+import { signToken } from '../token.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -27,13 +28,21 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid email or password' });
     }
 
-    const hashedPassword = crypto.createHash('sha256').update(password).digest('hex');
-    if (user.password !== hashedPassword) {
+    const { valid, needsUpgrade } = verifyPassword(password, user.password);
+    if (!valid) {
       return res.status(400).json({ error: 'Invalid email or password' });
+    }
+
+    // Transparently migrate legacy unsalted SHA-256 hashes to scrypt
+    if (needsUpgrade) {
+      await updateUserPassword(user.email, hashPassword(password)).catch((err) =>
+        console.error('Failed to upgrade legacy password hash:', err)
+      );
     }
 
     res.status(200).json({
       success: true,
+      token: signToken(user.id),
       user: { id: user.id, name: user.name, email: user.email, phone: user.phone }
     });
   } catch (error) {

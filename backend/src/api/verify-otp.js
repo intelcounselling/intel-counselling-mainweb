@@ -1,5 +1,8 @@
 import crypto from 'crypto';
-import { getUserByEmail, resetUserPassword } from '../db.js';
+import { getUserByEmail, resetUserPassword, incrementOtpAttempts, clearUserOTP } from '../db.js';
+import { hashPassword } from '../password.js';
+
+const MAX_OTP_ATTEMPTS = 5;
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -34,16 +37,25 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'OTP has expired' });
     }
 
-    // Verify OTP code
+    // Lock out brute-force attempts: the OTP is only 6 digits
+    if ((user.otp_attempts || 0) >= MAX_OTP_ATTEMPTS) {
+      await clearUserOTP(trimmedEmail);
+      return res.status(429).json({ error: 'Too many attempts. Please request a new OTP.' });
+    }
+
+    // Verify OTP code (constant-time comparison)
     const hashedProvidedOtp = crypto.createHash('sha256').update(otp.trim()).digest('hex');
-    if (user.otp_code !== hashedProvidedOtp) {
+    const a = Buffer.from(hashedProvidedOtp);
+    const b = Buffer.from(user.otp_code);
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+      const attempts = await incrementOtpAttempts(trimmedEmail);
+      if (attempts >= MAX_OTP_ATTEMPTS) {
+        await clearUserOTP(trimmedEmail);
+      }
       return res.status(400).json({ error: 'Invalid or expired OTP' });
     }
 
-    // Hash new password using SHA256 (matches registration / login)
-    const newPasswordHash = crypto.createHash('sha256').update(newPassword).digest('hex');
-
-    await resetUserPassword(trimmedEmail, newPasswordHash);
+    await resetUserPassword(trimmedEmail, hashPassword(newPassword));
 
     res.status(200).json({
       success: true,

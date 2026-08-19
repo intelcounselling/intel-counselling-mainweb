@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { X, ArrowRight, ArrowLeft, Shield, HeartPulse, CheckCircle, Link } from 'lucide-react';
 import { ClinicalConfig } from './ClinicalQuestions';
+import { authHeaders } from '../utils/auth';
 
 interface ClinicalAssessmentProps {
   config: ClinicalConfig;
@@ -16,6 +17,24 @@ const ClinicalAssessment: React.FC<ClinicalAssessmentProps> = ({ config, onClose
   const [result, setResult] = useState<any | null>(null);
 
   useEffect(() => {
+    const resultId = searchParams.get('id');
+    if (resultId) {
+      fetch(`/api/load-answers?id=${encodeURIComponent(resultId)}`, { headers: authHeaders() })
+        .then(res => (res.ok ? res.json() : Promise.reject(new Error('load failed'))))
+        .then(data => {
+          const raw = String(data.answers || '');
+          if (raw.length === config.questions.length) {
+            const parsedAnswers = raw.split('').map(Number);
+            setAnswers(parsedAnswers);
+            setStep(config.questions.length);
+            processResults(parsedAnswers, true);
+          }
+        })
+        .catch(err => console.error('Failed to load saved clinical result:', err));
+      return;
+    }
+
+    // Legacy links that carry raw answers in the URL — still readable, no longer generated
     const rawAnswers = searchParams.get('r');
     if (rawAnswers && rawAnswers.length === config.questions.length) {
       const parsedAnswers = rawAnswers.split('').map(Number);
@@ -51,27 +70,20 @@ const ClinicalAssessment: React.FC<ClinicalAssessmentProps> = ({ config, onClose
     let totalScore = 0;
     
     if (!isInitialLoad) {
-      setSearchParams({ r: finalAnswers.join('') }, { replace: true });
-
-      let userId = null;
-      try {
-        const savedUser = localStorage.getItem('auth_user');
-        if (savedUser) userId = JSON.parse(savedUser).id;
-      } catch (e) {}
-
+      // Save anonymously and reference the result only by its opaque id — raw answers
+      // (including the PHQ-9 self-harm item) must never appear in the URL or share links.
       fetch('/api/save-answers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          answers: finalAnswers.join(''), 
-          userId,
+        body: JSON.stringify({
+          answers: finalAnswers.join(''),
           testId: config.id
         })
       })
       .then(res => res.json())
       .then(data => {
         if (data.id) {
-          setSearchParams({ r: finalAnswers.join(''), id: data.id }, { replace: true });
+          setSearchParams({ id: data.id }, { replace: true });
         }
       })
       .catch(err => console.error('Failed to save clinical answers:', err));
@@ -238,9 +250,13 @@ const ClinicalAssessment: React.FC<ClinicalAssessmentProps> = ({ config, onClose
                )}
 
                <div className="flex flex-col md:flex-row gap-4 items-center justify-center w-full">
-                 <button 
+                 <button
                    onClick={() => {
-                     navigate('/booking?assessmentRef=' + encodeURIComponent(window.location.href));
+                     const savedId = searchParams.get('id');
+                     const ref = savedId
+                       ? `${window.location.origin}${window.location.pathname}?id=${savedId}`
+                       : window.location.href;
+                     navigate('/booking?assessmentRef=' + encodeURIComponent(ref));
                    }}
                    className={`w-full md:w-auto px-10 py-5 ${config.color} text-white rounded-2xl font-black uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all md:mb-8`}
                  >
@@ -249,7 +265,12 @@ const ClinicalAssessment: React.FC<ClinicalAssessmentProps> = ({ config, onClose
                  
                  <button 
                      onClick={() => {
-                        navigator.clipboard.writeText(window.location.href);
+                        const savedId = searchParams.get('id');
+                        if (!savedId) {
+                          alert('Your result is still being saved — please try again in a moment.');
+                          return;
+                        }
+                        navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}?id=${savedId}`);
                         alert("Result link copied to clipboard you can now share it!");
                      }}
                      className="flex items-center justify-center gap-3 w-full md:w-auto px-6 py-5 bg-white text-intel-dark border-2 border-black/10 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-black/5 transition-all shadow-sm md:mb-8"

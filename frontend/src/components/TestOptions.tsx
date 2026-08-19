@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Sparkles, Brain, Activity, HeartPulse, Moon, ArrowRight, History, Loader2, Calendar, Smartphone } from 'lucide-react';
 import SpotlightCard from './SpotlightCard';
 import FadeIn from './FadeIn';
+import { authHeaders, clearAuthSession } from '../utils/auth';
 
 interface TestOptionsProps {
   onBack: () => void;
@@ -24,21 +25,30 @@ const TestOptions: React.FC<TestOptionsProps> = ({ onBack, onSelectTest }) => {
         const parsed = saved ? JSON.parse(saved) : null;
         setUser(parsed);
         if (parsed) {
-          fetchResults(parsed.id);
+          fetchResults();
         } else {
           setPastResults([]);
         }
       } catch (e) {
+        clearAuthSession();
         setUser(null);
+        setPastResults([]);
       }
     };
     checkUser();
   }, []);
 
-  const fetchResults = async (userId: string) => {
+  const fetchResults = async () => {
     setLoadingResults(true);
     try {
-      const res = await fetch(`/api/user-results?userId=${encodeURIComponent(userId)}`);
+      const res = await fetch('/api/user-results', { headers: authHeaders() });
+      if (res.status === 401) {
+        // Session expired or invalid — clear it and show the logged-out state
+        clearAuthSession();
+        setUser(null);
+        setPastResults([]);
+        return;
+      }
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       const data = await res.json();
       if (data.results) {
@@ -150,10 +160,16 @@ const TestOptions: React.FC<TestOptionsProps> = ({ onBack, onSelectTest }) => {
                       minute: '2-digit'
                     });
 
+                    const testId = res.test_id || 'career';
+                    const clinicalTest = freeTests.find(t => t.id === testId);
+                    const resultTitle = clinicalTest
+                      ? `${clinicalTest.title} (${clinicalTest.shortTitle})`
+                      : 'Career Guidance Assessment';
+
                     return (
-                      <div 
+                      <div
                         key={res.id}
-                        onClick={() => navigate(`/assessments/career?id=${res.id}`)}
+                        onClick={() => navigate(`/assessments/${testId}?id=${res.id}`)}
                         className="group cursor-pointer bg-white border border-black/5 p-6 rounded-3xl hover:border-terracotta/40 hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
                       >
                         <div>
@@ -164,7 +180,7 @@ const TestOptions: React.FC<TestOptionsProps> = ({ onBack, onSelectTest }) => {
                             Attempt #{pastResults.length - idx}
                           </span>
                           <h4 className="font-bold text-sm text-intel-dark mb-1">
-                            Career Guidance Assessment
+                            {resultTitle}
                           </h4>
                           <p className="text-[10px] text-intel-dark/50 flex items-center gap-1">
                             <Calendar size={10} /> {formattedDate} at {formattedTime}

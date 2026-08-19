@@ -1,6 +1,7 @@
+import { escapeHtml, plainText } from '../escape.js';
+
 export default async function handler(req, res) {
   // CORS headers
-  res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader(
@@ -51,41 +52,41 @@ export default async function handler(req, res) {
           
           <div class="field">
             <div class="label">Client Name</div>
-            <div class="val"><strong>${name}</strong></div>
+            <div class="val"><strong>${escapeHtml(name)}</strong></div>
           </div>
 
           <div class="field">
             <div class="label">Email & Phone</div>
-            <div class="val"><a href="mailto:${email}">${email}</a> | ${phone}</div>
+            <div class="val"><a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a> | ${escapeHtml(phone)}</div>
           </div>
 
           <div class="field" style="display: flex; gap: 40px;">
             <div>
               <div class="label">Age</div>
-              <div class="val">${age}</div>
+              <div class="val">${escapeHtml(age)}</div>
             </div>
             <div>
               <div class="label">Gender</div>
-              <div class="val">${gender}</div>
+              <div class="val">${escapeHtml(gender)}</div>
             </div>
             <div>
               <div class="label">Status</div>
-              <div class="val">${occupation}</div>
+              <div class="val">${escapeHtml(occupation)}</div>
             </div>
           </div>
 
           <div class="field" style="background: #fdfaf4; padding: 12px; border-radius: 6px; border: 1px solid #ede8e0;">
             <div class="label" style="color: #C19B6C;">Intended Test</div>
-            <div class="val highlight">${testTitle}</div>
+            <div class="val highlight">${escapeHtml(testTitle)}</div>
           </div>
           
           <div class="field">
             <div class="label">Primary Concerns / Reason for Assessment</div>
-            <div class="message-box">${reason || 'None provided'}</div>
+            <div class="message-box">${reason ? escapeHtml(reason) : 'None provided'}</div>
           </div>
 
           <div style="font-size: 11px; color: #aaa; margin-top: 30px;">
-            Registered via Website: ${registeredAt}
+            Registered via Website: ${escapeHtml(registeredAt)}
           </div>
         </div>
       </body>
@@ -96,7 +97,7 @@ export default async function handler(req, res) {
       to: [{ email: 'intelcounselling@gmail.com', name: 'Intel Counselling Admin' }],
       sender: { email: 'intelcounselling@gmail.com', name: 'Intel Counselling Website' },
       replyTo: { email: email, name: name },
-      subject: `New Test Registration: ${name} (${testTitle})`,
+      subject: `New Test Registration: ${plainText(name)} (${plainText(testTitle)})`,
       htmlContent: adminHtml
     };
 
@@ -113,7 +114,7 @@ export default async function handler(req, res) {
     });
 
     if (!response.ok) {
-      const err = await response.json();
+      const err = await response.json().catch(() => ({}));
       console.error('Failed to send registration email:', err);
       return res.status(500).json({ error: 'Failed to send communication' });
     }

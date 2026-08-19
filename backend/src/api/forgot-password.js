@@ -45,7 +45,7 @@ export default async function handler(req, res) {
       console.log(`[DEV EMAIL] Subject: Your Password Reset OTP`);
       console.log(`[DEV EMAIL] Code: ${otp}`);
       console.log(`==================================================\n`);
-      return res.status(200).json({ success: true, message: 'OTP code generated (logged in dev)' });
+      return res.status(200).json({ success: true, message: 'If the account exists, an OTP code has been sent.' });
     }
 
     const htmlContent = `
@@ -90,10 +90,10 @@ export default async function handler(req, res) {
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
       console.error('Failed to send forgot password email:', err);
-      return res.status(500).json({ error: `Failed to send OTP email: ${err.message || JSON.stringify(err)}` });
+      return res.status(500).json({ error: 'Failed to send OTP email. Please try again later.' });
     }
 
-    res.status(200).json({ success: true, message: 'OTP sent successfully.' });
+    res.status(200).json({ success: true, message: 'If the account exists, an OTP code has been sent.' });
   } catch (error) {
     console.error('Error in forgot password handler:', error);
     res.status(500).json({ error: 'Internal Server Error' });

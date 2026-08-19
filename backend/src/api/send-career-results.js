@@ -1,4 +1,5 @@
 import PDFDocument from 'pdfkit-table';
+import { escapeHtml, plainText } from '../escape.js';
 
 const MI_DESC = {
   "Musical Intelligence": "This area has to do with sensitivity to sounds, rhythms, tones, and music. People with a high musical intelligence normally have good pitch and may even have absolute pitch, and are able to sing, play musical instruments, and compose music. They have sensitivity to rhythm, pitch, meter, tone, melody or timbre.",
@@ -176,7 +177,6 @@ async function createPdfBufferBase64(registration, appointment, result) {
 
 export default async function handler(req, res) {
   // CORS headers
-  res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader(
@@ -204,11 +204,16 @@ export default async function handler(req, res) {
 
     const { name, email, phone, age, gender } = registration || {};
     const { sessionMode, date, time } = appointment || {};
+
+    // Validate required fields before generating PDFs or sending any email.
+    if (!name || typeof name !== 'string' || !email || typeof email !== 'string') {
+      return res.status(400).json({ error: 'Missing required fields: registration.name and registration.email' });
+    }
     const { mi, interests, personality, summary } = result || {};
 
-    const formatMi = mi ? Object.entries(mi).map(([k, v]) => `<li><strong>${k}:</strong> ${v}</li>`).join('') : '';
-    const formatInterests = interests ? Object.entries(interests).map(([k, v]) => `<li><strong>${k}:</strong> ${v}</li>`).join('') : '';
-    const formatPersonality = personality ? Object.entries(personality).map(([k, v]) => `<li><strong>${k}:</strong> ${v}</li>`).join('') : '';
+    const formatMi = mi ? Object.entries(mi).map(([k, v]) => `<li><strong>${escapeHtml(k)}:</strong> ${escapeHtml(v)}</li>`).join('') : '';
+    const formatInterests = interests ? Object.entries(interests).map(([k, v]) => `<li><strong>${escapeHtml(k)}:</strong> ${escapeHtml(v)}</li>`).join('') : '';
+    const formatPersonality = personality ? Object.entries(personality).map(([k, v]) => `<li><strong>${escapeHtml(k)}:</strong> ${escapeHtml(v)}</li>`).join('') : '';
 
     const hasCounselling = appointment && appointment.date;
 
@@ -241,15 +246,15 @@ export default async function handler(req, res) {
             <div class="title">👤 User Details</div>
             <div class="field">
               <div class="label">Name</div>
-              <div class="val"><strong>${name || 'N/A'}</strong></div>
+              <div class="val"><strong>${escapeHtml(name) || 'N/A'}</strong></div>
             </div>
             <div class="field">
               <div class="label">Email & Phone</div>
-              <div class="val"><a href="mailto:${email}">${email || 'N/A'}</a> | ${phone || 'N/A'}</div>
+              <div class="val"><a href="mailto:${escapeHtml(email)}">${escapeHtml(email) || 'N/A'}</a> | ${escapeHtml(phone) || 'N/A'}</div>
             </div>
             <div class="field">
               <div class="label">Age & Gender</div>
-              <div class="val">${age || 'N/A'} | ${gender || 'N/A'}</div>
+              <div class="val">${escapeHtml(age) || 'N/A'} | ${escapeHtml(gender) || 'N/A'}</div>
             </div>
           </div>
 
@@ -262,7 +267,7 @@ export default async function handler(req, res) {
             </div>
             <div class="field">
               <div class="label">Date & Time Slot</div>
-              <div class="val highlight">${date} at ${time}</div>
+              <div class="val highlight">${escapeHtml(date)} at ${escapeHtml(time)}</div>
             </div>
           </div>
           ` : ''}
@@ -271,11 +276,11 @@ export default async function handler(req, res) {
             <div class="title">🧠 Test Scores Summary</div>
             <div class="field">
               <div class="label">Top Intelligence Profile</div>
-              <div class="val">${summary?.topIntelligence?.join(', ') || 'N/A'}</div>
+              <div class="val">${escapeHtml(summary?.topIntelligence?.join(', ')) || 'N/A'}</div>
             </div>
             <div class="field">
               <div class="label">Top Vocational Interests</div>
-              <div class="val">${summary?.topInterests?.join(', ') || 'N/A'}</div>
+              <div class="val">${escapeHtml(summary?.topInterests?.join(', ')) || 'N/A'}</div>
             </div>
           </div>
 
@@ -328,14 +333,14 @@ export default async function handler(req, res) {
             <p style="color: #666; font-size: 14px;">Your comprehensive evaluation is ready.</p>
           </div>
           
-          <p>Dear ${name},</p>
+          <p>Dear ${escapeHtml(name)},</p>
           <p>Thank you for taking the Career Guidance Assessment with Intel Counselling. We have compiled your responses and generated your custom report, which is attached to this email as a PDF document.</p>
           
           ${hasCounselling ? `
           <div style="background: #fdfaf4; padding: 20px; border-radius: 6px; border: 1px solid #ede8e0; margin: 25px 0;">
             <h3 style="color: #C19B6C; margin-top: 0; margin-bottom: 12px;">📅 Confirmed Counselling Session</h3>
             <p style="margin: 5px 0;"><strong>Format:</strong> ${sessionMode === 'online' ? '🌐 Online (Virtual)' : '🏢 In-Person'}</p>
-            <p style="margin: 5px 0;"><strong>Scheduled Time:</strong> <span class="highlight">${date} at ${time}</span></p>
+            <p style="margin: 5px 0;"><strong>Scheduled Time:</strong> <span class="highlight">${escapeHtml(date)} at ${escapeHtml(time)}</span></p>
             <p style="margin-top: 10px; font-size: 13px; color: #555;">Our expert counselor will review your report with you during this live session to provide detailed interpretation and answer any questions.</p>
           </div>
           ` : ''}
@@ -380,14 +385,14 @@ export default async function handler(req, res) {
         to: [{ email: 'intelcounselling@gmail.com', name: 'Intel Counselling Admin' }],
         sender: { email: 'intelcounselling@gmail.com', name: 'Intel Counselling Assessment Portal' },
         replyTo: { email: email, name: name },
-        subject: `Career Test Completed: ${name} ${hasCounselling ? `(Session Scheduled: ${date})` : ''}`,
+        subject: `Career Test Completed: ${plainText(name)} ${hasCounselling ? `(Session Scheduled: ${plainText(date)})` : ''}`,
         htmlContent: adminHtml,
         attachment: attachmentPayload
       })
     });
 
     if (!adminRes.ok) {
-      const err = await adminRes.json();
+      const err = await adminRes.json().catch(() => ({}));
       console.error('Failed to send admin email:', err);
     }
 
@@ -405,7 +410,7 @@ export default async function handler(req, res) {
     });
 
     if (!userRes.ok) {
-      const err = await userRes.json();
+      const err = await userRes.json().catch(() => ({}));
       console.error('Failed to send user email:', err);
       return res.status(500).json({ error: 'Failed to send user confirmation email' });
     }

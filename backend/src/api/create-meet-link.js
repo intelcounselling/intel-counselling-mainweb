@@ -2,7 +2,6 @@ import { google } from 'googleapis';
 
 export default async function handler(req, res) {
   // CORS configuration
-  res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader(
@@ -46,23 +45,28 @@ export default async function handler(req, res) {
 
     // Parse date and time to construct Date objects
     // Assuming date is YYYY-MM-DD and time is like "09:00 AM"
-    let startDateTime = new Date();
-    let endDateTime = new Date();
-    
+    let startDateTime;
+    let endDateTime;
+
     if (date && time) {
-      const timeParts = time.match(/(\d+):(\d+)\s+(AM|PM)/);
-      if (timeParts) {
-        let hours = parseInt(timeParts[1]);
-        const mins = parseInt(timeParts[2]);
-        const ampm = timeParts[3];
-        if (ampm === 'PM' && hours < 12) hours += 12;
-        if (ampm === 'AM' && hours === 12) hours = 0;
-        
-        startDateTime = new Date(`${date}T${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:00`);
-        endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000); // 1 hour duration
+      const timeParts = time.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (!timeParts) {
+        return res.status(400).json({ error: 'Invalid time format. Expected e.g. "09:00 AM".' });
       }
+      let hours = parseInt(timeParts[1]);
+      const mins = parseInt(timeParts[2]);
+      const ampm = timeParts[3].toUpperCase();
+      if (ampm === 'PM' && hours < 12) hours += 12;
+      if (ampm === 'AM' && hours === 12) hours = 0;
+
+      // Anchor to IST explicitly — server local time may be UTC, which would shift the event
+      startDateTime = new Date(`${date}T${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:00+05:30`);
+      if (isNaN(startDateTime.getTime())) {
+        return res.status(400).json({ error: 'Invalid date format. Expected YYYY-MM-DD.' });
+      }
+      endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000); // 1 hour duration
     } else {
-        // Fallback times if date/time are malformed or missing
+        // Fallback times if date/time are missing
         startDateTime = new Date();
         startDateTime.setHours(startDateTime.getHours() + 1);
         endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000);
@@ -105,6 +109,6 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Error generating Meet link:', error);
-    return res.status(500).json({ error: 'Internal Server Error', details: error.message });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 }

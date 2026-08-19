@@ -2,7 +2,6 @@ import crypto from 'crypto';
 
 export default async function handler(req, res) {
   // Handle CORS preflight requests for local development (Vercel doesn't strictly need this but good practice)
-  res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader(
@@ -20,7 +19,24 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { amount, serviceName, customerName, customerEmail, customerPhone } = req.body;
+    const { serviceId, serviceName, customerName, customerEmail, customerPhone } = req.body;
+
+    // Prices live server-side only — the client picks a service, never an amount.
+    // Env overrides let pricing change without a deploy.
+    const PRICES = {
+      session_online: Number(process.env.SESSION_PRICE_ONLINE || 1),
+      session_inperson: Number(process.env.SESSION_PRICE_INPERSON || 1),
+      career_assessment: Number(process.env.CAREER_PRICE_ASSESSMENT || 2999),
+      career_assessment_plus: Number(process.env.CAREER_PRICE_PLUS || 4999),
+    };
+
+    const orderAmount = PRICES[serviceId];
+    if (!Number.isFinite(orderAmount) || orderAmount <= 0) {
+      return res.status(400).json({ error: 'Unknown service' });
+    }
+
+    // Prefer a configured base URL over the spoofable Host header for the post-payment redirect
+    const baseUrl = process.env.PUBLIC_BASE_URL || `https://${req.headers.host}`;
 
     const orderId = 'ORDER_' + crypto.randomBytes(8).toString('hex');
     const cashfreeOptions = {
@@ -32,7 +48,7 @@ export default async function handler(req, res) {
         'x-client-secret': process.env.CASHFREE_SECRET_KEY,
       },
       body: JSON.stringify({
-        order_amount: amount, 
+        order_amount: orderAmount,
         order_currency: 'INR',
         order_id: orderId,
         customer_details: {
@@ -43,7 +59,7 @@ export default async function handler(req, res) {
         },
         order_meta: {
           // Vercel dynamically assigns HTTPs urls. We construct a dynamic HTTPS absolute URL.
-          return_url: `https://${req.headers.host}/?order_id={order_id}`,
+          return_url: `${baseUrl}/?order_id={order_id}`,
         },
         order_note: `Payment for ${serviceName || 'Consultation'}`
       }),

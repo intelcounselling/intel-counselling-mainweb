@@ -1,9 +1,10 @@
 import { getUserResults } from '../db.js';
+import { getAuthenticatedUserId } from '../token.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') {
     res.status(200).end();
@@ -15,10 +16,11 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { userId } = req.query;
-
+    // The authenticated user is the only one allowed to list their results;
+    // any client-supplied userId is ignored.
+    const userId = getAuthenticatedUserId(req);
     if (!userId) {
-      return res.status(400).json({ error: 'Missing userId parameter' });
+      return res.status(401).json({ error: 'Unauthorized' });
     }
 
     const results = await getUserResults(userId);
