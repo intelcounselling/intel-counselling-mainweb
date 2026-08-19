@@ -68,9 +68,33 @@ function getDb() {
           if (!rows.some(r => r.name === 'test_id')) {
             db.run('ALTER TABLE assessment_results ADD COLUMN test_id TEXT', () => {});
           }
+          if (!rows.some(r => r.name === 'registration')) {
+            db.run('ALTER TABLE assessment_results ADD COLUMN registration TEXT', () => {});
+          }
+          if (!rows.some(r => r.name === 'registration_iv')) {
+            db.run('ALTER TABLE assessment_results ADD COLUMN registration_iv TEXT', () => {});
+          }
+          if (!rows.some(r => r.name === 'order_id')) {
+            db.run('ALTER TABLE assessment_results ADD COLUMN order_id TEXT', () => {});
+          }
+          if (!rows.some(r => r.name === 'emailed_at')) {
+            db.run('ALTER TABLE assessment_results ADD COLUMN emailed_at DATETIME', () => {});
+          }
         }
       });
     });
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS orders (
+        order_id TEXT PRIMARY KEY,
+        service_id TEXT NOT NULL,
+        amount REAL NOT NULL,
+        status TEXT NOT NULL DEFAULT 'CREATED',
+        result_id TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME
+      )
+    `);
   }
   return db;
 }
@@ -215,6 +239,21 @@ export function updateUserPassword(email, newPasswordHash) {
   });
 }
 
+export function markOrderUsed(orderId) {
+  return new Promise((resolve, reject) => {
+    const database = getDb();
+    database.run(
+      // Only a PAID order can be consumed, and only once
+      "UPDATE orders SET status = 'USED', updated_at = CURRENT_TIMESTAMP WHERE order_id = ? AND status = 'PAID'",
+      [orderId],
+      function (err) {
+        if (err) reject(err);
+        else resolve(this.changes > 0);
+      }
+    );
+  });
+}
+
 export function resetUserPassword(email, newPasswordHash) {
   return new Promise((resolve, reject) => {
     const database = getDb();
@@ -224,6 +263,111 @@ export function resetUserPassword(email, newPasswordHash) {
       function (err) {
         if (err) reject(err);
         else resolve();
+      }
+    );
+  });
+}
+
+// --- Orders (payment status lives server-side, never trusted from the client) ---
+
+export function createOrder(orderId, serviceId, amount) {
+  return new Promise((resolve, reject) => {
+    const database = getDb();
+    database.run(
+      'INSERT INTO orders (order_id, service_id, amount) VALUES (?, ?, ?)',
+      [orderId, serviceId, amount],
+      function (err) {
+        if (err) reject(err);
+        else resolve(orderId);
+      }
+    );
+  });
+}
+
+export function getOrder(orderId) {
+  return new Promise((resolve, reject) => {
+    const database = getDb();
+    database.get('SELECT * FROM orders WHERE order_id = ?', [orderId], (err, row) => {
+      if (err) reject(err);
+      else resolve(row || null);
+    });
+  });
+}
+
+export function markOrderPaid(orderId) {
+  return new Promise((resolve, reject) => {
+    const database = getDb();
+    database.run(
+      "UPDATE orders SET status = 'PAID', updated_at = CURRENT_TIMESTAMP WHERE order_id = ?",
+      [orderId],
+      function (err) {
+        if (err) reject(err);
+        else resolve(this.changes > 0);
+      }
+    );
+  });
+}
+
+export function linkOrderToResult(orderId, resultId) {
+  return new Promise((resolve, reject) => {
+    const database = getDb();
+    database.run(
+      // Single-use: only claim an order not already linked to another result
+      'UPDATE orders SET result_id = ?, updated_at = CURRENT_TIMESTAMP WHERE order_id = ? AND result_id IS NULL',
+      [resultId, orderId],
+      function (err) {
+        if (err) return reject(err);
+        if (this.changes === 0) return resolve(false);
+        database.run(
+          'UPDATE assessment_results SET order_id = ? WHERE id = ?',
+          [orderId, resultId],
+          function (err2) {
+            if (err2) reject(err2);
+            else resolve(true);
+          }
+        );
+      }
+    );
+  });
+}
+
+export function saveResultRegistration(resultId, encryptedRegistration, iv) {
+  return new Promise((resolve, reject) => {
+    const database = getDb();
+    database.run(
+      'UPDATE assessment_results SET registration = ?, registration_iv = ? WHERE id = ?',
+      [encryptedRegistration, iv, resultId],
+      function (err) {
+        if (err) reject(err);
+        else resolve(this.changes > 0);
+      }
+    );
+  });
+}
+
+export function getResultFull(id) {
+  return new Promise((resolve, reject) => {
+    const database = getDb();
+    database.get(
+      'SELECT encrypted_answers, iv, user_id, test_id, order_id, registration, registration_iv, emailed_at FROM assessment_results WHERE id = ?',
+      [id],
+      (err, row) => {
+        if (err) reject(err);
+        else resolve(row || null);
+      }
+    );
+  });
+}
+
+export function markResultEmailed(resultId) {
+  return new Promise((resolve, reject) => {
+    const database = getDb();
+    database.run(
+      'UPDATE assessment_results SET emailed_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [resultId],
+      function (err) {
+        if (err) reject(err);
+        else resolve(this.changes > 0);
       }
     );
   });

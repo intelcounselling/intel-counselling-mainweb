@@ -1,3 +1,5 @@
+import { getOrder, markOrderPaid } from '../db.js';
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
@@ -33,6 +35,20 @@ export default async function handler(req, res) {
     if (!response.ok) {
       console.error('Cashfree order lookup failed:', response.status, data);
       return res.status(500).json({ error: 'Internal Server Error' });
+    }
+
+    if (data.order_status === 'PAID') {
+      const storedOrder = await getOrder(orderId);
+      if (storedOrder) {
+        if (Number(storedOrder.amount) !== Number(data.order_amount)) {
+          console.warn('Payment amount mismatch for order', orderId, '— expected', storedOrder.amount, 'got', data.order_amount);
+          return res.status(200).json({ paid: false, orderStatus: 'AMOUNT_MISMATCH' });
+        }
+        await markOrderPaid(orderId);
+      } else {
+        // Order created before server-side order tracking existed (legacy)
+        console.warn('Verified payment for order not found in local DB:', orderId);
+      }
     }
 
     res.status(200).json({

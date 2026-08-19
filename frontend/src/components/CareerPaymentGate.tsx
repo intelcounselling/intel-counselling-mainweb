@@ -185,6 +185,9 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
           const verifyData = await verifyRes.json().catch(() => ({}));
 
           if (verifyRes.ok && verifyData.paid === true) {
+            // Persist the verified order id so the assessment save can link the
+            // result to this payment server-side (single-use).
+            sessionStorage.setItem('career_order_id', orderId);
             // Success! Save selected appointment slot to localStorage
             if (selectedPackage === 'assessment_explanation') {
               localStorage.setItem('career_booked_session_mode', sessionMode);

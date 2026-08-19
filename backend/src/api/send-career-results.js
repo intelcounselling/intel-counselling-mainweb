@@ -1,5 +1,7 @@
 import PDFDocument from 'pdfkit-table';
 import { escapeHtml, plainText } from '../escape.js';
+import { decrypt } from '../encryption.js';
+import { getResultFull, getOrder, markResultEmailed } from '../db.js';
 
 const MI_DESC = {
   "Musical Intelligence": "This area has to do with sensitivity to sounds, rhythms, tones, and music. People with a high musical intelligence normally have good pitch and may even have absolute pitch, and are able to sing, play musical instruments, and compose music. They have sensitivity to rhythm, pitch, meter, tone, melody or timbre.",
@@ -195,11 +197,44 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { registration, appointment, result } = req.body;
+    const { resultId, appointment, result } = req.body;
 
     const apiKey = process.env.BREVO_API_KEY;
     if (!apiKey) {
       return res.status(500).json({ error: 'BREVO_API_KEY is not set' });
+    }
+
+    if (!resultId || typeof resultId !== 'string') {
+      return res.status(400).json({ error: 'Missing required field: resultId' });
+    }
+
+    const storedResult = await getResultFull(resultId);
+    if (!storedResult) {
+      return res.status(404).json({ error: 'Result not found' });
+    }
+
+    // Identity comes ONLY from the registration stored (encrypted) with the result —
+    // any client-supplied identity fields are ignored.
+    if (!storedResult.registration || !storedResult.registration_iv) {
+      return res.status(400).json({ error: 'No registration on file for this result' });
+    }
+    let registration;
+    try {
+      registration = JSON.parse(decrypt(storedResult.registration, storedResult.registration_iv));
+    } catch (decryptErr) {
+      console.error('Failed to decrypt stored registration for result', resultId);
+      return res.status(500).json({ error: 'Internal Server Error' });
+    }
+
+    // Career results are a paid product — require a verified PAID order on the result.
+    const order = storedResult.order_id ? await getOrder(storedResult.order_id) : null;
+    if (!order || order.status !== 'PAID') {
+      return res.status(402).json({ error: 'Payment not verified for this result' });
+    }
+
+    // Duplicate suppression: this result's report was already emailed.
+    if (storedResult.emailed_at) {
+      return res.status(200).json({ success: true, alreadySent: true });
     }
 
     const { name, email, phone, age, gender } = registration || {};
@@ -207,7 +242,7 @@ export default async function handler(req, res) {
 
     // Validate required fields before generating PDFs or sending any email.
     if (!name || typeof name !== 'string' || !email || typeof email !== 'string') {
-      return res.status(400).json({ error: 'Missing required fields: registration.name and registration.email' });
+      return res.status(400).json({ error: 'No registration on file for this result' });
     }
     const { mi, interests, personality, summary } = result || {};
 
@@ -414,6 +449,8 @@ export default async function handler(req, res) {
       console.error('Failed to send user email:', err);
       return res.status(500).json({ error: 'Failed to send user confirmation email' });
     }
+
+    await markResultEmailed(resultId);
 
     res.status(200).json({ success: true, message: 'Career result email sent successfully.' });
   } catch (error) {

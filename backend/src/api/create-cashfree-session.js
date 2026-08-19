@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { createOrder } from '../db.js';
 
 export default async function handler(req, res) {
   // Handle CORS preflight requests for local development (Vercel doesn't strictly need this but good practice)
@@ -70,6 +71,8 @@ export default async function handler(req, res) {
     const data = await response.json();
 
     if (response.ok) {
+        // Persist the order server-side so payment status is never trusted from the client
+        await createOrder(orderId, serviceId, orderAmount);
         res.status(200).json({ paymentSessionId: data.payment_session_id, orderId: data.order_id });
     } else {
         res.status(400).json({ error: data.message || 'Failed to create Cashfree order' });

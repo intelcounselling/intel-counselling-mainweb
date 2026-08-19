@@ -24,6 +24,7 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
   const [result, setResult] = useState<any | null>(null);
   const [showSectionIntro, setShowSectionIntro] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [savedResultId, setSavedResultId] = useState<string | null>(null);
   const shouldSendEmailRef = useRef(false);
 
   useEffect(() => {
@@ -85,38 +86,33 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
   }, []);
 
   useEffect(() => {
-    if (result && shouldSendEmailRef.current) {
+    // Wait until both the computed results and the saved result id are available —
+    // the server derives identity and payment status from the stored result.
+    if (result && savedResultId && shouldSendEmailRef.current) {
       shouldSendEmailRef.current = false;
-      let registration = null;
-      try {
-        const savedReg = localStorage.getItem('assessment_registration');
-        if (savedReg) registration = JSON.parse(savedReg);
-      } catch (e) {
-        console.error('Failed to parse registration details', e);
-      }
 
       const sessionMode = localStorage.getItem('career_booked_session_mode') || '';
       const date = localStorage.getItem('career_booked_date') || '';
       const time = localStorage.getItem('career_booked_time') || '';
 
-      if (registration) {
-        fetch('/api/send-career-results', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            registration,
-            appointment: { sessionMode, date, time },
-            result
-          })
+      fetch('/api/send-career-results', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resultId: savedResultId,
+          appointment: { sessionMode, date, time },
+          result
         })
-        .then(res => {
-          if (!res.ok) console.error('Failed to send career results email');
-          else console.log('Career results email sent successfully.');
-        })
-        .catch(err => console.error('Error sending career results email:', err));
-      }
+      })
+      .then(res => {
+        if (res.status === 402) console.error('Career results email not sent: payment not verified for this result.');
+        else if (res.status === 400) console.error('Career results email not sent: no registration on file for this result.');
+        else if (!res.ok) console.error('Failed to send career results email');
+        else console.log('Career results email sent successfully.');
+      })
+      .catch(err => console.error('Error sending career results email:', err));
     }
-  }, [result]);
+  }, [result, savedResultId]);
 
   const currentQuestion = ALL_QUESTIONS[step];
   
@@ -179,11 +175,31 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
     if (!isInitialLoad) {
       // Only send the results email for a live test completion, not saved-result loads
       shouldSendEmailRef.current = true;
+
+      // Attach the registration details so the server stores identity with the result
+      let registration: any = null;
+      try {
+        const savedReg = localStorage.getItem('assessment_registration');
+        if (savedReg) {
+          const parsed = JSON.parse(savedReg);
+          if (parsed && parsed.name && parsed.email) registration = parsed;
+        }
+      } catch (e) {
+        console.error('Failed to parse registration details', e);
+      }
+
+      // Attach the verified payment order so the server can mark this result as paid
+      const orderId = sessionStorage.getItem('career_order_id');
+
       // Save encrypted answers to DB and update URL with UUID
       fetch('/api/save-answers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify({ answers: finalAnswers.join('') })
+        body: JSON.stringify({
+          answers: finalAnswers.join(''),
+          ...(registration ? { registration } : {}),
+          ...(orderId ? { orderId } : {})
+        })
       })
         .then(res => {
           if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
@@ -191,6 +207,9 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
         })
         .then(data => {
           if (data.id) {
+            // The order is single-use — it is now linked to this result server-side
+            sessionStorage.removeItem('career_order_id');
+            setSavedResultId(data.id);
             setSearchParams({ id: data.id }, { replace: true });
           }
         })

@@ -17,14 +17,18 @@ function getKey() {
   return crypto.createHash('sha256').update(rawKey).digest();
 }
 
+// New data is encrypted with AES-256-GCM (authenticated — tampering is detected).
+// Format: "v2:<authTagHex>:<cipherHex>", with the IV kept in the existing iv column.
+// Legacy AES-CBC rows (no "v2:" prefix) remain readable.
 export function encrypt(plainText) {
-  const iv = crypto.randomBytes(16);
+  const iv = crypto.randomBytes(12);
   const key = getKey();
-  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
   let encrypted = cipher.update(plainText, 'utf8', 'hex');
   encrypted += cipher.final('hex');
+  const tag = cipher.getAuthTag().toString('hex');
   return {
-    encrypted,
+    encrypted: `v2:${tag}:${encrypted}`,
     iv: iv.toString('hex')
   };
 }
@@ -32,6 +36,17 @@ export function encrypt(plainText) {
 export function decrypt(encryptedText, ivHex) {
   const key = getKey();
   const iv = Buffer.from(ivHex, 'hex');
+
+  if (encryptedText.startsWith('v2:')) {
+    const [, tagHex, cipherHex] = encryptedText.split(':');
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+    decipher.setAuthTag(Buffer.from(tagHex, 'hex'));
+    let decrypted = decipher.update(cipherHex, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
+  }
+
+  // Legacy AES-256-CBC
   const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
   let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
   decrypted += decipher.final('utf8');

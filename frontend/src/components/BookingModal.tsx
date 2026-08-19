@@ -43,7 +43,7 @@ const loadCashfreeScript = () => {
 
 const CashfreePaymentStep: React.FC<{
   bookingDetails: any,
-  onSuccess: (gmeetLink: string) => void,
+  onSuccess: (gmeetLink: string, orderId?: string) => void,
   onBack: () => void
 }> = ({ bookingDetails, onSuccess, onBack }) => {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -114,7 +114,7 @@ const CashfreePaymentStep: React.FC<{
 
           if (verifyRes.ok && verifyData.paid === true) {
             setIsProcessing(false);
-            onSuccess('');
+            onSuccess('', orderId);
           } else {
             setIsProcessing(false);
             setError("Payment was not completed or is pending verification. Please try again or contact us if you were charged.");
@@ -367,7 +367,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
   const today = new Date().toISOString().split('T')[0];
   const availableSlots = details.date ? getAvailableSlots(details.date) : [];
 
-  const handleBookingSuccess = async (link: string) => {
+  const handleBookingSuccess = async (link: string, orderId?: string) => {
     localStorage.removeItem('career_booked_session_mode');
     localStorage.removeItem('career_booked_date');
     localStorage.removeItem('career_booked_time');
@@ -395,7 +395,9 @@ const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
           assessmentUrl: new URLSearchParams(window.location.search).get('assessmentRef') || null,
           shareAssessmentResult: details.shareAssessmentResult && (!!careerResult || !!clinicalResult),
           careerResult: careerResult,
-          clinicalResult: clinicalResult
+          clinicalResult: clinicalResult,
+          orderId: orderId || null,
+          isFree: isFreeBooking
         }),
       });
       console.log("Confirmation emails sent via Brevo.");
@@ -703,7 +705,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
                 price: details.sessionMode === 'online' ? SESSION_PRICES.online : SESSION_PRICES.inperson
               }
             }}
-            onSuccess={(link) => handleBookingSuccess(details.sessionMode === 'online' ? link : '')}
+            onSuccess={(link, orderId) => handleBookingSuccess(details.sessionMode === 'online' ? link : '', orderId)}
             onBack={() => setStep(8)}
           />
         )}

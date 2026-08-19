@@ -1,5 +1,6 @@
 import PDFDocument from 'pdfkit';
 import { escapeHtml, plainText } from '../escape.js';
+import { getOrder, markOrderUsed } from '../db.js';
 
 function createCareerPdfBufferBase64(registration, appointment, result) {
   return new Promise((resolve, reject) => {
@@ -262,7 +263,9 @@ export default async function handler(req, res) {
       assessmentUrl,
       shareAssessmentResult,
       careerResult,
-      clinicalResult
+      clinicalResult,
+      orderId,
+      isFree
     } = req.body;
 
     console.log('Received booking body payload:', JSON.stringify({ shareAssessmentResult, hasCareerResult: !!careerResult, hasClinicalResult: !!clinicalResult }, null, 2));
@@ -271,6 +274,19 @@ export default async function handler(req, res) {
     // the customer email is already sent, which caused double-sends on retry).
     if (!toName || typeof toName !== 'string' || !customerEmail || typeof customerEmail !== 'string') {
       return res.status(400).json({ error: 'Missing required fields: toName and customerEmail' });
+    }
+
+    // Paid bookings must reference a server-verified PAID session order; the order
+    // is consumed after the confirmation is sent so it can't be reused. Free
+    // bookings are allowed through but flagged to the admin as unverified.
+    if (isFree !== true) {
+      if (typeof orderId !== 'string' || !/^ORDER_[a-f0-9]+$/.test(orderId)) {
+        return res.status(402).json({ error: 'Payment not verified for this booking' });
+      }
+      const order = await getOrder(orderId);
+      if (!order || order.status !== 'PAID' || !String(order.service_id).startsWith('session')) {
+        return res.status(402).json({ error: 'Payment not verified for this booking' });
+      }
     }
 
     const details = fullDetails || {};
@@ -462,7 +478,7 @@ export default async function handler(req, res) {
     const adminPayload = {
       to: [{ email: 'intelcounselling@gmail.com', name: 'Intel Counselling Admin' }],
       sender: { email: 'intelcounselling@gmail.com', name: 'Intel Counselling Bookings' },
-      subject: `🔔 New Session Booking: ${plainText(toName)} (${plainText(sessionMode)})`,
+      subject: `${isFree === true ? '[FREE — unverified] ' : ''}🔔 New Session Booking: ${plainText(toName)} (${plainText(sessionMode)})`,
       htmlContent: adminHtml,
       attachment: []
     };
@@ -506,6 +522,11 @@ export default async function handler(req, res) {
       const err = await adminRes.json().catch(() => ({}));
       console.error('Failed to send admin email:', err);
       return res.status(500).json({ error: 'Failed to send admin notification email' });
+    }
+
+    // Consume the order so the same payment can't confirm a second booking
+    if (isFree !== true && orderId) {
+      await markOrderUsed(orderId).catch((err) => console.error('Failed to mark order used:', err));
     }
 
     res.status(200).json({ success: true, message: 'Confirmation emails sent successfully.' });
