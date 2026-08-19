@@ -1,6 +1,6 @@
 import PDFDocument from 'pdfkit';
 import { escapeHtml, plainText } from '../escape.js';
-import { getOrder, markOrderUsed } from '../db.js';
+import { getOrder, markOrderUsed, getResultFull } from '../db.js';
 
 function createCareerPdfBufferBase64(registration, appointment, result) {
   return new Promise((resolve, reject) => {
@@ -265,7 +265,8 @@ export default async function handler(req, res) {
       careerResult,
       clinicalResult,
       orderId,
-      isFree
+      isFree,
+      freeResultId
     } = req.body;
 
     console.log('Received booking body payload:', JSON.stringify({ shareAssessmentResult, hasCareerResult: !!careerResult, hasClinicalResult: !!clinicalResult }, null, 2));
@@ -278,8 +279,29 @@ export default async function handler(req, res) {
 
     // Paid bookings must reference a server-verified PAID session order; the order
     // is consumed after the confirmation is sent so it can't be reused. Free
-    // bookings are allowed through but flagged to the admin as unverified.
-    if (isFree !== true) {
+    // bookings must reference a career assessment result whose paid order was for
+    // the package that includes a free session.
+    let freeOrderToConsume = null;
+    if (isFree === true) {
+      const freeError = { error: 'Free session not available for this booking' };
+      if (typeof freeResultId !== 'string' || !freeResultId) {
+        return res.status(402).json(freeError);
+      }
+      const result = await getResultFull(freeResultId);
+      if (!result || result.test_id !== 'career' || !result.order_id) {
+        return res.status(402).json(freeError);
+      }
+      const resultOrder = await getOrder(result.order_id);
+      // Must still be PAID — 'USED' means the free session was already claimed
+      if (
+        !resultOrder ||
+        resultOrder.status !== 'PAID' ||
+        resultOrder.service_id !== 'career_assessment_plus'
+      ) {
+        return res.status(402).json(freeError);
+      }
+      freeOrderToConsume = result.order_id;
+    } else {
       if (typeof orderId !== 'string' || !/^ORDER_[a-f0-9]+$/.test(orderId)) {
         return res.status(402).json({ error: 'Payment not verified for this booking' });
       }
@@ -406,7 +428,7 @@ export default async function handler(req, res) {
       headers,
       body: JSON.stringify({
         to: [{ email: customerEmail, name: toName }],
-        sender: { email: 'intelcounselling@gmail.com', name: 'Intel Counselling' },
+        sender: { email: process.env.SENDER_EMAIL || 'intelcounselling@gmail.com', name: 'Intel Counselling' },
         subject: `Thank You for Choosing Intel Counselling`,
         htmlContent: customerHtml
       })
@@ -476,9 +498,9 @@ export default async function handler(req, res) {
     }
 
     const adminPayload = {
-      to: [{ email: 'intelcounselling@gmail.com', name: 'Intel Counselling Admin' }],
-      sender: { email: 'intelcounselling@gmail.com', name: 'Intel Counselling Bookings' },
-      subject: `${isFree === true ? '[FREE — unverified] ' : ''}🔔 New Session Booking: ${plainText(toName)} (${plainText(sessionMode)})`,
+      to: [{ email: process.env.ADMIN_EMAIL || 'intelcounselling@gmail.com', name: 'Intel Counselling Admin' }],
+      sender: { email: process.env.SENDER_EMAIL || 'intelcounselling@gmail.com', name: 'Intel Counselling Bookings' },
+      subject: `${isFree === true ? '[FREE] ' : ''}🔔 New Session Booking: ${plainText(toName)} (${plainText(sessionMode)})`,
       htmlContent: adminHtml,
       attachment: []
     };
@@ -524,9 +546,12 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Failed to send admin notification email' });
     }
 
-    // Consume the order so the same payment can't confirm a second booking
+    // Consume the order so the same payment can't confirm a second booking,
+    // and the same career package can't claim a second free session
     if (isFree !== true && orderId) {
       await markOrderUsed(orderId).catch((err) => console.error('Failed to mark order used:', err));
+    } else if (freeOrderToConsume) {
+      await markOrderUsed(freeOrderToConsume).catch((err) => console.error('Failed to consume free-session order:', err));
     }
 
     res.status(200).json({ success: true, message: 'Confirmation emails sent successfully.' });

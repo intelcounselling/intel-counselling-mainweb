@@ -168,6 +168,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
   const [step, setStep] = useState<number>(1);
   const [meetLink, setMeetLink] = useState('');
   const [isFreeProcessing, setIsFreeProcessing] = useState(false);
+  const [freeBookingError, setFreeBookingError] = useState<string | null>(null);
   const [details, setDetails] = useState(() => {
     let savedReg = null;
     try {
@@ -367,38 +368,80 @@ const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
   const today = new Date().toISOString().split('T')[0];
   const availableSlots = details.date ? getAvailableSlots(details.date) : [];
 
-  const handleBookingSuccess = async (link: string, orderId?: string) => {
-    localStorage.removeItem('career_booked_session_mode');
-    localStorage.removeItem('career_booked_date');
-    localStorage.removeItem('career_booked_time');
-    
-    setMeetLink(link);
-    setStep(10); // Final Confirmation Step
+  // The free-session entitlement comes from the paid career assessment result:
+  // assessmentRef is an encoded URL like /assessments/career?id=<uuid>.
+  const extractFreeResultId = (): string | null => {
+    const assessmentRef = searchParams.get('assessmentRef');
+    if (!assessmentRef) return null;
+    try {
+      return new URL(assessmentRef).searchParams.get('id');
+    } catch (e) {
+      return null;
+    }
+  };
 
+  const handleBookingSuccess = async (link: string, orderId?: string) => {
     const isOnline = details.sessionMode === 'online';
     const serviceName = details.mainConcerns.join(', ') || 'Consultation';
+
+    const emailBody = {
+      toName: details.name,
+      customerEmail: details.email,
+      serviceName: serviceName,
+      appointmentDate: details.date,
+      appointmentTime: details.time,
+      sessionMode: isOnline ? 'Online (Virtual)' : 'In-Person',
+      meetLink: isOnline ? link : null,
+      rescheduleInfo: 'If you need to change your timing, please reply to this email to reschedule at least 24 hours in advance.',
+      fullDetails: details, // Pass complete form structure for PDF generation
+      assessmentUrl: new URLSearchParams(window.location.search).get('assessmentRef') || null,
+      shareAssessmentResult: details.shareAssessmentResult && (!!careerResult || !!clinicalResult),
+      careerResult: careerResult,
+      clinicalResult: clinicalResult,
+      orderId: orderId || null,
+      isFree: isFreeBooking,
+      freeResultId: isFreeBooking ? extractFreeResultId() : undefined
+    };
+
+    const confirmBooking = () => {
+      localStorage.removeItem('career_booked_session_mode');
+      localStorage.removeItem('career_booked_date');
+      localStorage.removeItem('career_booked_time');
+      setMeetLink(link);
+      setStep(10); // Final Confirmation Step
+    };
+
+    if (isFreeBooking) {
+      // Free bookings are gated server-side — wait for the verdict before
+      // showing the success screen.
+      setFreeBookingError(null);
+      try {
+        const res = await fetch('/api/send-booking-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(emailBody),
+        });
+        if (res.status === 402) {
+          setFreeBookingError('This free session link is not valid. The complimentary session is only available with the Career Assessment + Session package. Please book a regular session instead, or contact us if you believe this is a mistake.');
+          return;
+        }
+        console.log("Confirmation emails sent via Brevo.");
+      } catch (error) {
+        console.error("Failed to send confirmation emails:", error);
+      }
+      confirmBooking();
+      return;
+    }
+
+    // Paid flow: payment is already server-verified, confirm immediately and
+    // send the emails in the background.
+    confirmBooking();
 
     try {
       await fetch('/api/send-booking-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          toName: details.name,
-          customerEmail: details.email,
-          serviceName: serviceName,
-          appointmentDate: details.date,
-          appointmentTime: details.time,
-          sessionMode: isOnline ? 'Online (Virtual)' : 'In-Person',
-          meetLink: isOnline ? link : null,
-          rescheduleInfo: 'If you need to change your timing, please reply to this email to reschedule at least 24 hours in advance.',
-          fullDetails: details, // Pass complete form structure for PDF generation
-          assessmentUrl: new URLSearchParams(window.location.search).get('assessmentRef') || null,
-          shareAssessmentResult: details.shareAssessmentResult && (!!careerResult || !!clinicalResult),
-          careerResult: careerResult,
-          clinicalResult: clinicalResult,
-          orderId: orderId || null,
-          isFree: isFreeBooking
-        }),
+        body: JSON.stringify(emailBody),
       });
       console.log("Confirmation emails sent via Brevo.");
     } catch (error) {
@@ -662,6 +705,12 @@ const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {step === 8 && freeBookingError && (
+            <div className="mt-6 text-red-400 text-sm bg-red-500/10 p-4 rounded-xl border border-red-500/20">
+              {freeBookingError}
             </div>
           )}
 

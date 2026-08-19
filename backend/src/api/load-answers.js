@@ -1,6 +1,6 @@
 import { decrypt } from '../encryption.js';
 import { getResultById } from '../db.js';
-import { getAuthenticatedUserId } from '../token.js';
+import { authenticateRequest } from '../token.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -33,7 +33,7 @@ export default async function handler(req, res) {
     // unguessable UUID — needed right after taking a test while logged out.
     // Once a result is linked to an account, only that user may read it.
     if (row.user_id) {
-      const authenticatedUserId = getAuthenticatedUserId(req);
+      const authenticatedUserId = await authenticateRequest(req);
       if (!authenticatedUserId || authenticatedUserId !== row.user_id) {
         return res.status(403).json({ error: 'Forbidden' });
       }

@@ -5,7 +5,8 @@ import { dirname, join } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const DB_PATH = join(__dirname, '..', 'database.sqlite');
+// SQLITE_PATH override lets tests run against an isolated database file
+const DB_PATH = process.env.SQLITE_PATH || join(__dirname, '..', 'database.sqlite');
 
 let db;
 
@@ -44,6 +45,9 @@ function getDb() {
           }
           if (!rows.some(r => r.name === 'otp_attempts')) {
             db.run('ALTER TABLE users ADD COLUMN otp_attempts INTEGER DEFAULT 0', () => {});
+          }
+          if (!rows.some(r => r.name === 'token_version')) {
+            db.run('ALTER TABLE users ADD COLUMN token_version INTEGER DEFAULT 0', () => {});
           }
         }
       });
@@ -148,6 +152,31 @@ export function getUserByEmail(email) {
       if (err) reject(err);
       else resolve(row || null);
     });
+  });
+}
+
+export function getUserById(id) {
+  return new Promise((resolve, reject) => {
+    const database = getDb();
+    database.get('SELECT id, token_version FROM users WHERE id = ?', [id], (err, row) => {
+      if (err) reject(err);
+      else resolve(row || null);
+    });
+  });
+}
+
+// Invalidates every outstanding session token for a user (see token.js authenticateRequest)
+export function bumpTokenVersion(userId) {
+  return new Promise((resolve, reject) => {
+    const database = getDb();
+    database.run(
+      'UPDATE users SET token_version = COALESCE(token_version, 0) + 1 WHERE id = ?',
+      [userId],
+      function (err) {
+        if (err) reject(err);
+        else resolve(this.changes > 0);
+      }
+    );
   });
 }
 

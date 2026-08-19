@@ -31,7 +31,14 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
   .filter(Boolean);
 app.use(cors(allowedOrigins.length ? { origin: allowedOrigins } : {}));
 
-app.use(express.json({ limit: '1mb' }));
+// Keep the raw request bytes alongside the parsed body — Cashfree webhook
+// signature verification must run over the exact raw payload.
+app.use(express.json({
+  limit: '1mb',
+  verify: (req, res, buf) => {
+    req.rawBody = buf;
+  },
+}));
 
 // Main API routing mount
 app.use('/api', apiRouter);

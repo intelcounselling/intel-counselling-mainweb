@@ -70,7 +70,7 @@ export default async function handler(req, res) {
 
     const payload = {
       to: [{ email: trimmedEmail, name: user.name }],
-      sender: { email: 'intelcounselling@gmail.com', name: 'Intel Counselling Support' },
+      sender: { email: process.env.SENDER_EMAIL || 'intelcounselling@gmail.com', name: 'Intel Counselling Support' },
       subject: `Your Password Reset OTP`,
       htmlContent: htmlContent
     };

@@ -1,5 +1,5 @@
 import { getUserResults } from '../db.js';
-import { getAuthenticatedUserId } from '../token.js';
+import { authenticateRequest } from '../token.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -18,7 +18,7 @@ export default async function handler(req, res) {
   try {
     // The authenticated user is the only one allowed to list their results;
     // any client-supplied userId is ignored.
-    const userId = getAuthenticatedUserId(req);
+    const userId = await authenticateRequest(req);
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }

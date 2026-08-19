@@ -68,8 +68,8 @@ export default async function handler(req, res) {
     `;
 
     const payload = {
-      to: [{ email: 'intelcounselling@gmail.com', name: 'Intel Counselling Admin' }],
-      sender: { email: 'intelcounselling@gmail.com', name: 'Intel Counselling Website' },
+      to: [{ email: process.env.ADMIN_EMAIL || 'intelcounselling@gmail.com', name: 'Intel Counselling Admin' }],
+      sender: { email: process.env.SENDER_EMAIL || 'intelcounselling@gmail.com', name: 'Intel Counselling Website' },
       replyTo: { email: email, name: name },
       subject: `New Inquiry via Website: ${plainText(service)}`,
       htmlContent: adminHtml

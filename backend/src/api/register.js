@@ -36,7 +36,7 @@ export default async function handler(req, res) {
 
     res.status(200).json({
       success: true,
-      token: signToken(userId),
+      token: signToken(userId, 0),
       user: { id: userId, name, email, phone }
     });
   } catch (error) {

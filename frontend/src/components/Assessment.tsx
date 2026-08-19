@@ -100,8 +100,7 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           resultId: savedResultId,
-          appointment: { sessionMode, date, time },
-          result
+          appointment: { sessionMode, date, time }
         })
       })
       .then(res => {

@@ -42,7 +42,7 @@ export default async function handler(req, res) {
 
     res.status(200).json({
       success: true,
-      token: signToken(user.id),
+      token: signToken(user.id, user.token_version == null ? 0 : user.token_version),
       user: { id: user.id, name: user.name, email: user.email, phone: user.phone }
     });
   } catch (error) {

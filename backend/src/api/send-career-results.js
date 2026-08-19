@@ -2,6 +2,7 @@ import PDFDocument from 'pdfkit-table';
 import { escapeHtml, plainText } from '../escape.js';
 import { decrypt } from '../encryption.js';
 import { getResultFull, getOrder, markResultEmailed } from '../db.js';
+import { scoreCareerAnswers, TOTAL_QUESTIONS } from '../careerScoring.js';
 
 const MI_DESC = {
   "Musical Intelligence": "This area has to do with sensitivity to sounds, rhythms, tones, and music. People with a high musical intelligence normally have good pitch and may even have absolute pitch, and are able to sing, play musical instruments, and compose music. They have sensitivity to rhythm, pitch, meter, tone, melody or timbre.",
@@ -197,12 +198,10 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { resultId, appointment, result } = req.body;
-
-    const apiKey = process.env.BREVO_API_KEY;
-    if (!apiKey) {
-      return res.status(500).json({ error: 'BREVO_API_KEY is not set' });
-    }
+    // Any client-supplied `result` payload is deliberately ignored — scores are
+    // recomputed server-side from the stored (encrypted) answers so reports
+    // cannot be tampered with.
+    const { resultId, appointment } = req.body;
 
     if (!resultId || typeof resultId !== 'string') {
       return res.status(400).json({ error: 'Missing required field: resultId' });
@@ -228,13 +227,19 @@ export default async function handler(req, res) {
 
     // Career results are a paid product — require a verified PAID order on the result.
     const order = storedResult.order_id ? await getOrder(storedResult.order_id) : null;
-    if (!order || order.status !== 'PAID') {
+    // USED means the order's free session was claimed — payment itself is still valid
+    if (!order || !['PAID', 'USED'].includes(order.status)) {
       return res.status(402).json({ error: 'Payment not verified for this result' });
     }
 
     // Duplicate suppression: this result's report was already emailed.
     if (storedResult.emailed_at) {
       return res.status(200).json({ success: true, alreadySent: true });
+    }
+
+    const apiKey = process.env.BREVO_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'BREVO_API_KEY is not set' });
     }
 
     const { name, email, phone, age, gender } = registration || {};
@@ -244,7 +249,22 @@ export default async function handler(req, res) {
     if (!name || typeof name !== 'string' || !email || typeof email !== 'string') {
       return res.status(400).json({ error: 'No registration on file for this result' });
     }
-    const { mi, interests, personality, summary } = result || {};
+
+    // Recompute the scores server-side from the stored encrypted answers.
+    let result;
+    try {
+      const answerString = decrypt(storedResult.encrypted_answers, storedResult.iv);
+      if (typeof answerString !== 'string' || answerString.length !== TOTAL_QUESTIONS) {
+        console.error('Stored answers have invalid length for result', resultId);
+        return res.status(500).json({ error: 'Internal Server Error' });
+      }
+      result = scoreCareerAnswers(answerString);
+    } catch (scoreErr) {
+      console.error('Failed to decrypt/score stored answers for result', resultId, scoreErr);
+      return res.status(500).json({ error: 'Internal Server Error' });
+    }
+
+    const { mi, interests, personality, summary } = result;
 
     const formatMi = mi ? Object.entries(mi).map(([k, v]) => `<li><strong>${escapeHtml(k)}:</strong> ${escapeHtml(v)}</li>`).join('') : '';
     const formatInterests = interests ? Object.entries(interests).map(([k, v]) => `<li><strong>${escapeHtml(k)}:</strong> ${escapeHtml(v)}</li>`).join('') : '';
@@ -417,8 +437,8 @@ export default async function handler(req, res) {
       method: 'POST',
       headers,
       body: JSON.stringify({
-        to: [{ email: 'intelcounselling@gmail.com', name: 'Intel Counselling Admin' }],
-        sender: { email: 'intelcounselling@gmail.com', name: 'Intel Counselling Assessment Portal' },
+        to: [{ email: process.env.ADMIN_EMAIL || 'intelcounselling@gmail.com', name: 'Intel Counselling Admin' }],
+        sender: { email: process.env.SENDER_EMAIL || 'intelcounselling@gmail.com', name: 'Intel Counselling Assessment Portal' },
         replyTo: { email: email, name: name },
         subject: `Career Test Completed: ${plainText(name)} ${hasCounselling ? `(Session Scheduled: ${plainText(date)})` : ''}`,
         htmlContent: adminHtml,
@@ -437,7 +457,7 @@ export default async function handler(req, res) {
       headers,
       body: JSON.stringify({
         to: [{ email: email, name: name }],
-        sender: { email: 'intelcounselling@gmail.com', name: 'Intel Counselling' },
+        sender: { email: process.env.SENDER_EMAIL || 'intelcounselling@gmail.com', name: 'Intel Counselling' },
         subject: `Your Career Assessment Results - Intel Counselling`,
         htmlContent: userHtml,
         attachment: attachmentPayload

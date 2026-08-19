@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { encrypt } from '../encryption.js';
 import { insertResult, getOrder, linkOrderToResult, saveResultRegistration } from '../db.js';
-import { getAuthenticatedUserId } from '../token.js';
+import { authenticateRequest } from '../token.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -64,7 +64,7 @@ export default async function handler(req, res) {
 
     // Owner identity comes only from the auth token — a client-supplied userId
     // could attach a result to someone else's account.
-    const userId = getAuthenticatedUserId(req);
+    const userId = await authenticateRequest(req);
 
     const { encrypted, iv } = encrypt(answers);
     const id = crypto.randomUUID();

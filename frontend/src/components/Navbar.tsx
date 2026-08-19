@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Home, Info, Users, Calendar, Heart, Layers, LogIn, Menu, X, Image as ImageIcon, Sparkles } from 'lucide-react';
-import { clearAuthSession } from '../utils/auth';
+import { clearAuthSession, authHeaders } from '../utils/auth';
 
 interface NavbarProps {
   onBookClick: () => void;
@@ -37,6 +37,13 @@ const Navbar: React.FC<NavbarProps> = ({ onBookClick, onAssessmentClick, onLogin
   }, []);
 
   const handleLogout = () => {
+    // Fire-and-forget: revoke every outstanding session token server-side.
+    // Local logout proceeds regardless of whether this call succeeds.
+    try {
+      fetch('/api/logout-all', { method: 'POST', headers: authHeaders() }).catch(() => {});
+    } catch (e) {
+      // ignore — logout must never be blocked by a network failure
+    }
     clearAuthSession();
     setUser(null);
     navigate('/');
