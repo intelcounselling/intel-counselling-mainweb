@@ -13,7 +13,9 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api/portal': {
-        target: 'http://localhost:4000',
+        // Unified backend (backend/server.js) — the standalone mindbridge/backend
+        // copy is stale and should not be used.
+        target: 'http://localhost:3001',
         changeOrigin: true,
       },
     },

@@ -57,6 +57,23 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // ── Forced password reset ────────────────────────────────
+    // Backend rejects most requests with 403 MUST_RESET_PASSWORD while a
+    // user still has temporary credentials. Flag it in the auth store —
+    // ProtectedRoute (src/utils/roleGuard.jsx) reacts to the flag and
+    // client-side-navigates to /reset-password, and skips the redirect
+    // when the user is already on that screen (no loop, no hard reload).
+    if (
+      error.response?.status === 403 &&
+      error.response?.data?.code === 'MUST_RESET_PASSWORD'
+    ) {
+      const { user, updateUser } = useAuthStore.getState();
+      if (user && !user.mustResetPassword) {
+        updateUser({ mustResetPassword: true });
+      }
+      return Promise.reject(error);
+    }
+
     if (
       error.response?.status === 401 &&
       !originalRequest._retry &&

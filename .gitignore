@@ -33,3 +33,7 @@ database.sqlite*
 *.njsproj
 *.sln
 *.sw?
+
+# Backend runtime data
+backend/uploads/
+backend/backups/

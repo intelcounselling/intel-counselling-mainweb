@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Syntax-check backend
+        run: |
+          set -e
+          find backend/src backend/server.js backend/scripts -name "*.js" -print0 | xargs -0 -n1 node --check
+
+      - name: Backend tests
+        run: npm test --workspace=backend --if-present
+        env:
+          ENCRYPTION_KEY: ci-test-encryption-key
+          AUTH_TOKEN_SECRET: ci-test-token-secret
+
+      - name: Type-check and build main frontend
+        working-directory: frontend
+        run: |
+          npx tsc --noEmit
+          npm run build
+
+      - name: Build mindbridge frontend
+        working-directory: mindbridge/frontend
+        run: |
+          npm ci
+          npm run build
