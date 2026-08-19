@@ -10,9 +10,15 @@ const UPLOAD_DIR = process.env.UPLOAD_DIR || 'uploads';
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 
+const IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp'];
+const CSV_MIMES = ['text/csv', 'application/vnd.ms-excel', 'text/plain'];
+
+const isCsvFile = (file) =>
+  path.extname(file.originalname).toLowerCase() === '.csv' && CSV_MIMES.includes(file.mimetype);
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const dest = file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')
+    const dest = isCsvFile(file)
       ? path.join(UPLOAD_DIR, 'csv')
       : path.join(UPLOAD_DIR, 'logos');
     cb(null, dest);
@@ -25,8 +31,9 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  const allowed = ['image/jpeg', 'image/png', 'image/webp', 'text/csv', 'application/vnd.ms-excel'];
-  if (allowed.includes(file.mimetype) || file.originalname.endsWith('.csv')) {
+  // CSV uploads must have both a .csv extension and an allowlisted mimetype;
+  // images must have an allowlisted image mimetype.
+  if (IMAGE_MIMES.includes(file.mimetype) || isCsvFile(file)) {
     cb(null, true);
   } else {
     cb(new Error('Invalid file type. Only JPEG, PNG, WebP images and CSV files are allowed.'));

@@ -3,6 +3,34 @@ const { sendAppointmentEmail } = require('../services/email.service');
 const { parsePagination, buildPaginationMeta } = require('../utils/pagination');
 const { handleError } = require('../utils/errorHandler');
 
+// ── Access Helpers ────────────────────────────────────────────
+
+function isSuperAdmin(req) {
+  return req.user.role === 'SUPER_ADMIN';
+}
+
+// Verify a school is assigned to the requesting psychiatrist
+async function isSchoolAssigned(psychiatristId, schoolId) {
+  const school = await prisma.school.findFirst({
+    where: { id: schoolId, psychiatrists: { some: { id: psychiatristId } } },
+    select: { id: true },
+  });
+  return !!school;
+}
+
+// Verify a student belongs to one of the psychiatrist's assigned schools
+async function isStudentAssigned(psychiatristId, studentId) {
+  const student = await prisma.user.findFirst({
+    where: {
+      id: studentId,
+      role: 'STUDENT',
+      school: { psychiatrists: { some: { id: psychiatristId } } },
+    },
+    select: { id: true },
+  });
+  return !!student;
+}
+
 // ── Dashboard ─────────────────────────────────────────────────
 
 async function getDashboard(req, res) {
@@ -125,6 +153,10 @@ async function getSchoolStudents(req, res) {
     const { id: schoolId } = req.params;
     const { skip, take, page, limit } = parsePagination(req.query);
 
+    if (!isSuperAdmin(req) && !(await isSchoolAssigned(req.user.id, schoolId))) {
+      return res.status(403).json({ error: 'School is not assigned to you' });
+    }
+
     const [students, total] = await Promise.all([
       prisma.user.findMany({
         where: { schoolId, role: 'STUDENT', isActive: true },
@@ -197,6 +229,17 @@ async function updateAlertStatus(req, res) {
       return res.status(400).json({ error: 'Invalid status' });
     }
 
+    const existing = await prisma.alert.findFirst({
+      where: {
+        id,
+        ...(!isSuperAdmin(req) && {
+          student: { school: { psychiatrists: { some: { id: req.user.id } } } },
+        }),
+      },
+      select: { id: true },
+    });
+    if (!existing) return res.status(404).json({ error: 'Alert not found' });
+
     const alert = await prisma.alert.update({ where: { id }, data: { status } });
     res.json({ alert });
   } catch (err) {
@@ -248,6 +291,19 @@ async function createAppointment(req, res) {
     const { patientId, slot, notes, meetingLink, resultIds } = req.body;
     const psychiatristId = req.user.id;
 
+    if (!isSuperAdmin(req) && !(await isStudentAssigned(psychiatristId, patientId))) {
+      return res.status(403).json({ error: 'Student is not in one of your assigned schools' });
+    }
+
+    if (resultIds?.length) {
+      const ownedCount = await prisma.testResult.count({
+        where: { id: { in: resultIds }, studentId: patientId },
+      });
+      if (ownedCount !== resultIds.length) {
+        return res.status(403).json({ error: 'One or more results do not belong to this student' });
+      }
+    }
+
     const appointment = await prisma.appointment.create({
       data: {
         patientId,
@@ -292,6 +348,12 @@ async function updateAppointment(req, res) {
     const { id } = req.params;
     const { status, notes, meetingLink, slot } = req.body;
 
+    const existing = await prisma.appointment.findUnique({ where: { id }, select: { psychiatristId: true } });
+    if (!existing) return res.status(404).json({ error: 'Appointment not found' });
+    if (!isSuperAdmin(req) && existing.psychiatristId !== req.user.id) {
+      return res.status(403).json({ error: 'Insufficient permissions' });
+    }
+
     const appointment = await prisma.appointment.update({
       where: { id },
       data: {
@@ -310,6 +372,13 @@ async function updateAppointment(req, res) {
 async function deleteAppointment(req, res) {
   try {
     const { id } = req.params;
+
+    const existing = await prisma.appointment.findUnique({ where: { id }, select: { psychiatristId: true } });
+    if (!existing) return res.status(404).json({ error: 'Appointment not found' });
+    if (!isSuperAdmin(req) && existing.psychiatristId !== req.user.id) {
+      return res.status(403).json({ error: 'Insufficient permissions' });
+    }
+
     await prisma.appointment.delete({ where: { id } });
     res.json({ message: 'Appointment deleted' });
   } catch (err) {
@@ -322,6 +391,11 @@ async function deleteAppointment(req, res) {
 async function getStudentProfile(req, res) {
   try {
     const { id } = req.params;
+
+    if (!isSuperAdmin(req) && !(await isStudentAssigned(req.user.id, id))) {
+      return res.status(404).json({ error: 'Student not found' });
+    }
+
     const [student, results, alerts, appointments] = await Promise.all([
       prisma.user.findUnique({
         where: { id },
@@ -362,6 +436,9 @@ async function createNote(req, res) {
     if (!patientId || !sessionDate || !summary) {
       return res.status(400).json({ error: 'patientId, sessionDate, and summary are required' });
     }
+    if (!isSuperAdmin(req) && !(await isStudentAssigned(counsellorId, patientId))) {
+      return res.status(403).json({ error: 'Student is not in one of your assigned schools' });
+    }
     const note = await prisma.counsellingNote.create({
       data: {
         counsellorId,
@@ -385,6 +462,11 @@ async function createNote(req, res) {
 async function getNotes(req, res) {
   try {
     const { patientId } = req.params;
+
+    if (!isSuperAdmin(req) && !(await isStudentAssigned(req.user.id, patientId))) {
+      return res.status(404).json({ error: 'Student not found' });
+    }
+
     const notes = await prisma.counsellingNote.findMany({
       where: { patientId },
       orderBy: { sessionDate: 'desc' },
@@ -400,6 +482,13 @@ async function updateNote(req, res) {
   try {
     const { noteId } = req.params;
     const { summary, goals, nextSteps, isConfidential } = req.body;
+
+    const existing = await prisma.counsellingNote.findUnique({ where: { id: noteId }, select: { counsellorId: true } });
+    if (!existing) return res.status(404).json({ error: 'Note not found' });
+    if (!isSuperAdmin(req) && existing.counsellorId !== req.user.id) {
+      return res.status(403).json({ error: 'Insufficient permissions' });
+    }
+
     const note = await prisma.counsellingNote.update({
       where: { id: noteId },
       data: {
@@ -418,6 +507,13 @@ async function updateNote(req, res) {
 async function deleteNote(req, res) {
   try {
     const { noteId } = req.params;
+
+    const existing = await prisma.counsellingNote.findUnique({ where: { id: noteId }, select: { counsellorId: true } });
+    if (!existing) return res.status(404).json({ error: 'Note not found' });
+    if (!isSuperAdmin(req) && existing.counsellorId !== req.user.id) {
+      return res.status(403).json({ error: 'Insufficient permissions' });
+    }
+
     await prisma.counsellingNote.delete({ where: { id: noteId } });
     res.json({ success: true });
   } catch (err) {
@@ -431,6 +527,10 @@ async function deleteNote(req, res) {
 async function getStudentProgress(req, res) {
   try {
     const { id: studentId } = req.params;
+
+    if (!isSuperAdmin(req) && !(await isStudentAssigned(req.user.id, studentId))) {
+      return res.status(404).json({ error: 'Student not found' });
+    }
 
     const results = await prisma.testResult.findMany({
       where: { studentId, isParentPerspective: false },

@@ -70,6 +70,16 @@ async function verifyToken(req, res, next) {
       user.mustResetPassword = false;
     }
 
+    // Enforce forced password reset: only allow the password-reset flow
+    // (and fetching own profile / logging out) until the password is changed.
+    if (user.mustResetPassword) {
+      const fullPath = (req.baseUrl || '') + (req.path || '');
+      const allowedPaths = ['/auth/reset-password', '/auth/change-password', '/auth/logout', '/auth/me'];
+      if (!allowedPaths.some((p) => fullPath.endsWith(p))) {
+        return res.status(403).json({ error: 'Password reset required', code: 'MUST_RESET_PASSWORD' });
+      }
+    }
+
     req.user = user;
     next();
   } catch (err) {

@@ -11,6 +11,7 @@ const { auditLog } = require('./middleware/audit.middleware');
 const routes = require('./routes');
 
 const app = express();
+app.set('trust proxy', 1);
 
 // ── Security ──────────────────────────────────────────────────
 app.use(helmet({
@@ -61,8 +62,10 @@ app.use((req, res) => {
 // ── Global Error Handler ──────────────────────────────────────
 app.use((err, req, res, next) => {
   logger.error('Unhandled error:', err);
-  res.status(err.status || 500).json({
-    error: `${err.message} \n ${err.stack}`,
+  console.error('Unhandled error:', err);
+  const status = err.status || 500;
+  res.status(status).json({
+    error: status < 500 && err.message ? err.message : 'Internal server error',
   });
 });
 

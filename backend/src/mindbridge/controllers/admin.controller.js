@@ -13,7 +13,17 @@ const sqlite3 = require('sqlite3');
 const fs = require('fs');
 const path = require('path');
 
+function getEncryptionKey() {
+  if (process.env.ENCRYPTION_KEY) return process.env.ENCRYPTION_KEY;
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('ENCRYPTION_KEY environment variable must be set in production');
+  }
+  logger.warn('ENCRYPTION_KEY not set — falling back to insecure development key');
+  return 'intel_counselling_default_dev_key_32b!';
+}
+
 async function getMainWebsiteTestStats() {
+  const rawKey = getEncryptionKey();
   return new Promise((resolve) => {
     // Locate SQLite database
     let sqliteDbPath = path.resolve(__dirname, '../../../../backend/database.sqlite');
@@ -64,7 +74,6 @@ async function getMainWebsiteTestStats() {
           }
         } else if (row.encrypted_answers) {
           try {
-            const rawKey = process.env.ENCRYPTION_KEY || 'intel_counselling_default_dev_key_32b!';
             const key = crypto.createHash('sha256').update(rawKey).digest();
             const iv = Buffer.from(row.iv, 'hex');
             const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
@@ -247,7 +256,7 @@ async function createSchool(req, res) {
   } catch (err) {
     console.error('CREATE_SCHOOL_ERROR:', err);
     logger.error('createSchool error:', err);
-    res.status(500).json({ error: `${err.message} -- STACK: ${err.stack}` });
+    res.status(500).json({ error: 'Internal server error' });
   }
 }
 
@@ -342,83 +351,101 @@ async function createFamily(req, res) {
     const school = await prisma.school.findUnique({ where: { id: schoolId } });
     if (!school) return res.status(404).json({ error: 'School not found' });
 
-    const generatedCredentials = [];
+    // Create the family, students, and parents atomically so a duplicate
+    // email rolls back everything instead of leaving orphaned partial data.
+    const { family, generatedCredentials, firebaseSyncs } = await prisma.$transaction(async (tx) => {
+      const generatedCredentials = [];
+      const firebaseSyncs = [];
 
-    const family = await prisma.family.create({ data: { schoolId } });
+      const family = await tx.family.create({ data: { schoolId } });
 
-    // Create students
-    for (const s of studentData) {
-      let email = s.email?.trim().toLowerCase();
-      if (email) {
-        const existing = await prisma.user.findUnique({ where: { email } });
-        if (existing) return res.status(400).json({ error: `Email ${email} is already registered` });
-      }
+      // Create students
+      for (const s of studentData) {
+        let email = s.email?.trim().toLowerCase();
+        if (email) {
+          const existing = await tx.user.findUnique({ where: { email } });
+          if (existing) {
+            const err = new Error(`Email ${email} is already registered`);
+            err.status = 400;
+            throw err;
+          }
+        }
 
-      const creds = await generateCredentials(s.firstName, s.lastName, school.accessCode);
-      const studentEmail = email || creds.email;
+        const creds = await generateCredentials(s.firstName, s.lastName, school.accessCode);
+        const studentEmail = email || creds.email;
 
-      const student = await prisma.user.create({
-        data: {
+        const student = await tx.user.create({
+          data: {
+            email: studentEmail,
+            passwordHash: creds.passwordHash,
+            role: 'STUDENT',
+            firstName: s.firstName,
+            lastName: s.lastName,
+            grade: s.grade,
+            dateOfBirth: s.dateOfBirth ? new Date(s.dateOfBirth) : null,
+            schoolId,
+            familyStudentId: family.id,
+            mustResetPassword: true,
+          },
+        });
+
+        firebaseSyncs.push({ email: studentEmail, password: creds.plainPassword, name: `${s.firstName} ${s.lastName}` });
+
+        generatedCredentials.push({
+          id: student.id,
+          name: `${s.firstName} ${s.lastName}`,
           email: studentEmail,
-          passwordHash: creds.passwordHash,
+          password: creds.plainPassword,
           role: 'STUDENT',
-          firstName: s.firstName,
-          lastName: s.lastName,
-          grade: s.grade,
-          dateOfBirth: s.dateOfBirth ? new Date(s.dateOfBirth) : null,
-          schoolId,
-          familyStudentId: family.id,
-          mustResetPassword: true,
-        },
-      });
-
-      // Sync to Firebase Auth (non-blocking — silently skipped if Firebase not configured)
-      syncUserToFirebase(studentEmail, creds.plainPassword, `${s.firstName} ${s.lastName}`).catch(() => {});
-
-      generatedCredentials.push({
-        id: student.id,
-        name: `${s.firstName} ${s.lastName}`,
-        email: studentEmail,
-        password: creds.plainPassword,
-        role: 'STUDENT',
-      });
-    }
-
-    // Create parents
-    for (const p of parentData) {
-      let email = p.email?.trim().toLowerCase();
-      if (email) {
-        const existing = await prisma.user.findUnique({ where: { email } });
-        if (existing) return res.status(400).json({ error: `Email ${email} is already registered` });
+        });
       }
 
-      const creds = await generateCredentials(p.firstName, p.lastName, school.accessCode);
-      const parentEmail = email || creds.email;
+      // Create parents
+      for (const p of parentData) {
+        let email = p.email?.trim().toLowerCase();
+        if (email) {
+          const existing = await tx.user.findUnique({ where: { email } });
+          if (existing) {
+            const err = new Error(`Email ${email} is already registered`);
+            err.status = 400;
+            throw err;
+          }
+        }
 
-      const parent = await prisma.user.create({
-        data: {
+        const creds = await generateCredentials(p.firstName, p.lastName, school.accessCode);
+        const parentEmail = email || creds.email;
+
+        const parent = await tx.user.create({
+          data: {
+            email: parentEmail,
+            passwordHash: creds.passwordHash,
+            role: 'PARENT',
+            firstName: p.firstName,
+            lastName: p.lastName,
+            phone: p.phone,
+            schoolId,
+            familyParentId: family.id,
+            mustResetPassword: true,
+          },
+        });
+
+        firebaseSyncs.push({ email: parentEmail, password: creds.plainPassword, name: `${p.firstName} ${p.lastName}` });
+
+        generatedCredentials.push({
+          id: parent.id,
+          name: `${p.firstName} ${p.lastName}`,
           email: parentEmail,
-          passwordHash: creds.passwordHash,
+          password: creds.plainPassword,
           role: 'PARENT',
-          firstName: p.firstName,
-          lastName: p.lastName,
-          phone: p.phone,
-          schoolId,
-          familyParentId: family.id,
-          mustResetPassword: true,
-        },
-      });
+        });
+      }
 
-      // Sync to Firebase Auth (non-blocking)
-      syncUserToFirebase(parentEmail, creds.plainPassword, `${p.firstName} ${p.lastName}`).catch(() => {});
+      return { family, generatedCredentials, firebaseSyncs };
+    });
 
-      generatedCredentials.push({
-        id: parent.id,
-        name: `${p.firstName} ${p.lastName}`,
-        email: parentEmail,
-        password: creds.plainPassword,
-        role: 'PARENT',
-      });
+    // Sync to Firebase Auth after commit (non-blocking — silently skipped if Firebase not configured)
+    for (const sync of firebaseSyncs) {
+      syncUserToFirebase(sync.email, sync.password, sync.name).catch(() => {});
     }
 
     res.status(201).json({ family, credentials: generatedCredentials });
@@ -611,6 +638,11 @@ async function generateBulkCredentials(req, res) {
     res.json({ generated: results.length, credentials: results, skipped });
   } catch (err) {
     handleError(res, err, 'generateBulkCredentials');
+  } finally {
+    // Best-effort cleanup of the uploaded CSV
+    if (req.file?.path) {
+      fs.unlink(req.file.path, () => {});
+    }
   }
 }
 
@@ -663,8 +695,10 @@ async function getClasses(req, res) {
 
 async function updateClass(req, res) {
   try {
-    const { classId } = req.params;
+    const { id: schoolId, classId } = req.params;
     const { name, grade, section } = req.body;
+    const existing = await prisma.class.findFirst({ where: { id: classId, schoolId } });
+    if (!existing) return res.status(404).json({ error: 'Class not found' });
     const cls = await prisma.class.update({
       where: { id: classId },
       data: { ...(name && { name }), ...(grade && { grade }), ...(section !== undefined && { section }) },
@@ -677,7 +711,9 @@ async function updateClass(req, res) {
 
 async function deleteClass(req, res) {
   try {
-    const { classId } = req.params;
+    const { id: schoolId, classId } = req.params;
+    const existing = await prisma.class.findFirst({ where: { id: classId, schoolId } });
+    if (!existing) return res.status(404).json({ error: 'Class not found' });
     await prisma.class.delete({ where: { id: classId } });
     res.json({ success: true });
   } catch (err) {
@@ -687,9 +723,13 @@ async function deleteClass(req, res) {
 
 async function assignStudentToClass(req, res) {
   try {
-    const { classId } = req.params;
+    const { id: schoolId, classId } = req.params;
     const { studentId } = req.body;
     if (!studentId) return res.status(400).json({ error: 'studentId required' });
+    const cls = await prisma.class.findFirst({ where: { id: classId, schoolId } });
+    if (!cls) return res.status(404).json({ error: 'Class not found' });
+    const student = await prisma.user.findFirst({ where: { id: studentId, role: 'STUDENT', schoolId } });
+    if (!student) return res.status(404).json({ error: 'Student not found' });
     await prisma.user.update({ where: { id: studentId }, data: { classId } });
     res.json({ success: true });
   } catch (err) {
@@ -699,8 +739,11 @@ async function assignStudentToClass(req, res) {
 
 async function removeStudentFromClass(req, res) {
   try {
+    const { id: schoolId } = req.params;
     const { studentId } = req.body;
     if (!studentId) return res.status(400).json({ error: 'studentId required' });
+    const student = await prisma.user.findFirst({ where: { id: studentId, role: 'STUDENT', schoolId } });
+    if (!student) return res.status(404).json({ error: 'Student not found' });
     await prisma.user.update({ where: { id: studentId }, data: { classId: null } });
     res.json({ success: true });
   } catch (err) {

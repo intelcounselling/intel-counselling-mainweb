@@ -14,6 +14,9 @@ const checkSchoolAccess = (req, res, next) => {
 
 const superAdmin = [verifyToken, requireRole('SUPER_ADMIN')];
 const admin = [verifyToken, requireRole('SUPER_ADMIN', 'SCHOOL_ADMIN'), checkSchoolAccess];
+// For routes where :id is a USER id (not a school id) — the controllers
+// enforce per-record school ownership themselves.
+const adminNoSchoolCheck = [verifyToken, requireRole('SUPER_ADMIN', 'SCHOOL_ADMIN')];
 
 router.get('/dashboard', ...admin, ctrl.getDashboard);
 router.get('/severe-no-appt', ...admin, ctrl.getSevereNoAppointment);
@@ -43,9 +46,9 @@ router.post('/schools/:id/classes/:classId/students', ...admin, ctrl.createStude
 // Users
 router.get('/users', ...admin, ctrl.getUsers);
 router.post('/users/batch-delete', ...admin, ctrl.batchDeleteUsers);
-router.put('/users/:id/toggle-active', ...admin, validateUUID('id'), ctrl.toggleUserActive);
-router.post('/users/:id/reset-password', ...admin, validateUUID('id'), ctrl.resetUserPassword);
-router.delete('/users/:id', ...admin, validateUUID('id'), ctrl.deleteUser);
+router.put('/users/:id/toggle-active', ...adminNoSchoolCheck, validateUUID('id'), ctrl.toggleUserActive);
+router.post('/users/:id/reset-password', ...adminNoSchoolCheck, validateUUID('id'), ctrl.resetUserPassword);
+router.delete('/users/:id', ...adminNoSchoolCheck, validateUUID('id'), ctrl.deleteUser);
 router.get('/students/:id/pdf-report', ...superAdmin, validateUUID('id'), ctrl.downloadStudentPDFReport);
 
 module.exports = router;

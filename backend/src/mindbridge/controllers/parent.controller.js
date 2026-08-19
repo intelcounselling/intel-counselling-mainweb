@@ -141,6 +141,26 @@ async function bookAppointment(req, res) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
+    // Verify the target is an active psychiatrist for the child's school
+    const child = await prisma.user.findUnique({
+      where: { id: childId },
+      select: { schoolId: true },
+    });
+    const psychiatrist = await prisma.user.findFirst({
+      where: {
+        id: psychiatristId,
+        role: 'PSYCHIATRIST',
+        isActive: true,
+        ...(child?.schoolId
+          ? { OR: [{ schoolId: child.schoolId }, { assignedSchools: { some: { id: child.schoolId } } }] }
+          : {}),
+      },
+      select: { id: true },
+    });
+    if (!psychiatrist) {
+      return res.status(404).json({ error: 'Psychiatrist not found' });
+    }
+
     // Get last 3 results for the child
     const recentResults = await prisma.testResult.findMany({
       where: { studentId: childId },
@@ -230,22 +250,34 @@ async function submitParentPerspective(req, res) {
     const test = await prisma.test.findUnique({ where: { id: testId } });
     if (!test) return res.status(404).json({ error: 'Test not found' });
 
+    let questions = test.questions;
+    let thresholds = test.thresholds;
+
+    // Fix if stored as JSON string in DB
+    while (typeof questions === 'string') {
+      try { questions = JSON.parse(questions); } catch (e) { questions = []; }
+    }
+    while (typeof thresholds === 'string') {
+      try { thresholds = JSON.parse(thresholds); } catch (e) { thresholds = []; }
+    }
+    if (!Array.isArray(questions)) questions = [];
+    if (!Array.isArray(thresholds)) thresholds = [];
+
     // Calculate score
     let score = 0;
     const answerArr = Array.isArray(answers) ? answers : Object.values(answers);
     score = answerArr.reduce((sum, a) => sum + (parseInt(a.value ?? a) || 0), 0);
-    const maxScore = test.questions.reduce((sum, q) => {
+    const maxScore = questions.reduce((sum, q) => {
       const maxVal = Math.max(...(q.options || []).map(o => o.value || 0));
       return sum + maxVal;
     }, 0);
 
-    const thresholds = test.thresholds;
     const band = thresholds.find(b => score >= b.min && score <= b.max) || thresholds[0];
 
     // Compute sub-scores if questions have dimensions
     const subScores = {};
-    if (Array.isArray(test.questions) && test.questions[0]?.dimension) {
-      for (const q of test.questions) {
+    if (questions[0]?.dimension) {
+      for (const q of questions) {
         const ans = answerArr.find(a => a.questionId === q.id || a.id === q.id);
         if (ans !== undefined) {
           const val = parseInt(ans.value ?? ans) || 0;
@@ -260,7 +292,7 @@ async function submitParentPerspective(req, res) {
         testId,
         score,
         maxScore,
-        severity: band.severity || 'unknown',
+        severity: band?.severity || 'unknown',
         isLow: false,
         answers: answers,
         subScores: Object.keys(subScores).length > 0 ? subScores : undefined,
