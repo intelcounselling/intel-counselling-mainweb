@@ -28,14 +28,14 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid email or password' });
     }
 
-    const { valid, needsUpgrade } = verifyPassword(password, user.password);
+    const { valid, needsUpgrade } = await verifyPassword(password, user.password);
     if (!valid) {
       return res.status(400).json({ error: 'Invalid email or password' });
     }
 
     // Transparently migrate legacy unsalted SHA-256 hashes to scrypt
     if (needsUpgrade) {
-      await updateUserPassword(user.email, hashPassword(password)).catch((err) =>
+      await updateUserPassword(user.email, await hashPassword(password)).catch((err) =>
         console.error('Failed to upgrade legacy password hash:', err)
       );
     }

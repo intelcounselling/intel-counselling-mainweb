@@ -1,19 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
-import BookingModal from './components/BookingModal';
 import ClickSpark from './components/ClickSpark';
 import InteractiveBackground from './components/InteractiveBackground';
 import AuthModal from './components/AuthModal';
 
-// Pages
-import Home from './pages/Home';
-import ServicePage from './pages/ServicePage';
-import AssessmentsPage from './pages/AssessmentsPage';
-import AssessmentTestPage from './pages/AssessmentTestPage';
-import BookingPage from './pages/BookingPage';
-import CareerGuidancePage from './pages/CareerGuidancePage';
+// Pages (lazy-loaded for route-level code splitting)
+const Home = lazy(() => import('./pages/Home'));
+const ServicePage = lazy(() => import('./pages/ServicePage'));
+const AssessmentsPage = lazy(() => import('./pages/AssessmentsPage'));
+const AssessmentTestPage = lazy(() => import('./pages/AssessmentTestPage'));
+const BookingPage = lazy(() => import('./pages/BookingPage'));
+const CareerGuidancePage = lazy(() => import('./pages/CareerGuidancePage'));
+
+// Minimal centered spinner shown briefly while a route chunk loads
+const RouteFallback = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="w-10 h-10 rounded-full border-2 border-terracotta/30 border-t-terracotta animate-spin" aria-label="Loading" />
+  </div>
+);
 
 // A helper component to handle scroll restoration and hash navigation
 const ScrollToTop = () => {
@@ -74,14 +80,16 @@ const AppContent: React.FC = () => {
         forcePill={!isHome}
       />
       
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/services/:serviceId" element={<ServicePage />} />
-        <Route path="/assessments" element={<AssessmentsPage />} />
-        <Route path="/assessments/:testId" element={<AssessmentTestPage />} />
-        <Route path="/career-assessment" element={<CareerGuidancePage />} />
-        <Route path="/booking" element={<BookingPage />} />
-      </Routes>
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/services/:serviceId" element={<ServicePage />} />
+          <Route path="/assessments" element={<AssessmentsPage />} />
+          <Route path="/assessments/:testId" element={<AssessmentTestPage />} />
+          <Route path="/career-assessment" element={<CareerGuidancePage />} />
+          <Route path="/booking" element={<BookingPage />} />
+        </Routes>
+      </Suspense>
 
       {showAuthModal && (
         <AuthModal 

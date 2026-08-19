@@ -55,7 +55,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid or expired OTP' });
     }
 
-    await resetUserPassword(trimmedEmail, hashPassword(newPassword));
+    await resetUserPassword(trimmedEmail, await hashPassword(newPassword));
 
     res.status(200).json({
       success: true,

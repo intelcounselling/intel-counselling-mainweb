@@ -30,7 +30,7 @@ export default async function handler(req, res) {
     }
 
     const userId = crypto.randomUUID();
-    const hashedPassword = hashPassword(password);
+    const hashedPassword = await hashPassword(password);
 
     await createUser(userId, name, email, hashedPassword, phone);
 

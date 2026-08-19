@@ -98,7 +98,11 @@ function getDb() {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME
       )
-    `);
+    `, () => {
+      // Indexes for the hot lookups (user results listing, email-based auth)
+      db.run('CREATE INDEX IF NOT EXISTS idx_results_user ON assessment_results(user_id)', () => {});
+      db.run('CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at)', () => {});
+    });
   }
   return db;
 }

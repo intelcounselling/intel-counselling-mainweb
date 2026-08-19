@@ -3,7 +3,15 @@ import crypto from 'crypto';
 const ALGORITHM = 'aes-256-cbc';
 const KEY_LENGTH = 32; // 256 bits
 
+let cachedKey = null;
+
 function getKey() {
+  if (cachedKey) return cachedKey;
+  cachedKey = deriveKey();
+  return cachedKey;
+}
+
+function deriveKey() {
   const rawKey = process.env.ENCRYPTION_KEY;
   if (!rawKey) {
     // Refuse to encrypt real data with a key that lives in git history.
