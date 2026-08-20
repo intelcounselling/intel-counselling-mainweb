@@ -67,13 +67,18 @@ export default function CreateAppointmentModal({ isOpen, onClose, prefillStudent
   ], [students]);
 
   const handleSubmit = () => {
-    if (!selectedStudent || !selectedPsych || !slot) {
+    const psychId = selectedPsych || psychiatrists[0]?.id;
+    if (!selectedStudent || !slot) {
       toastError('Please fill all required fields');
+      return;
+    }
+    if (!psychId) {
+      toastError('No psychiatrists are available to schedule this appointment');
       return;
     }
     createMutation.mutate({
       patientId: selectedStudent.id,
-      psychiatristId: selectedPsych,
+      psychiatristId: psychId,
       slot: new Date(slot).toISOString(),
       notes: notes || undefined,
       meetingLink: meetingLink || undefined,
@@ -309,7 +314,7 @@ export default function CreateAppointmentModal({ isOpen, onClose, prefillStudent
                 variant="primary"
                 size="sm"
                 loading={createMutation.isPending}
-                disabled={!selectedStudent || !selectedPsych || !slot}
+                disabled={!selectedStudent || !slot}
                 onClick={handleSubmit}
                 icon={<CalendarPlus className="w-4 h-4" />}
               >
