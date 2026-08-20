@@ -169,13 +169,31 @@ async function main() {
   console.log('Seeding INTELL Student Success Assessment tests...');
 
   for (const testData of tests) {
-    const existing = await prisma.test.findFirst({ where: { category: testData.category } });
-    if (!existing) {
+    const existingList = await prisma.test.findMany({ 
+      where: { category: testData.category },
+      orderBy: { createdAt: 'asc' }
+    });
+
+    if (existingList.length === 0) {
       await prisma.test.create({ data: testData });
       console.log(`  Created: ${testData.name}`);
     } else {
-      await prisma.test.update({ where: { id: existing.id }, data: testData });
+      const primary = existingList[0];
+      await prisma.test.update({ where: { id: primary.id }, data: testData });
       console.log(`  Updated: ${testData.name}`);
+
+      // Deduplicate in case duplicates exist in database
+      if (existingList.length > 1) {
+        const duplicates = existingList.slice(1);
+        for (const dup of duplicates) {
+          await prisma.testResult.updateMany({
+            where: { testId: dup.id },
+            data: { testId: primary.id }
+          });
+          await prisma.test.delete({ where: { id: dup.id } });
+          console.log(`  Merged and deleted duplicate: ${dup.name} (ID: ${dup.id})`);
+        }
+      }
     }
   }
 

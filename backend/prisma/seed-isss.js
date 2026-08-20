@@ -249,16 +249,32 @@ async function main() {
   ];
 
   for (const tool of tools) {
-    // Check if a test with this category already exists
-    const existing = await prisma.test.findFirst({ where: { category: tool.category } });
+    const existingList = await prisma.test.findMany({ 
+      where: { category: tool.category },
+      orderBy: { createdAt: 'asc' }
+    });
 
-    if (existing) {
-      console.log(`⏭  Skipped (already exists): ${tool.name}`);
-      continue;
+    if (existingList.length === 0) {
+      await prisma.test.create({ data: tool });
+      console.log(`✅ Created: ${tool.name}`);
+    } else {
+      const primary = existingList[0];
+      await prisma.test.update({ where: { id: primary.id }, data: tool });
+      console.log(`🔄 Updated: ${tool.name}`);
+
+      // Deduplicate in case duplicates exist
+      if (existingList.length > 1) {
+        const duplicates = existingList.slice(1);
+        for (const dup of duplicates) {
+          await prisma.testResult.updateMany({
+            where: { testId: dup.id },
+            data: { testId: primary.id }
+          });
+          await prisma.test.delete({ where: { id: dup.id } });
+          console.log(`  Merged and deleted duplicate: ${dup.name} (ID: ${dup.id})`);
+        }
+      }
     }
-
-    await prisma.test.create({ data: tool });
-    console.log(`✅ Created: ${tool.name}`);
   }
 
   console.log('\n🎉 ISSS seed complete!');
