@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, Navigate } from 'react-router-dom';
 import { School, Users, AlertTriangle, ArrowRight, Activity, ShieldCheck, Brain, HeartPulse, Moon, Smartphone, Sparkles, Clock, CalendarPlus, Check } from 'lucide-react';
@@ -7,11 +8,13 @@ import api from '../../lib/axios';
 import { formatRelative } from '../../utils/formatters';
 import useAuthStore from '../../store/authStore';
 import { useToast } from '../../components/ui/Toast';
+import CreateAppointmentModal from '../../components/admin/CreateAppointmentModal';
 
 export default function AdminDashboard() {
   const { success, error: toastError } = useToast();
   const qc = useQueryClient();
   const user = useAuthStore(s => s.user);
+  const [scheduleStudent, setScheduleStudent] = useState(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-dashboard'],
@@ -136,7 +139,7 @@ export default function AdminDashboard() {
                         title="Schedule appointment"
                         aria-label="Schedule appointment"
                         className="flex-shrink-0 w-8 h-8 rounded-lg bg-primary-50 hover:bg-primary-700 text-primary-700 hover:text-white flex items-center justify-center transition-colors"
-                        onClick={() => window.location.href = `/admin/users`}
+                        onClick={() => setScheduleStudent(student)}
                       >
                         <CalendarPlus className="w-4 h-4" />
                       </button>
@@ -259,6 +262,12 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      <CreateAppointmentModal
+        isOpen={!!scheduleStudent}
+        onClose={() => setScheduleStudent(null)}
+        prefillStudent={scheduleStudent}
+      />
     </div>
   );
 }
