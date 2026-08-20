@@ -235,20 +235,7 @@ export default function CreateAppointmentModal({ isOpen, onClose, prefillStudent
                 />
               </div>
 
-              {/* Meeting link */}
-              <div>
-                <label className="text-sm font-medium text-surface-700 block mb-1.5">Meeting Link</label>
-                <div className="relative">
-                  <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
-                  <input
-                    type="url"
-                    className="form-input !pl-9"
-                    placeholder="https://meet.google.com/..."
-                    value={meetingLink}
-                    onChange={e => setMeetingLink(e.target.value)}
-                  />
-                </div>
-              </div>
+
 
               {/* Notes */}
               <div>
