@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   X, CheckCircle, Search, AlertTriangle, FileText,
@@ -54,6 +54,12 @@ export default function CreateAppointmentModal({ isOpen, onClose, prefillStudent
 
   const students = studentsData || [];
   const psychiatrists = psychData || [];
+
+  useEffect(() => {
+    if (psychiatrists.length > 0 && !selectedPsych) {
+      setSelectedPsych(psychiatrists[0].id);
+    }
+  }, [psychiatrists, selectedPsych]);
 
   const atRiskFirst = useMemo(() => [
     ...students.filter(s => s.alerts?.length > 0),
@@ -213,20 +219,7 @@ export default function CreateAppointmentModal({ isOpen, onClose, prefillStudent
                 </div>
               )}
 
-              {/* Psychiatrist */}
-              <div>
-                <label className="text-sm font-medium text-surface-700 block mb-1.5">
-                  Psychiatrist <span className="text-red-500">*</span>
-                </label>
-                <select className="form-input" value={selectedPsych} onChange={e => setSelectedPsych(e.target.value)}>
-                  <option value="">Select psychiatrist…</option>
-                  {psychiatrists.map(p => (
-                    <option key={p.id} value={p.id}>
-                      Dr. {p.firstName} {p.lastName}
-                    </option>
-                  ))}
-                </select>
-              </div>
+
 
               {/* Date & time */}
               <div>
