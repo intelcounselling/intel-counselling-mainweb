@@ -47,18 +47,64 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
       return null;
     }
   });
-  const [authMode, setAuthMode] = useState<'login' | 'register'>('register');
+
+  const [authMode, setAuthMode] = useState<'login' | 'register' | 'forgot' | 'reset'>('register');
   const [authName, setAuthName] = useState('');
   const [authEmail, setAuthEmail] = useState('');
   const [authPhone, setAuthPhone] = useState('');
   const [authPassword, setAuthPassword] = useState('');
+  const [authOtp, setAuthOtp] = useState('');
+  const [authNewPassword, setAuthNewPassword] = useState('');
+  const [authConfirmPassword, setAuthConfirmPassword] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [authSuccessMsg, setAuthSuccessMsg] = useState<string | null>(null);
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthLoading(true);
     setAuthError(null);
+    setAuthSuccessMsg(null);
+
+    if (authMode === 'forgot') {
+      try {
+        await apiClient.post('/api/forgot-password', { email: authEmail });
+        setAuthSuccessMsg('OTP code sent! Check your email (or dev logs).');
+        setAuthMode('reset');
+      } catch (err: any) {
+        setAuthError(err.message || 'Something went wrong');
+      } finally {
+        setAuthLoading(false);
+      }
+      return;
+    }
+
+    if (authMode === 'reset') {
+      if (authNewPassword !== authConfirmPassword) {
+        setAuthError('Passwords do not match');
+        setAuthLoading(false);
+        return;
+      }
+      if (authNewPassword.length < 8) {
+        setAuthError('Password must be at least 8 characters');
+        setAuthLoading(false);
+        return;
+      }
+      try {
+        await apiClient.post('/api/verify-otp', { email: authEmail, otp: authOtp, newPassword: authNewPassword });
+        setAuthSuccessMsg('Password reset successfully! Please login.');
+        setAuthMode('login');
+        setAuthPassword('');
+        setAuthOtp('');
+        setAuthNewPassword('');
+        setAuthConfirmPassword('');
+      } catch (err: any) {
+        setAuthError(err.message || 'Something went wrong');
+      } finally {
+        setAuthLoading(false);
+      }
+      return;
+    }
 
     const url = authMode === 'login' ? '/api/login' : '/api/register';
     const body = authMode === 'login'
@@ -273,17 +319,23 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
                 </div>
               )}
 
+              {authSuccessMsg && (
+                <div className="bg-emerald-50 text-emerald-600 text-xs p-3 rounded-xl border border-emerald-100 font-semibold text-center">
+                  {authSuccessMsg}
+                </div>
+              )}
+
               <div className="flex bg-black/5 p-1 rounded-xl">
                 <button 
                   type="button" 
-                  onClick={() => setAuthMode('register')} 
+                  onClick={() => { setAuthMode('register'); setAuthSuccessMsg(null); setAuthError(null); }} 
                   className={`flex-1 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${authMode === 'register' ? 'bg-white text-intel-dark shadow-sm' : 'text-intel-dark/60 hover:text-intel-dark'}`}
                 >
                   Register
                 </button>
                 <button 
                   type="button" 
-                  onClick={() => setAuthMode('login')} 
+                  onClick={() => { setAuthMode('login'); setAuthSuccessMsg(null); setAuthError(null); }} 
                   className={`flex-1 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${authMode === 'login' ? 'bg-white text-intel-dark shadow-sm' : 'text-intel-dark/60 hover:text-intel-dark'}`}
                 >
                   Login
@@ -310,22 +362,70 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
                     />
                   </>
                 )}
-                <input 
-                  required 
-                  type="email" 
-                  placeholder="Email Address" 
-                  value={authEmail} 
-                  onChange={e => setAuthEmail(e.target.value)} 
-                  className="w-full bg-white border border-black/5 rounded-xl px-3.5 py-3 text-xs text-intel-dark outline-none focus:border-terracotta transition-colors"
-                />
-                <input 
-                  required 
-                  type="password" 
-                  placeholder="Password" 
-                  value={authPassword} 
-                  onChange={e => setAuthPassword(e.target.value)} 
-                  className="w-full bg-white border border-black/5 rounded-xl px-3.5 py-3 text-xs text-intel-dark outline-none focus:border-terracotta transition-colors"
-                />
+
+                {(authMode === 'login' || authMode === 'register' || authMode === 'forgot') && (
+                  <input 
+                    required 
+                    type="email" 
+                    placeholder="Email Address" 
+                    value={authEmail} 
+                    onChange={e => setAuthEmail(e.target.value)} 
+                    className="w-full bg-white border border-black/5 rounded-xl px-3.5 py-3 text-xs text-intel-dark outline-none focus:border-terracotta transition-colors"
+                  />
+                )}
+
+                {(authMode === 'login' || authMode === 'register') && (
+                  <>
+                    <input 
+                      required 
+                      type="password" 
+                      placeholder="Password" 
+                      value={authPassword} 
+                      onChange={e => setAuthPassword(e.target.value)} 
+                      className="w-full bg-white border border-black/5 rounded-xl px-3.5 py-3 text-xs text-intel-dark outline-none focus:border-terracotta transition-colors"
+                    />
+                    {authMode === 'login' && (
+                      <div className="flex justify-end">
+                        <button 
+                          type="button" 
+                          onClick={() => { setAuthMode('forgot'); setAuthSuccessMsg(null); setAuthError(null); }} 
+                          className="text-[10px] text-terracotta hover:underline font-bold"
+                        >
+                          Forgot Password?
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {authMode === 'reset' && (
+                  <>
+                    <input 
+                      required 
+                      type="text" 
+                      placeholder="6-digit OTP Code" 
+                      value={authOtp} 
+                      onChange={e => setAuthOtp(e.target.value)} 
+                      className="w-full bg-white border border-black/5 rounded-xl px-3.5 py-3 text-xs text-intel-dark outline-none focus:border-terracotta transition-colors"
+                    />
+                    <input 
+                      required 
+                      type="password" 
+                      placeholder="New Password (min 8 chars)" 
+                      value={authNewPassword} 
+                      onChange={e => setAuthNewPassword(e.target.value)} 
+                      className="w-full bg-white border border-black/5 rounded-xl px-3.5 py-3 text-xs text-intel-dark outline-none focus:border-terracotta transition-colors"
+                    />
+                    <input 
+                      required 
+                      type="password" 
+                      placeholder="Confirm New Password" 
+                      value={authConfirmPassword} 
+                      onChange={e => setAuthConfirmPassword(e.target.value)} 
+                      className="w-full bg-white border border-black/5 rounded-xl px-3.5 py-3 text-xs text-intel-dark outline-none focus:border-terracotta transition-colors"
+                    />
+                  </>
+                )}
                 
                 <button 
                   type="submit" 
@@ -333,8 +433,26 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
                   className="w-full bg-intel-dark text-white py-4 rounded-xl font-bold text-xs uppercase tracking-widest transition-all disabled:opacity-50 hover:bg-black/90 mt-4 flex items-center justify-center gap-1.5 shadow-md"
                 >
                   {authLoading && <Loader2 size={12} className="animate-spin" />}
-                  {authMode === 'register' ? 'Register & Continue' : 'Login & Continue'}
+                  {authMode === 'register' 
+                    ? 'Register & Continue' 
+                    : authMode === 'login' 
+                      ? 'Login & Continue' 
+                      : authMode === 'forgot' 
+                        ? 'Send OTP Code' 
+                        : 'Reset Password'}
                 </button>
+
+                {(authMode === 'forgot' || authMode === 'reset') && (
+                  <div className="text-center mt-2">
+                    <button 
+                      type="button" 
+                      onClick={() => { setAuthMode('login'); setAuthSuccessMsg(null); setAuthError(null); }} 
+                      className="text-[10px] text-intel-dark/60 hover:text-intel-dark underline font-bold"
+                    >
+                      Back to Login
+                    </button>
+                  </div>
+                )}
               </form>
             </div>
           ) : (

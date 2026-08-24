@@ -70,6 +70,16 @@ const ClinicalAssessment: React.FC<ClinicalAssessmentProps> = ({ config, onClose
     let totalScore = 0;
     
     if (!isInitialLoad) {
+      let registration = null;
+      try {
+        const savedReg = localStorage.getItem('assessment_registration');
+        if (savedReg) {
+          registration = JSON.parse(savedReg);
+        }
+      } catch (e) {
+        console.error('Failed to parse registration for save-answers:', e);
+      }
+
       // Save anonymously and reference the result only by its opaque id — raw answers
       // (including the PHQ-9 self-harm item) must never appear in the URL or share links.
       fetch('/api/save-answers', {
@@ -77,7 +87,8 @@ const ClinicalAssessment: React.FC<ClinicalAssessmentProps> = ({ config, onClose
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           answers: finalAnswers.join(''),
-          testId: config.id
+          testId: config.id,
+          registration
         })
       })
       .then(res => res.json())
