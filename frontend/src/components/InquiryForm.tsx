@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { Send, CheckCircle2, MessageSquare, User, Mail, Sparkles } from 'lucide-react';
+import { apiClient } from '../utils/api';
 
 const InquiryForm: React.FC = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -18,13 +19,7 @@ const InquiryForm: React.FC = () => {
     setIsSubmitting(true);
     setError('');
     try {
-      const res = await fetch('/api/send-inquiry-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to send message.');
+      await apiClient.post<any>('/api/send-inquiry-email', formData);
       setIsSubmitted(true);
       setFormData({ name: '', email: '', service: 'Personal Therapy', message: '' });
     } catch (err: any) {

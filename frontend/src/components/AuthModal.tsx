@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Loader2, ShieldCheck, Mail, Lock, User, Phone } from 'lucide-react';
 import { setAuthSession } from '../utils/auth';
+import { apiClient } from '../utils/api';
 
 interface AuthModalProps {
   onClose: () => void;
@@ -29,20 +30,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess, initialMode =
 
     if (mode === 'forgot') {
       try {
-        const response = await fetch('/api/forgot-password', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email })
-        });
-        if (!response.ok) {
-          const errorText = await response.text();
-          let errorMessage = 'Failed to send OTP';
-          try {
-            const errData = JSON.parse(errorText);
-            errorMessage = errData.error || errorMessage;
-          } catch (e) {}
-          throw new Error(errorMessage);
-        }
+        await apiClient.post('/api/forgot-password', { email });
         setSuccessMsg('OTP code sent! Check your email (or dev logs).');
         setMode('reset');
       } catch (err: any) {
@@ -65,20 +53,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess, initialMode =
         return;
       }
       try {
-        const response = await fetch('/api/verify-otp', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, otp, newPassword })
-        });
-        if (!response.ok) {
-          const errorText = await response.text();
-          let errorMessage = 'Failed to verify OTP';
-          try {
-            const errData = JSON.parse(errorText);
-            errorMessage = errData.error || errorMessage;
-          } catch (e) {}
-          throw new Error(errorMessage);
-        }
+        await apiClient.post('/api/verify-otp', { email, otp, newPassword });
         setSuccessMsg('Password reset successfully! Please login.');
         setMode('login');
         setPassword('');
@@ -99,23 +74,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess, initialMode =
       : { name, email, password, phone };
 
     try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorMessage = 'Authentication failed';
-        try {
-          const errData = JSON.parse(errorText);
-          errorMessage = errData.error || errorMessage;
-        } catch (e) {}
-        throw new Error(errorMessage);
-      }
-
-      const data = await response.json();
+      const data = await apiClient.post<any>(url, body);
 
       if (!data.user) {
         throw new Error(data.error || 'Authentication failed. Please try again.');

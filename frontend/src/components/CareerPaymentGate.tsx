@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ShieldCheck, Loader2, Sparkles, Brain, Target, UserCheck, PhoneCall, Check, Monitor, MapPin } from 'lucide-react';
 import { setAuthSession } from '../utils/auth';
+import { apiClient } from '../utils/api';
 
 interface CareerPaymentGateProps {
   registration: any;
@@ -65,21 +66,7 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
       : { name: authName, email: authEmail, password: authPassword, phone: authPhone };
 
     try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorMessage = 'Authentication failed';
-        try {
-          const errData = JSON.parse(errorText);
-          errorMessage = errData.error || errorMessage;
-        } catch (e) {}
-        throw new Error(errorMessage);
-      }
-      const data = await response.json();
+      const data = await apiClient.post<any>(url, body);
 
       if (!data.user) {
         throw new Error(data.error || 'Authentication failed. Please try again.');
@@ -127,29 +114,13 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
         : 'Career Guidance Assessment (Assessment + Result Explanation)';
 
       // Create session on server side
-      const response = await fetch('/api/create-cashfree-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          serviceId: serviceId,
-          serviceName: serviceName,
-          customerName: registration.name,
-          customerEmail: registration.email,
-          customerPhone: registration.phone || '9999999999'
-        })
+      const data = await apiClient.post<any>('/api/create-cashfree-session', {
+        serviceId: serviceId,
+        serviceName: serviceName,
+        customerName: registration.name,
+        customerEmail: registration.email,
+        customerPhone: registration.phone || '9999999999'
       });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorMessage = "Failed to create payment session.";
-        try {
-          const errData = JSON.parse(errorText);
-          errorMessage = errData.error || errorMessage;
-        } catch (e) {}
-        throw new Error(errorMessage);
-      }
-
-      const data = await response.json();
 
       // Initialize Cashfree
       const cashfree = await (window as any).Cashfree({
@@ -177,14 +148,9 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
         // Never trust the client-side checkout result alone — confirm the
         // order status with the server before unlocking the assessment.
         try {
-          const verifyRes = await fetch('/api/verify-payment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ orderId })
-          });
-          const verifyData = await verifyRes.json().catch(() => ({}));
+          const verifyData = await apiClient.post<any>('/api/verify-payment', { orderId });
 
-          if (verifyRes.ok && verifyData.paid === true) {
+          if (verifyData.paid === true) {
             // Persist the verified order id so the assessment save can link the
             // result to this payment server-side (single-use).
             sessionStorage.setItem('career_order_id', orderId);

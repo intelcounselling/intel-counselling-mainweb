@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { CheckCircle2, ChevronRight, ArrowLeft, Video, ShieldCheck, MapPin, Monitor, Loader2 } from 'lucide-react';
 import { MI_QUESTIONS, INTEREST_QUESTIONS, PERSONALITY_QUESTIONS } from './TestQuestions';
 import { CLINICAL_CONFIGS } from './ClinicalQuestions';
-import { authHeaders } from '../utils/auth';
+import { apiClient } from '../utils/api';
 
 const ALL_QUESTIONS = [...MI_QUESTIONS, ...INTEREST_QUESTIONS, ...PERSONALITY_QUESTIONS];
 
@@ -60,25 +60,13 @@ const CashfreePaymentStep: React.FC<{
     }
 
     try {
-      const response = await fetch('/api/create-cashfree-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          serviceId: bookingDetails.service.id,
-          serviceName: bookingDetails.service.name,
-          customerName: bookingDetails.name,
-          customerEmail: bookingDetails.email,
-          customerPhone: bookingDetails.phone || '9999999999'
-        })
+      const data = await apiClient.post<any>('/api/create-cashfree-session', {
+        serviceId: bookingDetails.service.id,
+        serviceName: bookingDetails.service.name,
+        customerName: bookingDetails.name,
+        customerEmail: bookingDetails.email,
+        customerPhone: bookingDetails.phone || '9999999999'
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to initialize payment order.");
-      }
 
       const cashfree = await (window as any).Cashfree({
         mode: "production",
@@ -105,14 +93,9 @@ const CashfreePaymentStep: React.FC<{
         // Never trust the client-side checkout result alone — confirm the
         // order status with the server before confirming the booking.
         try {
-          const verifyRes = await fetch('/api/verify-payment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ orderId })
-          });
-          const verifyData = await verifyRes.json().catch(() => ({}));
+          const verifyData = await apiClient.post<any>('/api/verify-payment', { orderId });
 
-          if (verifyRes.ok && verifyData.paid === true) {
+          if (verifyData.paid === true) {
             setIsProcessing(false);
             onSuccess('', orderId);
           } else {
@@ -215,8 +198,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
         if (testId === 'career') {
           const id = url.searchParams.get('id') || '';
           if (id) {
-            fetch(`/api/load-answers?id=${encodeURIComponent(id)}`, { headers: authHeaders() })
-              .then(res => res.json())
+            apiClient.get<any>(`/api/load-answers?id=${encodeURIComponent(id)}`)
               .then(data => {
                 if (data.answers && data.answers.length === ALL_QUESTIONS.length) {
                   const parsed = data.answers.split('').map(Number);
@@ -308,8 +290,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
         // Fallback for direct IDs or legacy references
         const id = assessmentRef;
         if (id && id.length > 10) {
-          fetch(`/api/load-answers?id=${encodeURIComponent(id)}`, { headers: authHeaders() })
-            .then(res => res.json())
+          apiClient.get<any>(`/api/load-answers?id=${encodeURIComponent(id)}`)
             .then(data => {
               if (data.answers && data.answers.length === ALL_QUESTIONS.length) {
                 const parsed = data.answers.split('').map(Number);
@@ -416,18 +397,14 @@ const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
       // showing the success screen.
       setFreeBookingError(null);
       try {
-        const res = await fetch('/api/send-booking-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(emailBody),
-        });
-        if (res.status === 402) {
+        await apiClient.post('/api/send-booking-email', emailBody);
+        console.log("Confirmation emails sent via Brevo.");
+      } catch (error: any) {
+        console.error("Failed to send confirmation emails:", error);
+        if (error.status === 402) {
           setFreeBookingError('This free session link is not valid. The complimentary session is only available with the Career Assessment + Session package. Please book a regular session instead, or contact us if you believe this is a mistake.');
           return;
         }
-        console.log("Confirmation emails sent via Brevo.");
-      } catch (error) {
-        console.error("Failed to send confirmation emails:", error);
       }
       confirmBooking();
       return;
@@ -438,11 +415,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
     confirmBooking();
 
     try {
-      await fetch('/api/send-booking-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(emailBody),
-      });
+      await apiClient.post('/api/send-booking-email', emailBody);
       console.log("Confirmation emails sent via Brevo.");
     } catch (error) {
       console.error("Failed to send confirmation emails:", error);

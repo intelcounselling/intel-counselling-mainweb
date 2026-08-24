@@ -127,7 +127,7 @@ const Navbar: React.FC<NavbarProps> = ({ onBookClick, onAssessmentClick, onLogin
             >
               {isPill ? (
                 <span className="text-white/70 group-hover:text-white inline-block origin-center animate-[bouncyTurn_0.6s_cubic-bezier(0.175,0.885,0.32,1.275)_both]" title={link.label}>
-                  {React.cloneElement(link.icon as React.ReactElement, { size: 20 })}
+                  {React.cloneElement(link.icon as React.ReactElement<any>, { size: 20 })}
                 </span>
               ) : (
                 <>
@@ -135,7 +135,7 @@ const Navbar: React.FC<NavbarProps> = ({ onBookClick, onAssessmentClick, onLogin
                     {link.label}
                   </span>
                   <span className="text-white/70 group-hover:text-white md:hidden">
-                    {React.cloneElement(link.icon as React.ReactElement, { size: 16 })}
+                    {React.cloneElement(link.icon as React.ReactElement<any>, { size: 16 })}
                   </span>
                 </>
               )}

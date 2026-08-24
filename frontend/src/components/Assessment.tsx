@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { X, ArrowRight, ArrowLeft, Loader2, Sparkles, Download, CheckCircle, Brain, Target, UserCheck } from 'lucide-react';
 import { MI_QUESTIONS, INTEREST_QUESTIONS, PERSONALITY_QUESTIONS, Question } from './TestQuestions';
-import { authHeaders } from '../utils/auth';
+import { apiClient } from '../utils/api';
 
 interface AssessmentProps {
   type?: string;
@@ -34,11 +34,7 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
     if (resultId) {
       // Load from DB using UUID
       setLoading(true);
-      fetch(`/api/load-answers?id=${encodeURIComponent(resultId)}`, { headers: authHeaders() })
-        .then(res => {
-          if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-          return res.json();
-        })
+      apiClient.get<any>(`/api/load-answers?id=${encodeURIComponent(resultId)}`)
         .then(data => {
           if (data.answers && data.answers.length === ALL_QUESTIONS.length) {
             const parsedAnswers = data.answers.split('').map(Number);
@@ -63,15 +59,7 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
       setStep(ALL_QUESTIONS.length);
       setShowSectionIntro(false);
       setLoading(true);
-      fetch('/api/save-answers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify({ answers: rawAnswers })
-      })
-        .then(res => {
-          if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-          return res.json();
-        })
+      apiClient.post<any>('/api/save-answers', { answers: rawAnswers })
         .then(data => {
           if (data.id) {
             setSearchParams({ id: data.id }, { replace: true });
@@ -95,21 +83,18 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
       const date = localStorage.getItem('career_booked_date') || '';
       const time = localStorage.getItem('career_booked_time') || '';
 
-      fetch('/api/send-career-results', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          resultId: savedResultId,
-          appointment: { sessionMode, date, time }
-        })
+      apiClient.post('/api/send-career-results', {
+        resultId: savedResultId,
+        appointment: { sessionMode, date, time }
       })
-      .then(res => {
-        if (res.status === 402) console.error('Career results email not sent: payment not verified for this result.');
-        else if (res.status === 400) console.error('Career results email not sent: no registration on file for this result.');
-        else if (!res.ok) console.error('Failed to send career results email');
-        else console.log('Career results email sent successfully.');
+      .then(() => {
+        console.log('Career results email sent successfully.');
       })
-      .catch(err => console.error('Error sending career results email:', err));
+      .catch(err => {
+        if (err.status === 402) console.error('Career results email not sent: payment not verified for this result.');
+        else if (err.status === 400) console.error('Career results email not sent: no registration on file for this result.');
+        else console.error('Error sending career results email:', err);
+      });
     }
   }, [result, savedResultId]);
 
@@ -191,19 +176,11 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
       const orderId = sessionStorage.getItem('career_order_id');
 
       // Save encrypted answers to DB and update URL with UUID
-      fetch('/api/save-answers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify({
-          answers: finalAnswers.join(''),
-          ...(registration ? { registration } : {}),
-          ...(orderId ? { orderId } : {})
-        })
+      apiClient.post<any>('/api/save-answers', {
+        answers: finalAnswers.join(''),
+        ...(registration ? { registration } : {}),
+        ...(orderId ? { orderId } : {})
       })
-        .then(res => {
-          if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-          return res.json();
-        })
         .then(data => {
           if (data.id) {
             // The order is single-use — it is now linked to this result server-side

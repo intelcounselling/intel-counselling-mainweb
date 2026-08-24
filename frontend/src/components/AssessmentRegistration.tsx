@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { User, Mail, Phone, Calendar, ArrowRight, Loader2, Sparkles, ShieldCheck, Heart } from 'lucide-react';
+import { apiClient } from '../utils/api';
 
 interface AssessmentRegistrationProps {
   testId: string;
@@ -45,22 +46,12 @@ const AssessmentRegistration: React.FC<AssessmentRegistrationProps> = ({ testId,
 
     try {
       // Send registration alert email to admin
-      const response = await fetch('/api/send-registration-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          testId,
-          testTitle: getTestTitle(),
-          registeredAt: new Date().toLocaleString()
-        })
+      await apiClient.post('/api/send-registration-email', {
+        ...formData,
+        testId,
+        testTitle: getTestTitle(),
+        registeredAt: new Date().toLocaleString()
       });
-
-      if (!response.ok) {
-        // Log it, but we won't block the user from proceeding if the mail API fails (e.g. key missing/offline dev mode)
-        const data = await response.json();
-        console.warn('Mail dispatch warning:', data.error || 'Failed to dispatch email alert');
-      }
       
       // Save details to localStorage
       localStorage.setItem('assessment_registration', JSON.stringify(formData));
@@ -68,7 +59,7 @@ const AssessmentRegistration: React.FC<AssessmentRegistrationProps> = ({ testId,
       // Call onComplete to proceed to the test
       onComplete(formData);
     } catch (err: any) {
-      console.error('Registration dispatch error:', err);
+      console.warn('Registration dispatch error:', err);
       // Fallback: save to localStorage and let the user take the test even if offline or API fails
       localStorage.setItem('assessment_registration', JSON.stringify(formData));
       onComplete(formData);

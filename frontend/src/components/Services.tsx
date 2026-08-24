@@ -20,8 +20,8 @@ const RotatingText: React.FC<RotatingTextProps> = ({ texts }) => {
   }, [texts.length]);
 
   return (
-    <span className="relative inline-flex flex-col h-[1.15em] overflow-hidden align-bottom">
-      <div className="invisible pointer-events-none h-0 flex flex-col items-center select-none" aria-hidden="true">
+    <span className="relative inline-flex flex-col h-[1.15em] overflow-hidden align-bottom min-w-max">
+      <div className="invisible pointer-events-none h-0 flex flex-col items-center select-none min-w-max" aria-hidden="true">
         {texts.map((t, i) => (
           <span key={i} className="italic whitespace-nowrap px-1 md:px-2">{t}</span>
         ))}

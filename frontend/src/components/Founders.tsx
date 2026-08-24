@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Linkedin, Twitter, Mail, Target, Heart, ChevronRight, X, Star } from 'lucide-react';
 import { LazyImage } from './ui/LazyImage';
 import FadeIn from './FadeIn';
@@ -21,6 +21,15 @@ interface FoundersProps {
 
 const Founders: React.FC<FoundersProps> = ({ onExpandChange }) => {
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const isMobile = windowWidth < 768;
 
   const founders: Founder[] = [
     {
@@ -74,12 +83,15 @@ const Founders: React.FC<FoundersProps> = ({ onExpandChange }) => {
         </div>
       </FadeIn>
 
-      <div className="flex gap-4 md:gap-6 items-stretch overflow-hidden">
+      <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-stretch overflow-hidden">
 
         {/* ── LEFT: Founder cards ── */}
         <div
           className="flex flex-col gap-4 sm:gap-5 shrink-0 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]"
-          style={{ width: isOpen ? 'min(340px, 42%)' : '100%' }}
+          style={{
+            width: isMobile ? '100%' : (isOpen ? 'min(340px, 42%)' : '100%'),
+            display: isMobile && isOpen ? 'none' : 'flex'
+          }}
         >
           {founders.map((f, idx) => {
             const isActive = activeIdx === idx;
