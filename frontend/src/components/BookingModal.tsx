@@ -8,8 +8,8 @@ import { apiClient } from '../utils/api';
 const ALL_QUESTIONS = [...MI_QUESTIONS, ...INTEREST_QUESTIONS, ...PERSONALITY_QUESTIONS];
 
 const SESSION_PRICES = {
-  online: 1,
-  inperson: 1
+  online: 1600,
+  inperson: 2000
 };
 
 const getAvailableSlots = (date: string) => [

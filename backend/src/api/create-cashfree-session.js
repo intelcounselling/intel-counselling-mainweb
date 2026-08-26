@@ -25,8 +25,8 @@ export default async function handler(req, res) {
     // Prices live server-side only — the client picks a service, never an amount.
     // Env overrides let pricing change without a deploy.
     const PRICES = {
-      session_online: Number(process.env.SESSION_PRICE_ONLINE || 1),
-      session_inperson: Number(process.env.SESSION_PRICE_INPERSON || 1),
+      session_online: Number(process.env.SESSION_PRICE_ONLINE || 1600),
+      session_inperson: Number(process.env.SESSION_PRICE_INPERSON || 2000),
       career_assessment: Number(process.env.CAREER_PRICE_ASSESSMENT || 2999),
       career_assessment_plus: Number(process.env.CAREER_PRICE_PLUS || 4999),
     };

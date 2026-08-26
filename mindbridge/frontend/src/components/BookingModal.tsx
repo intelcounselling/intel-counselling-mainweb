@@ -3,8 +3,8 @@ import { useSearchParams } from 'react-router-dom';
 import { CheckCircle2, ChevronRight, ArrowLeft, Video, ShieldCheck, MapPin, Monitor, Loader2 } from 'lucide-react';
 
 const SESSION_PRICES = {
-  online: 1,
-  inperson: 1
+  online: 1600,
+  inperson: 2000
 };
 
 const getAvailableSlots = (date: string) => [
