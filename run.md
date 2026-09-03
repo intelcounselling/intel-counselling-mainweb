@@ -73,5 +73,63 @@ npm run dev:backend
 
 - **Frontend:** Open [http://localhost:3000/](http://localhost:3000/) in your browser. You should see the application load correctly.
 - **Backend:** The backend console should output:
-  `Cashfree Backend API Server running on port 3001`
+  `Unified Backend API Server running on port 3001`
   `Connected to SQLite database at .../backend/database.sqlite`
+
+---
+
+## 5. Render Deployment (Backend)
+
+The backend is deployed as a Render Web Service at `https://intel-counselling.onrender.com`
+(the Vercel frontend proxies `/api/*` to it via `frontend/vercel.json`).
+
+### Service settings (Root Directory = `backend`)
+
+| Setting | Value |
+| --- | --- |
+| Root Directory | `backend` |
+| Build Command | `npm install && npm run build` (runs `prisma generate`) |
+| Start Command | `npm start` (runs `node server.js`) |
+| Health Check Path | `/api/health` |
+
+> **Note:** `backend/package-lock.json` is now committed, so the build command may
+> be either `npm install && npm run build` or the stricter `npm ci && npm run build`
+> (both run `prisma generate`). If you add/update backend dependencies, regenerate
+> the lockfile (`npm install --package-lock-only` inside `backend/`) and commit it.
+> `engines.node` is pinned to `>=20` in `backend/package.json` so Render uses an
+> LTS version the dependency set (Prisma 5, sqlite3 native build) supports.
+
+### Required environment variables (Render → Environment)
+
+```env
+DATABASE_URL=postgres://...          # Postgres for the Mindbridge portal (Prisma)
+DIRECT_URL=postgres://...            # Usually same as DATABASE_URL
+ENCRYPTION_KEY=<64-char-hex>         # Main-site assessment encryption (hard-fails endpoints if missing in prod)
+AUTH_TOKEN_SECRET=<random>           # Main-site session signing
+JWT_ACCESS_SECRET=<random>           # Mindbridge portal access tokens
+JWT_REFRESH_SECRET=<random>          # Mindbridge portal refresh tokens
+FIREBASE_SERVICE_ACCOUNT={"type":"service_account",...}   # Optional — falls back to local JWT
+CASHFREE_APP_ID / CASHFREE_SECRET_KEY / BREVO_API_KEY       # Payments + email
+ALLOWED_ORIGINS=https://<vercel-frontend-domain>            # CORS in production
+```
+
+### Diagnosing a failed deploy
+
+1. Render Dashboard → service → **Events** tab shows the failed build/deploy reason.
+2. **Logs** tab shows runtime output.
+3. A very common silent failure: the deploy "succeeds" but the service keeps
+   running the previous build (Render restarts the old instance if the new
+   one fails its health check). Verify what commit is live: the latest
+   commit adds `GET /api/db-status` —
+   if `https://intel-counselling.onrender.com/api/db-status` returns 404, the
+   running instance is **stale** and the newest deploy did not go live.
+4. Remember: free-tier instances spin down after 15 min idle; the first request
+   after idle can take ~30–60 s (this is a cold start, not a failure).
+
+### Known limitation: SQLite on Render
+
+`backend/src/db.js` uses a file-based SQLite database created on Render's
+**ephemeral disk** — all assessment/user data is wiped on every redeploy and
+restart. The `/api/db-status` endpoint was added to debug this. The proper fix
+is a Render Persistent Disk, or migrating the main-site store to the same
+Postgres instance the portal uses.
