@@ -17,6 +17,7 @@ import linkResultHandler from '../api/link-result.js';
 import userResultsHandler from '../api/user-results.js';
 import forgotPasswordHandler from '../api/forgot-password.js';
 import verifyOtpHandler from '../api/verify-otp.js';
+import { getUserByEmail } from '../db.js';
 
 const router = express.Router();
 
@@ -50,6 +51,50 @@ const generalLimiter = rateLimit({
 router.use(generalLimiter);
 
 router.get('/health', (req, res) => res.status(200).send('OK'));
+
+// Temporary diagnostic: tests DB connectivity and returns exact error on failure.
+// Remove once production SQLite/disk issue is confirmed resolved.
+router.get('/db-status', async (req, res) => {
+  try {
+    const { fileURLToPath } = await import('url');
+    const { dirname, join } = await import('path');
+    const fs = await import('fs');
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    const dbPath = process.env.SQLITE_PATH || join(__dirname, '..', '..', 'database.sqlite');
+    const dbExists = fs.existsSync(dbPath);
+    const dbDir = dirname(dbPath);
+    const dirExists = fs.existsSync(dbDir);
+    let writable = false;
+    try {
+      fs.accessSync(dbDir, fs.constants.W_OK);
+      writable = true;
+    } catch (_) {}
+    // Try a real DB query
+    let queryResult = null;
+    let queryError = null;
+    try {
+      await getUserByEmail('__db_test__@status.check');
+      queryResult = 'ok';
+    } catch (err) {
+      queryError = err.message;
+    }
+    res.json({
+      dbPath,
+      dbExists,
+      dbDir,
+      dirExists,
+      dirWritable: writable,
+      sqliteQuery: queryResult || 'failed',
+      sqliteError: queryError,
+      nodeEnv: process.env.NODE_ENV || 'not set',
+      encryptionKeySet: !!process.env.ENCRYPTION_KEY,
+      authSecretSet: !!process.env.AUTH_TOKEN_SECRET,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message, stack: err.stack });
+  }
+});
 router.post('/register', authLimiter, registerHandler);
 router.post('/login', authLimiter, loginHandler);
 router.post('/logout-all', authLimiter, logoutAllHandler);
