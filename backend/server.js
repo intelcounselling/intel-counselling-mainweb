@@ -13,6 +13,18 @@ const __dirname = dirname(__filename);
 dotenv.config({ path: join(__dirname, '../.env.local') });
 dotenv.config({ path: join(__dirname, '.env') });
 
+// Fail fast in production when required secrets are missing. Without this, the
+// server boots fine but every auth endpoint (login/register) returns an opaque
+// 500 "Internal Server Error" at request time when signToken() throws.
+if (process.env.NODE_ENV === 'production' && !process.env.AUTH_TOKEN_SECRET) {
+  console.error(
+    'FATAL: AUTH_TOKEN_SECRET environment variable must be set in production. ' +
+    'Generate one with: node -e "console.log(require(\'crypto\').randomBytes(48).toString(\'hex\'))"'
+  );
+  process.exit(1);
+}
+
+
 const { default: apiRouter } = await import('./src/routes/api.js');
 const { default: mindbridgeApp } = await import('./src/mindbridge/app.js');
 
