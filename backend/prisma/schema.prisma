@@ -18,6 +18,10 @@ datasource db {
 enum Role {
   SUPER_ADMIN
   SCHOOL_ADMIN
+  // PSYCHIATRIST is deprecated/unused: the SUPER_ADMIN now fulfils the
+  // counsellor role. The enum value is kept only so `prisma db push` never
+  // needs --accept-data-loss on the production database — no users carry
+  // this role and no code creates one.
   PSYCHIATRIST
   PARENT
   STUDENT
@@ -67,7 +71,6 @@ model School {
   users         User[]
   families      Family[]
   classes       Class[]
-  psychiatrists User[]   @relation("PsychiatristSchools")
 }
 
 // Class/Section within a school (Package 1)
@@ -118,8 +121,8 @@ model User {
   otpExpiresAt      DateTime?
   createdAt         DateTime @default(now())
 
-  // Psychiatrist ↔ School many-to-many
-  assignedSchools School[] @relation("PsychiatristSchools")
+  // Psychiatrist ↔ School many-to-many (removed — the SUPER_ADMIN now
+  // fulfils the counsellor role; appointments reference them directly)
 
   testResults              TestResult[]
   appointments             Appointment[] @relation("PatientAppointments")

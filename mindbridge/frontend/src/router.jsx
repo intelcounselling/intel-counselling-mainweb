@@ -108,7 +108,7 @@ const router = createBrowserRouter([
   {
     path: '/psychiatrist',
     element: (
-      <ProtectedRoute roles={['PSYCHIATRIST', 'SUPER_ADMIN']}>
+      <ProtectedRoute roles={['SUPER_ADMIN']}>
         <AppShell />
       </ProtectedRoute>
     ),

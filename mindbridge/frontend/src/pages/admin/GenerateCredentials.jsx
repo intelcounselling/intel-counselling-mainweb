@@ -44,7 +44,7 @@ export default function GenerateCredentials() {
           <p className="text-surface-500">John,Doe,john.doe@example.com,STUDENT,10</p>
           <p className="text-surface-500">Jane,Doe,jane.doe@example.com,PARENT,</p>
         </div>
-        <p className="text-xs text-surface-400 mt-2">Roles: STUDENT, PARENT, PSYCHIATRIST</p>
+        <p className="text-xs text-surface-400 mt-2">Roles: STUDENT, PARENT</p>
       </Card>
 
       <Card>

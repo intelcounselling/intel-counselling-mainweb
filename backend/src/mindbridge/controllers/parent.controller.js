@@ -129,7 +129,7 @@ async function getChildResult(req, res) {
 
 async function bookAppointment(req, res) {
   try {
-    const { childId, psychiatristId, slot, notes, meetingLink } = req.body;
+    const { childId, slot, notes, meetingLink } = req.body;
 
     // Verify child belongs to parent's family
     const parent = await prisma.user.findUnique({
@@ -141,24 +141,15 @@ async function bookAppointment(req, res) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    // Verify the target is an active psychiatrist for the child's school
-    const child = await prisma.user.findUnique({
-      where: { id: childId },
-      select: { schoolId: true },
-    });
-    const psychiatrist = await prisma.user.findFirst({
-      where: {
-        id: psychiatristId,
-        role: 'PSYCHIATRIST',
-        isActive: true,
-        ...(child?.schoolId
-          ? { OR: [{ schoolId: child.schoolId }, { assignedSchools: { some: { id: child.schoolId } } }] }
-          : {}),
-      },
+    // The SUPER_ADMIN conducts all counselling sessions — the separate
+    // psychiatrist role has been removed, so auto-assign them.
+    const counsellor = await prisma.user.findFirst({
+      where: { role: 'SUPER_ADMIN', isActive: true },
+      orderBy: { createdAt: 'asc' },
       select: { id: true },
     });
-    if (!psychiatrist) {
-      return res.status(404).json({ error: 'Psychiatrist not found' });
+    if (!counsellor) {
+      return res.status(503).json({ error: 'No counsellor is available. Please try again later.' });
     }
 
     // Get last 3 results for the child
@@ -171,7 +162,7 @@ async function bookAppointment(req, res) {
     const appointment = await prisma.appointment.create({
       data: {
         patientId: childId,
-        psychiatristId,
+        psychiatristId: counsellor.id,
         slot: new Date(slot),
         notes,
         meetingLink,

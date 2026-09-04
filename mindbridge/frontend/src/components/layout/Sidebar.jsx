@@ -21,13 +21,6 @@ const NAV_BY_ROLE = {
     { to: '/parent/appointments', label: 'Appointments', icon: Calendar },
     { to: '/parent/settings', label: 'Settings', icon: Settings },
   ],
-  PSYCHIATRIST: [
-    { to: '/psychiatrist', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-    { to: '/psychiatrist/schools', label: 'Schools', icon: Building2 },
-    { to: '/psychiatrist/alerts', label: 'Alerts', icon: Bell },
-    { to: '/psychiatrist/appointments', label: 'Appointments', icon: Calendar },
-    { to: '/psychiatrist/settings', label: 'Settings', icon: Settings },
-  ],
   SUPER_ADMIN: [
     { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
     { to: '/admin/schools', label: 'Schools', icon: School },
@@ -47,7 +40,6 @@ const NAV_BY_ROLE = {
 const ROLE_LABELS = {
   STUDENT: 'Student',
   PARENT: 'Parent',
-  PSYCHIATRIST: 'Psychiatrist',
   SUPER_ADMIN: 'Super Admin',
   SCHOOL_ADMIN: 'School Admin',
 };

@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   X, CheckCircle, Search, AlertTriangle, FileText,
-  Link2, CalendarPlus, UserPlus
+  Link2, CalendarPlus
 } from 'lucide-react';
 import { Button, Spinner } from '../ui';
 import SeverityBadge from '../charts/SeverityBadge';
@@ -15,7 +15,6 @@ export default function CreateAppointmentModal({ isOpen, onClose, prefillStudent
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const [selectedStudent, setSelectedStudent] = useState(prefillStudent || null);
-  const [selectedPsych, setSelectedPsych] = useState('');
   const [slot, setSlot] = useState('');
   const [notes, setNotes] = useState('');
   const [meetingLink, setMeetingLink] = useState('');
@@ -27,12 +26,6 @@ export default function CreateAppointmentModal({ isOpen, onClose, prefillStudent
     queryFn: () => api.get('/admin/appointment-students', { params: search ? { search } : {} }).then(r => r.data.students),
     enabled: isOpen && !prefillStudent,
     staleTime: 30000,
-  });
-
-  const { data: psychData, isLoading: psychLoading } = useQuery({
-    queryKey: ['admin-psychiatrists'],
-    queryFn: () => api.get('/admin/psychiatrists').then(r => r.data.psychiatrists),
-    enabled: isOpen,
   });
 
   const { data: historyData } = useQuery({
@@ -52,33 +45,7 @@ export default function CreateAppointmentModal({ isOpen, onClose, prefillStudent
     onError: (e) => toastError(e?.response?.data?.error || 'Failed to create appointment'),
   });
 
-  // Inline psychiatrist creation — unblocks scheduling when the platform has
-  // no psychiatrists yet (super admin only; endpoint enforces the role).
-  const [newPsych, setNewPsych] = useState({ firstName: '', lastName: '', email: '' });
-  const [createdCreds, setCreatedCreds] = useState(null);
-  const createPsychMutation = useMutation({
-    mutationFn: () => api.post('/admin/psychiatrists', {
-      firstName: newPsych.firstName.trim(),
-      lastName: newPsych.lastName.trim(),
-      email: newPsych.email.trim(),
-    }),
-    onSuccess: (res) => {
-      setCreatedCreds(res.data.credentials);
-      setNewPsych({ firstName: '', lastName: '', email: '' });
-      qc.invalidateQueries({ queryKey: ['admin-psychiatrists'] });
-      success('Psychiatrist created — copy their password now, it is shown only once.');
-    },
-    onError: (e) => toastError(e?.response?.data?.error || 'Failed to create psychiatrist'),
-  });
-
   const students = studentsData || [];
-  const psychiatrists = psychData || [];
-
-  useEffect(() => {
-    if (psychiatrists.length > 0 && !selectedPsych) {
-      setSelectedPsych(psychiatrists[0].id);
-    }
-  }, [psychiatrists, selectedPsych]);
 
   // Reset/sync form state every time the modal opens. The useState
   // initializers below only run on the component's FIRST mount — and both
@@ -104,18 +71,14 @@ export default function CreateAppointmentModal({ isOpen, onClose, prefillStudent
   ], [students]);
 
   const handleSubmit = () => {
-    const psychId = selectedPsych || psychiatrists[0]?.id;
     if (!selectedStudent || !slot) {
       toastError('Please fill all required fields');
       return;
     }
-    if (!psychId) {
-      toastError('No psychiatrists are available — create one using the form in this dialog');
-      return;
-    }
+    // The SUPER_ADMIN conducts the session themselves — the backend
+    // records them as the appointment's counsellor.
     createMutation.mutate({
       patientId: selectedStudent.id,
-      psychiatristId: psychId,
       slot: new Date(slot).toISOString(),
       notes: notes || undefined,
       meetingLink: meetingLink || undefined,
@@ -329,57 +292,6 @@ export default function CreateAppointmentModal({ isOpen, onClose, prefillStudent
                   </div>
                 </div>
               )}
-            </div>
-          )}
-
-          {/* ── No psychiatrists yet: inline creation (super admin) ── */}
-          {!psychLoading && psychiatrists.length === 0 && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-600" />
-                <p className="text-sm font-semibold text-amber-800">No psychiatrists exist yet</p>
-              </div>
-              <p className="text-xs text-amber-700 leading-relaxed">
-                Appointments need at least one psychiatrist. Create one below — their login password is shown once after creation.
-              </p>
-              {createdCreds && (
-                <div className="rounded-lg bg-white border border-amber-200 p-3 text-xs">
-                  <p className="font-semibold text-surface-800 mb-1">Credentials (copy now — shown only once):</p>
-                  <p className="text-surface-600">Email: <span className="font-mono">{createdCreds.email}</span></p>
-                  <p className="text-surface-600">Password: <span className="font-mono">{createdCreds.password}</span></p>
-                </div>
-              )}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <input
-                  className="form-input"
-                  placeholder="First name"
-                  value={newPsych.firstName}
-                  onChange={e => setNewPsych(p => ({ ...p, firstName: e.target.value }))}
-                />
-                <input
-                  className="form-input"
-                  placeholder="Last name"
-                  value={newPsych.lastName}
-                  onChange={e => setNewPsych(p => ({ ...p, lastName: e.target.value }))}
-                />
-                <input
-                  className="form-input"
-                  type="email"
-                  placeholder="Email"
-                  value={newPsych.email}
-                  onChange={e => setNewPsych(p => ({ ...p, email: e.target.value }))}
-                />
-              </div>
-              <Button
-                variant="primary"
-                size="sm"
-                icon={<UserPlus className="w-4 h-4" />}
-                loading={createPsychMutation.isPending}
-                disabled={!newPsych.firstName.trim() || !newPsych.lastName.trim() || !newPsych.email.trim()}
-                onClick={() => createPsychMutation.mutate()}
-              >
-                Create Psychiatrist
-              </Button>
             </div>
           )}
         </div>

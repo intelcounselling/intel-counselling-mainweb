@@ -58,8 +58,6 @@ router.put('/alerts/:id/resolve', ...admin, validateUUID('id'), ctrl.resolveAler
 router.get('/appointments', ...admin, ctrl.getAdminAppointments);
 router.post('/appointments', ...admin, ctrl.createAdminAppointment);
 router.get('/appointment-students', ...admin, ctrl.getStudentsForAppointment);
-router.get('/psychiatrists', ...admin, ctrl.getPsychiatristsForAdmin);
-router.post('/psychiatrists', ...superAdmin, ctrl.createPsychiatrist);
 router.get('/students/:id/history', ...admin, validateUUID('id'), ctrl.getStudentTestHistory);
 
 module.exports = router;

@@ -43,16 +43,8 @@ function BookingModal({ child, onClose, onSuccess }) {
   const [notes, setNotes] = useState('');
   const [meetingLink, setMeetingLink] = useState('');
 
-  // Fetch psychiatrists for the school
-  const { data: psychData } = useQuery({
-    queryKey: ['school-psychiatrists', child?.schoolId],
-    queryFn: () => api.get('/parent/children').then(r => r.data),
-    enabled: !!child,
-  });
-  const [psychiatristId, setPsychiatristId] = useState('');
-
   const mutation = useMutation({
-    mutationFn: () => api.post('/parent/appointments', { childId: child.id, psychiatristId, slot, notes, meetingLink }),
+    mutationFn: () => api.post('/parent/appointments', { childId: child.id, slot, notes, meetingLink }),
     onSuccess: () => { success('Appointment booked! A confirmation has been sent.'); onSuccess?.(); onClose(); },
     onError: (e) => toastError(e.response?.data?.error || 'Failed to book appointment'),
   });

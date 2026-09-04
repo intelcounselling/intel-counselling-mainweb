@@ -40,33 +40,28 @@ async function createAlertAndNotify({ studentId, resultId, severity, testName, s
 
   logger.info(`Alert created: ${alert.id} for student ${studentId}`);
 
-  // 3. Find psychiatrist(s) assigned to the school
-  if (student.schoolId) {
-    const psychiatrists = await prisma.user.findMany({
-      where: {
-        role: 'PSYCHIATRIST',
-        assignedSchools: { some: { id: student.schoolId } },
-        isActive: true,
-      },
-      select: { id: true, firstName: true, lastName: true, email: true },
-    });
+  // 3. Notify the SUPER_ADMIN(s) — they now fulfil the counsellor role that
+  //    the removed PSYCHIATRIST role used to hold
+  const superAdmins = await prisma.user.findMany({
+    where: { role: 'SUPER_ADMIN', isActive: true },
+    select: { id: true, firstName: true, lastName: true, email: true },
+  });
 
-    // 4. Email each psychiatrist
-    for (const psych of psychiatrists) {
-      try {
-        await emailService.sendAlertEmail({
-          to: psych.email,
-          psychiatristName: `${psych.firstName} ${psych.lastName}`,
-          studentName: `${student.firstName} ${student.lastName}`,
-          testName,
-          score,
-          maxScore,
-          severity,
-          schoolName: student.school?.name || 'Unknown School',
-        });
-      } catch (err) {
-        logger.error(`Failed to email psychiatrist ${psych.email}:`, err);
-      }
+  // 4. Email each super admin
+  for (const admin of superAdmins) {
+    try {
+      await emailService.sendAlertEmail({
+        to: admin.email,
+        psychiatristName: `${admin.firstName} ${admin.lastName}`,
+        studentName: `${student.firstName} ${student.lastName}`,
+        testName,
+        score,
+        maxScore,
+        severity,
+        schoolName: student.school?.name || 'Unknown School',
+      });
+    } catch (err) {
+      logger.error(`Failed to email super admin ${admin.email}:`, err);
     }
   }
 

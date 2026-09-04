@@ -598,7 +598,7 @@ async function generateBulkCredentials(req, res) {
       const role = cols[roleIdx];
       if (!first_name || !last_name || !role) continue;
 
-      const validRole = ['STUDENT', 'PARENT', 'PSYCHIATRIST'].includes(role.toUpperCase());
+      const validRole = ['STUDENT', 'PARENT'].includes(role.toUpperCase());
       if (!validRole) continue;
 
       const grade = gradeIdx !== -1 ? cols[gradeIdx] : null;
@@ -1159,11 +1159,15 @@ async function getAdminAppointments(req, res) {
 
 async function createAdminAppointment(req, res) {
   try {
-    const { patientId, psychiatristId, slot, notes, meetingLink, resultIds } = req.body;
+    const { patientId, slot, notes, meetingLink, resultIds } = req.body;
 
-    if (!patientId || !psychiatristId || !slot) {
-      return res.status(400).json({ error: 'patientId, psychiatristId, and slot are required' });
+    if (!patientId || !slot) {
+      return res.status(400).json({ error: 'patientId and slot are required' });
     }
+
+    // The SUPER_ADMIN conducts the session themselves — the separate
+    // psychiatrist role has been removed.
+    const psychiatristId = req.user.id;
 
     const { sendAppointmentEmail } = require('../services/email.service');
 
@@ -1254,87 +1258,6 @@ async function getStudentsForAppointment(req, res) {
   }
 }
 
-async function getPsychiatristsForAdmin(req, res) {
-  try {
-    const isSchoolAdmin = req.user.role === 'SCHOOL_ADMIN';
-    const schoolId = req.user.schoolId;
-
-    const psychiatrists = await prisma.user.findMany({
-      where: {
-        role: 'PSYCHIATRIST',
-        isActive: true,
-        ...(isSchoolAdmin && { assignedSchools: { some: { id: schoolId } } }),
-      },
-      select: {
-        id: true, firstName: true, lastName: true, email: true,
-        assignedSchools: { select: { id: true, name: true } },
-      },
-      orderBy: { lastName: 'asc' },
-    });
-
-    res.json({ psychiatrists });
-  } catch (err) {
-    handleError(res, err, 'getPsychiatristsForAdmin');
-  }
-}
-
-// SUPER_ADMIN only: create a psychiatrist without the bulk-CSV flow, so the
-// scheduling modal is never blocked by "no psychiatrists available".
-async function createPsychiatrist(req, res) {
-  try {
-    const { firstName, lastName, email, schoolIds } = req.body;
-
-    if (!firstName || !lastName || !email) {
-      return res.status(400).json({ error: 'firstName, lastName, and email are required' });
-    }
-
-    const normalizedEmail = String(email).trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-      return res.status(400).json({ error: 'Invalid email address' });
-    }
-
-    const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
-    if (existing) {
-      return res.status(409).json({ error: 'Email already registered' });
-    }
-
-    const plainPassword = generatePassword(10);
-    const passwordHash = await require('bcryptjs').hash(plainPassword, 12);
-
-    // Optional school assignments (must all exist)
-    let schoolsConnect = [];
-    if (Array.isArray(schoolIds) && schoolIds.length) {
-      const schools = await prisma.school.findMany({ where: { id: { in: schoolIds } } });
-      schoolsConnect = schools.map((s) => ({ id: s.id }));
-    }
-
-    const user = await prisma.user.create({
-      data: {
-        email: normalizedEmail,
-        passwordHash,
-        role: 'PSYCHIATRIST',
-        firstName: String(firstName).trim(),
-        lastName: String(lastName).trim(),
-        mustResetPassword: true,
-        ...(schoolsConnect.length && { assignedSchools: { connect: schoolsConnect } }),
-      },
-    });
-
-    // Non-blocking Firebase sync so Google login works for them too
-    syncUserToFirebase(normalizedEmail, plainPassword, `${firstName} ${lastName}`.trim()).catch(() => {});
-
-    logger.info(`Psychiatrist created by super admin: ${normalizedEmail}`);
-
-    res.status(201).json({
-      psychiatrist: { id: user.id, firstName: user.firstName, lastName: user.lastName, email: user.email },
-      // Shown once so the admin can hand the credentials over
-      credentials: { email: normalizedEmail, password: plainPassword },
-    });
-  } catch (err) {
-    handleError(res, err, 'createPsychiatrist');
-  }
-}
-
 async function getStudentTestHistory(req, res) {
   try {
     const { id } = req.params;
@@ -1412,7 +1335,5 @@ module.exports = {
   getAdminAppointments,
   createAdminAppointment,
   getStudentsForAppointment,
-  getPsychiatristsForAdmin,
-  createPsychiatrist,
   getStudentTestHistory,
 };

@@ -3,7 +3,7 @@ const router = express.Router();
 const { verifyToken, requireRole } = require('../middleware/auth.middleware');
 const ctrl = require('../controllers/psychiatrist.controller');
 
-const psych = [verifyToken, requireRole('PSYCHIATRIST', 'SUPER_ADMIN')];
+const psych = [verifyToken, requireRole('SUPER_ADMIN')];
 
 router.get('/dashboard', ...psych, ctrl.getDashboard);
 router.get('/schools', ...psych, ctrl.getSchools);
