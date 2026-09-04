@@ -1,9 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, Loader2, Sparkles, Brain, Target, UserCheck, PhoneCall, Check, Monitor, MapPin } from 'lucide-react';
+import { ShieldCheck, Loader2, Sparkles, Brain, Target, UserCheck, PhoneCall, Check, Monitor, MapPin, FileText, RotateCcw, BadgeCheck } from 'lucide-react';
 import { setAuthSession } from '../utils/auth';
 import { apiClient } from '../utils/api';
 import { usePricing, formatPrice } from '../utils/pricing';
+
+const formatResultDate = (value: string) => {
+  try {
+    const d = new Date(value.includes('T') ? value : value.replace(' ', 'T') + 'Z');
+    if (Number.isNaN(d.getTime())) return value;
+    return d.toLocaleString(undefined, {
+      day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit',
+    });
+  } catch {
+    return value;
+  }
+};
 
 interface CareerPaymentGateProps {
   registration: any;
@@ -73,6 +85,43 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
     const t = setTimeout(() => setResendCooldown((s) => s - 1), 1000);
     return () => clearTimeout(t);
   }, [resendCooldown]);
+
+  // --- Previous results + purchase entitlement for the signed-in user ------
+  const [prevResults, setPrevResults] = useState<any[]>([]);
+  const [entitled, setEntitled] = useState(false);
+  const [accessLoading, setAccessLoading] = useState(false);
+  // null = follow the entitlement default (packages hidden once entitled)
+  const [packagesOverride, setPackagesOverride] = useState<boolean | null>(null);
+  const showPackages = packagesOverride ?? !entitled;
+
+  useEffect(() => {
+    if (!user) {
+      setPrevResults([]);
+      setEntitled(false);
+      setAccessLoading(false);
+      setPackagesOverride(null);
+      return;
+    }
+    let alive = true;
+    setAccessLoading(true);
+    Promise.all([
+      apiClient.get<any>('/api/user-results').catch(() => null),
+      apiClient.get<any>('/api/career-access').catch(() => null),
+    ]).then(([resultsRes, accessRes]) => {
+      if (!alive) return;
+      const all: any[] = resultsRes?.results || [];
+      setPrevResults(all.filter((r: any) => (r.test_id || 'career') === 'career'));
+      setEntitled(!!accessRes?.entitled);
+      setAccessLoading(false);
+    });
+    return () => { alive = false; };
+  }, [user?.id]);
+
+  // Retake: entitlement is enforced server-side (career-access +
+  // send-career-results); here we just skip the payment step.
+  const handleRetake = () => {
+    onSuccess();
+  };
 
   const startResendCooldown = (seconds = 60) => setResendCooldown(seconds);
 
@@ -590,11 +639,87 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
           ) : (
             <>
               <div>
+                {accessLoading ? (
+                  <div className="flex items-center justify-center gap-2 py-6 text-intel-dark/40 text-[10px] font-black uppercase tracking-widest">
+                    <Loader2 size={12} className="animate-spin" /> Checking your account...
+                  </div>
+                ) : (
+                  <>
+                    {entitled && (
+                      <div className="p-5 rounded-2xl bg-serene-green/10 border border-serene-green/30 mb-6">
+                        <div className="flex items-center gap-2 mb-2">
+                          <BadgeCheck size={14} className="text-serene-green" />
+                          <span className="text-[10px] font-black uppercase tracking-widest text-serene-green">Access Active</span>
+                        </div>
+                        <p className="text-xs text-intel-dark/70 font-medium leading-relaxed mb-4">
+                          You already own the Career Guidance Assessment. Retake it anytime — no payment needed.
+                        </p>
+                        <button
+                          onClick={handleRetake}
+                          className="w-full bg-serene-green text-white py-4 rounded-xl font-black uppercase tracking-widest text-[10px] hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-md"
+                        >
+                          <RotateCcw size={12} /> Retake Test — Free
+                        </button>
+                      </div>
+                    )}
+
+                    {prevResults.length > 0 && (
+                      <div className="mb-6">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-1.5">
+                            <FileText size={12} className="text-intel-dark/40" />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-intel-dark/40">Previous Results</span>
+                          </div>
+                          <button
+                            onClick={() => navigate('/my-results')}
+                            className="text-[9px] text-terracotta hover:underline font-black uppercase tracking-widest"
+                          >
+                            My Results
+                          </button>
+                        </div>
+                        <div className="space-y-2">
+                          {prevResults.map(r => (
+                            <div key={r.id} className="flex items-center justify-between gap-3 p-3 bg-white border border-black/5 rounded-xl">
+                              <div className="min-w-0">
+                                <p className="text-[11px] font-bold text-intel-dark truncate">Career Guidance Assessment</p>
+                                <p className="text-[10px] text-intel-dark/50 font-medium">{formatResultDate(r.created_at)}</p>
+                              </div>
+                              {r.order_id && (
+                                <span className="shrink-0 bg-serene-green/10 text-serene-green text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border border-serene-green/30">Paid</span>
+                              )}
+                              <button
+                                onClick={() => navigate(`/assessments/career?id=${encodeURIComponent(r.id)}`)}
+                                className="shrink-0 px-4 py-2 bg-intel-dark text-white rounded-lg font-black uppercase tracking-widest text-[9px] hover:opacity-90 transition-opacity"
+                              >
+                                View
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {entitled && !showPackages && (
+                      <button
+                        type="button"
+                        onClick={() => setPackagesOverride(true)}
+                        className="text-[10px] text-terracotta hover:underline font-bold"
+                      >
+                        Want the + Result Explanation add-on? Choose a package
+                      </button>
+                    )}
+                  </>
+                )}
+
+                {showPackages && (
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-terracotta/10 border border-terracotta/20 text-terracotta text-[10px] font-bold uppercase tracking-wider mb-8">
                   <Sparkles size={12} />
                   Select Package
                 </div>
+                )}
                 
+                {showPackages && (
+                <>
                 <div className="space-y-4 mb-6">
                   <div className="space-y-2">
                     <button 
@@ -730,8 +855,10 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
                     </div>
                   </div>
                 </div>
+                </>)}
               </div>
 
+              {showPackages && (
               <div className="space-y-4">
                 {error && (
                   <div className="text-red-600 text-xs bg-red-50 border border-red-100 p-3 rounded-xl font-medium">
@@ -759,6 +886,7 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
                   Secured Checkout via Cashfree
                 </div>
               </div>
+              )}
             </>
           )}
         </div>
