@@ -164,6 +164,17 @@ export function createUser(id, name, email, password, phone) {
   });
 }
 
+// Total registered accounts — diagnostic for the ephemeral-disk wipe issue.
+export function countUsers() {
+  return new Promise((resolve, reject) => {
+    const database = getDb();
+    database.get('SELECT COUNT(*) AS n FROM users', [], (err, row) => {
+      if (err) reject(err);
+      else resolve(row ? row.n : 0);
+    });
+  });
+}
+
 export function getUserByEmail(email) {
   return new Promise((resolve, reject) => {
     const database = getDb();

@@ -159,6 +159,15 @@ locally) and **restart/redeploy** — every service price becomes ₹1:
 
 `backend/src/db.js` uses a file-based SQLite database created on Render's
 **ephemeral disk** — all assessment/user data is wiped on every redeploy and
-restart. The `/api/db-status` endpoint was added to debug this. The proper fix
-is a Render Persistent Disk, or migrating the main-site store to the same
-Postgres instance the portal uses.
+restart. The `/api/db-status` endpoint was added to debug this (it now also
+reports `userCount`). The proper fix is a Render Persistent Disk, or migrating
+the main-site store to the same Postgres instance the portal uses.
+
+**User-visible symptom of the wipe:** "forgot password OTP doesn't send".
+Accounts registered before the last redeploy no longer exist, so
+`POST /api/forgot-password` returns its generic anti-enumeration success
+(`"If the account exists, an OTP code has been sent."`) **without emailing
+anything**. The Brevo pipeline itself is fine — check `/api/db-status`
+→ `userCount`; if a just-registered account is missing after a deploy, the
+disk was wiped. Workaround for demos/tests: re-register the account, then
+request the reset OTP.

@@ -19,7 +19,7 @@ import linkResultHandler from '../api/link-result.js';
 import userResultsHandler from '../api/user-results.js';
 import forgotPasswordHandler from '../api/forgot-password.js';
 import verifyOtpHandler from '../api/verify-otp.js';
-import { getUserByEmail } from '../db.js';
+import { getUserByEmail, countUsers } from '../db.js';
 import { isDemoMode, getPrices } from '../pricing.js';
 
 const router = express.Router();
@@ -85,12 +85,16 @@ router.get('/db-status', async (req, res) => {
     // Try a real DB query
     let queryResult = null;
     let queryError = null;
+    let userCount = null;
     try {
       await getUserByEmail('__db_test__@status.check');
       queryResult = 'ok';
     } catch (err) {
       queryError = err.message;
     }
+    try {
+      userCount = await countUsers();
+    } catch (_) {}
     res.json({
       dbPath,
       dbExists,
@@ -99,6 +103,7 @@ router.get('/db-status', async (req, res) => {
       dirWritable: writable,
       sqliteQuery: queryResult || 'failed',
       sqliteError: queryError,
+      userCount,
       nodeEnv: process.env.NODE_ENV || 'not set',
       encryptionKeySet: !!process.env.ENCRYPTION_KEY,
       authSecretSet: !!process.env.AUTH_TOKEN_SECRET,

@@ -127,7 +127,9 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
     if (authMode === 'forgot') {
       try {
         await apiClient.post('/api/forgot-password', { email: authEmail });
-        setAuthSuccessMsg('OTP code sent! Check your email (or dev logs).');
+        setAuthSuccessMsg(
+          `If an account exists for ${authEmail}, a 6-digit code has been sent. Check your inbox and spam folder.`
+        );
         setAuthMode('reset');
       } catch (err: any) {
         setAuthError(err.message || 'Something went wrong');
