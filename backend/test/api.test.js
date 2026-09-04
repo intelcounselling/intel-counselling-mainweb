@@ -20,6 +20,7 @@ const express = (await import('express')).default;
 const apiRouter = (await import('../src/routes/api.js')).default;
 const db = await import('../src/db.js');
 const { scoreCareerAnswers } = await import('../src/careerScoring.js');
+const { hashOtp, OTP_PURPOSE } = await import('../src/otp.js');
 
 let server;
 let base;
@@ -56,14 +57,29 @@ const PASSWORD = 'S0me-Str0ng-Pass!';
 let token;
 let userId;
 
-test('register returns a token and user', async () => {
+test('register requires email verification before issuing a session', async () => {
   const res = await post('/register', { name: 'Tester', email: EMAIL, password: PASSWORD, phone: '9999999999' });
   assert.equal(res.status, 200);
   const data = await res.json();
-  assert.ok(data.token, 'token missing');
-  assert.ok(data.user?.id, 'user id missing');
-  token = data.token;
-  userId = data.user.id;
+  assert.equal(data.requiresVerification, true);
+  assert.ok(!data.token, 'unverified register must not return a token');
+
+  // Unverified login is rejected with EMAIL_NOT_VERIFIED (only after the
+  // password checks out — no account enumeration).
+  const locked = await post('/login', { email: EMAIL, password: PASSWORD });
+  assert.equal(locked.status, 403);
+  const lockedData = await locked.json();
+  assert.equal(lockedData.code, 'EMAIL_NOT_VERIFIED');
+
+  // Seed a known OTP so verification completes without real email delivery.
+  await db.updateUserOTP(EMAIL, hashOtp('654321'), new Date(Date.now() + 10 * 60 * 1000).toISOString(), OTP_PURPOSE.VERIFY_EMAIL);
+  const ver = await post('/verify-email', { email: EMAIL, otp: '654321' });
+  assert.equal(ver.status, 200);
+  const vdata = await ver.json();
+  assert.ok(vdata.token, 'verified user must receive a session token');
+  assert.ok(vdata.user?.id, 'user id missing');
+  token = vdata.token;
+  userId = vdata.user.id;
 });
 
 test('login succeeds with correct password, fails with wrong one', async () => {

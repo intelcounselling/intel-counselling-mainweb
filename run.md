@@ -155,19 +155,28 @@ locally) and **restart/redeploy** — every service price becomes ₹1:
    Also: `DIRECT_URL` (used for migrations/db push) should ideally be the
    **direct** connection (`db.<ref>.supabase.co:5432`), not the pooled one.
 
-### Known limitation: SQLite on Render
+### Storage: main site now uses Supabase Postgres
 
-`backend/src/db.js` uses a file-based SQLite database created on Render's
-**ephemeral disk** — all assessment/user data is wiped on every redeploy and
-restart. The `/api/db-status` endpoint was added to debug this (it now also
-reports `userCount`). The proper fix is a Render Persistent Disk, or migrating
-the main-site store to the same Postgres instance the portal uses.
+The main-site tables (`users`, `assessment_results`, `orders` — career-test
+accounts, saved answers, payment orders) live in **Supabase Postgres** via
+`DATABASE_URL`. `backend/src/db.js` is dual-driver:
 
-**User-visible symptom of the wipe:** "forgot password OTP doesn't send".
-Accounts registered before the last redeploy no longer exist, so
-`POST /api/forgot-password` returns its generic anti-enumeration success
-(`"If the account exists, an OTP code has been sent."`) **without emailing
-anything**. The Brevo pipeline itself is fine — check `/api/db-status`
-→ `userCount`; if a just-registered account is missing after a deploy, the
-disk was wiped. Workaround for demos/tests: re-register the account, then
-request the reset OTP.
+- `DATABASE_URL` set (Render) → PostgreSQL, persistent across redeploys.
+- No `DATABASE_URL` (local dev / CI) → file-based SQLite (`SQLITE_PATH`
+  override), so `npm run dev` and `npm test --workspace=backend` work offline.
+
+The `prisma db push && npm run db:seed:tests` steps in the Render build only
+manage the **Mindbridge portal** tables; the test seed is idempotent
+(update-or-create per category) and never deletes user data.
+
+Note: `backend/scripts/orders-report.js` still reads the legacy local SQLite
+file — for production orders use the Supabase SQL editor instead.
+
+### Known limitation (historical): SQLite on Render
+
+Before this migration the main site stored everything in `backend/database.sqlite`
+on Render's **ephemeral disk** — all user/assessment/order data was wiped on
+every redeploy and restart. That was the root cause of "forgot password OTP
+doesn't send" (accounts no longer existed, so the anti-enumeration generic
+success returned without emailing) and of the "database is reseeded" reports.
+`/api/db-status` → `userCount` remains useful as a health check.

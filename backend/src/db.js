@@ -1,454 +1,387 @@
-import sqlite3 from 'sqlite3';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// SQLITE_PATH override lets tests run against an isolated database file
-const DB_PATH = process.env.SQLITE_PATH || join(__dirname, '..', 'database.sqlite');
+// ---------------------------------------------------------------------------
+// Storage driver selection
+//
+//   production (Render):  DATABASE_URL is set → PostgreSQL (Supabase). Data
+//                         persists across redeploys/restarts.
+//   local dev / CI:       no DATABASE_URL → the original file-based SQLite
+//                         (SQLITE_PATH override supported, used by tests).
+//
+// All queries are written once with `?` placeholders and translated to `$n`
+// for Postgres, so every function below has a single SQL source of truth.
+// ---------------------------------------------------------------------------
+const USE_PG = !!process.env.DATABASE_URL;
 
-let db;
+let pgPool = null;
+let sqliteDb = null;
+let readyPromise = null;
 
-function getDb() {
-  if (!db) {
-    db = new sqlite3.Database(DB_PATH, (err) => {
-      if (err) {
-        console.error('Failed to open SQLite database:', err.message);
-      } else {
-        console.log('Connected to SQLite database at', DB_PATH);
-      }
-    });
+function pgSql(sql) {
+  let i = 0;
+  return sql.replace(/\?/g, () => `$${++i}`);
+}
 
-    // Enable WAL mode for better concurrent performance
-    db.run('PRAGMA journal_mode=WAL;');
+async function initPg() {
+  const { default: pg } = await import('pg');
+  let ssl;
+  try {
+    const host = new URL(process.env.DATABASE_URL).hostname;
+    // Supabase poolers present certificates Node cannot verify against the
+    // default CA bundle, so relax verification for non-local hosts.
+    ssl = /localhost|127\.0\.0\.1|::1/.test(host)
+      ? false
+      : { rejectUnauthorized: false };
+  } catch (_) {
+    ssl = { rejectUnauthorized: false };
+  }
+  pgPool = new pg.Pool({ connectionString: process.env.DATABASE_URL, ssl });
+  pgPool.on('error', (err) => console.error('Postgres pool error:', err.message));
 
-    // Create tables if they do not exist
-    db.run(`
-      CREATE TABLE IF NOT EXISTS users (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        phone TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `, () => {
-      // Add columns if they don't exist (idempotent migration)
-      db.all("PRAGMA table_info(users)", (err, rows) => {
-        if (!err && rows) {
-          if (!rows.some(r => r.name === 'otp_code')) {
-            db.run('ALTER TABLE users ADD COLUMN otp_code TEXT', () => {});
-          }
-          if (!rows.some(r => r.name === 'otp_expires_at')) {
-            db.run('ALTER TABLE users ADD COLUMN otp_expires_at DATETIME', () => {});
-          }
-          if (!rows.some(r => r.name === 'otp_attempts')) {
-            db.run('ALTER TABLE users ADD COLUMN otp_attempts INTEGER DEFAULT 0', () => {});
-          }
-          if (!rows.some(r => r.name === 'token_version')) {
-            db.run('ALTER TABLE users ADD COLUMN token_version INTEGER DEFAULT 0', () => {});
-          }
-          // Purpose-scoped OTPs: a code issued for email verification can never
-          // be replayed against password reset (and vice versa).
-          if (!rows.some(r => r.name === 'otp_purpose')) {
-            db.run('ALTER TABLE users ADD COLUMN otp_purpose TEXT', () => {});
-          }
-          // Per-account resend cooldown timestamp (ISO string).
-          if (!rows.some(r => r.name === 'otp_last_sent_at')) {
-            db.run('ALTER TABLE users ADD COLUMN otp_last_sent_at DATETIME', () => {});
-          }
-          // Email verification flag. NULL = legacy account created before
-          // verification existed — treated as verified (grandfathered) so
-          // existing users are never locked out. 0 = pending verification.
-          if (!rows.some(r => r.name === 'email_verified')) {
-            db.run('ALTER TABLE users ADD COLUMN email_verified INTEGER', () => {});
-          }
-        }
+  await pgPool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT UNIQUE NOT NULL,
+      password TEXT NOT NULL,
+      phone TEXT,
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+      otp_code TEXT,
+      otp_expires_at TIMESTAMPTZ,
+      otp_purpose TEXT,
+      otp_last_sent_at TIMESTAMPTZ,
+      otp_attempts INTEGER DEFAULT 0,
+      token_version INTEGER DEFAULT 0,
+      email_verified INTEGER
+    )
+  `);
+  await pgPool.query(`
+    CREATE TABLE IF NOT EXISTS assessment_results (
+      id TEXT PRIMARY KEY,
+      encrypted_answers TEXT NOT NULL,
+      iv TEXT NOT NULL,
+      user_id TEXT,
+      test_id TEXT,
+      registration TEXT,
+      registration_iv TEXT,
+      order_id TEXT,
+      emailed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await pgPool.query(`
+    CREATE TABLE IF NOT EXISTS orders (
+      order_id TEXT PRIMARY KEY,
+      service_id TEXT NOT NULL,
+      amount DOUBLE PRECISION NOT NULL,
+      status TEXT NOT NULL DEFAULT 'CREATED',
+      result_id TEXT,
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMPTZ
+    )
+  `);
+  await pgPool.query('CREATE INDEX IF NOT EXISTS idx_results_user ON assessment_results(user_id)');
+  await pgPool.query('CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at)');
+  console.log('Connected to PostgreSQL database (persistent — survives redeploys)');
+}
+
+async function initSqlite() {
+  const { default: sqlite3 } = await import('sqlite3');
+  const DB_PATH = process.env.SQLITE_PATH || join(__dirname, '..', 'database.sqlite');
+  sqliteDb = await new Promise((resolve, reject) => {
+    const db = new sqlite3.Database(DB_PATH, (err) => (err ? reject(err) : resolve(db)));
+  });
+  console.log('Connected to SQLite database at', DB_PATH);
+
+  const runSqlite = (sql, params = []) =>
+    new Promise((resolve, reject) => {
+      sqliteDb.run(sql, params, function (err) {
+        if (err) reject(err);
+        else resolve(this.changes);
       });
     });
 
-    db.run(`
-      CREATE TABLE IF NOT EXISTS assessment_results (
-        id TEXT PRIMARY KEY,
-        encrypted_answers TEXT NOT NULL,
-        iv TEXT NOT NULL,
-        user_id TEXT,
-        test_id TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `, () => {
-      // Add columns if they don't already exist (idempotent migration)
-      db.all("PRAGMA table_info(assessment_results)", (err, rows) => {
-        if (!err && rows) {
-          if (!rows.some(r => r.name === 'user_id')) {
-            db.run('ALTER TABLE assessment_results ADD COLUMN user_id TEXT', () => {});
-          }
-          if (!rows.some(r => r.name === 'test_id')) {
-            db.run('ALTER TABLE assessment_results ADD COLUMN test_id TEXT', () => {});
-          }
-          if (!rows.some(r => r.name === 'registration')) {
-            db.run('ALTER TABLE assessment_results ADD COLUMN registration TEXT', () => {});
-          }
-          if (!rows.some(r => r.name === 'registration_iv')) {
-            db.run('ALTER TABLE assessment_results ADD COLUMN registration_iv TEXT', () => {});
-          }
-          if (!rows.some(r => r.name === 'order_id')) {
-            db.run('ALTER TABLE assessment_results ADD COLUMN order_id TEXT', () => {});
-          }
-          if (!rows.some(r => r.name === 'emailed_at')) {
-            db.run('ALTER TABLE assessment_results ADD COLUMN emailed_at DATETIME', () => {});
-          }
-        }
-      });
-    });
+  await runSqlite('PRAGMA journal_mode = WAL');
+  await runSqlite(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT UNIQUE NOT NULL,
+      password TEXT NOT NULL,
+      phone TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await runSqlite(`
+    CREATE TABLE IF NOT EXISTS assessment_results (
+      id TEXT PRIMARY KEY,
+      encrypted_answers TEXT NOT NULL,
+      iv TEXT NOT NULL,
+      user_id TEXT,
+      test_id TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await runSqlite(`
+    CREATE TABLE IF NOT EXISTS orders (
+      order_id TEXT PRIMARY KEY,
+      service_id TEXT NOT NULL,
+      amount REAL NOT NULL,
+      status TEXT NOT NULL DEFAULT 'CREATED',
+      result_id TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME
+    )
+  `);
+  await runSqlite('CREATE INDEX IF NOT EXISTS idx_results_user ON assessment_results(user_id)');
+  await runSqlite('CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at)');
 
-    db.run(`
-      CREATE TABLE IF NOT EXISTS orders (
-        order_id TEXT PRIMARY KEY,
-        service_id TEXT NOT NULL,
-        amount REAL NOT NULL,
-        status TEXT NOT NULL DEFAULT 'CREATED',
-        result_id TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME
-      )
-    `, () => {
-      // Indexes for the hot lookups (user results listing, email-based auth)
-      db.run('CREATE INDEX IF NOT EXISTS idx_results_user ON assessment_results(user_id)', () => {});
-      db.run('CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at)', () => {});
+  // Idempotent column migrations (SQLite has no ADD COLUMN IF NOT EXISTS)
+  const addColumn = async (table, column, ddl) => {
+    const cols = await new Promise((resolve, reject) => {
+      sqliteDb.all(`PRAGMA table_info(${table})`, (err, rows) => (err ? reject(err) : resolve(rows || [])));
+    });
+    if (!cols.some((r) => r.name === column)) {
+      await runSqlite(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
+    }
+  };
+  await addColumn('users', 'otp_code', 'TEXT');
+  await addColumn('users', 'otp_expires_at', 'DATETIME');
+  await addColumn('users', 'otp_purpose', 'TEXT');
+  await addColumn('users', 'otp_last_sent_at', 'DATETIME');
+  await addColumn('users', 'otp_attempts', 'INTEGER DEFAULT 0');
+  await addColumn('users', 'token_version', 'INTEGER DEFAULT 0');
+  await addColumn('users', 'email_verified', 'INTEGER');
+  await addColumn('assessment_results', 'registration', 'TEXT');
+  await addColumn('assessment_results', 'registration_iv', 'TEXT');
+  await addColumn('assessment_results', 'order_id', 'TEXT');
+  await addColumn('assessment_results', 'emailed_at', 'DATETIME');
+}
+
+function ready() {
+  if (!readyPromise) {
+    readyPromise = (USE_PG ? initPg() : initSqlite()).catch((err) => {
+      readyPromise = null;
+      throw err;
     });
   }
-  return db;
+  return readyPromise;
 }
 
-export function insertResult(id, encryptedAnswers, iv, userId = null, testId = null) {
+// --- unified query helpers -------------------------------------------------
+
+async function all(sql, params = []) {
+  await ready();
+  if (USE_PG) {
+    const result = await pgPool.query(pgSql(sql), params);
+    return result.rows;
+  }
   return new Promise((resolve, reject) => {
-    const database = getDb();
-    database.run(
-      'INSERT INTO assessment_results (id, encrypted_answers, iv, user_id, test_id) VALUES (?, ?, ?, ?, ?)',
-      [id, encryptedAnswers, iv, userId, testId],
-      function (err) {
-        if (err) reject(err);
-        else resolve(this.lastID);
-      }
-    );
+    sqliteDb.all(sql, params, (err, rows) => (err ? reject(err) : resolve(rows || [])));
   });
 }
 
-export function getResultById(id) {
+async function get(sql, params = []) {
+  const rows = await all(sql, params);
+  return rows[0] || null;
+}
+
+// Resolves with the number of affected rows (this.changes / rowCount).
+async function run(sql, params = []) {
+  await ready();
+  if (USE_PG) {
+    const result = await pgPool.query(pgSql(sql), params);
+    return result.rowCount ?? 0;
+  }
   return new Promise((resolve, reject) => {
-    const database = getDb();
-    database.get(
-      'SELECT encrypted_answers, iv, user_id FROM assessment_results WHERE id = ?',
-      [id],
-      (err, row) => {
-        if (err) reject(err);
-        else resolve(row || null);
-      }
-    );
+    sqliteDb.run(sql, params, function (err) {
+      if (err) reject(err);
+      else resolve(this.changes);
+    });
   });
 }
+
+// --- Users ------------------------------------------------------------------
 
 export function createUser(id, name, email, password, phone) {
-  return new Promise((resolve, reject) => {
-    const database = getDb();
-    database.run(
-      'INSERT INTO users (id, name, email, password, phone, email_verified) VALUES (?, ?, ?, ?, ?, 0)',
-      [id, name, email, password, phone],
-      function (err) {
-        if (err) reject(err);
-        else resolve(id);
-      }
-    );
-  });
+  return run(
+    'INSERT INTO users (id, name, email, password, phone, email_verified) VALUES (?, ?, ?, ?, ?, 0)',
+    [id, name, email, password, phone]
+  ).then(() => id);
 }
 
-// Total registered accounts — diagnostic for the ephemeral-disk wipe issue.
-export function countUsers() {
-  return new Promise((resolve, reject) => {
-    const database = getDb();
-    database.get('SELECT COUNT(*) AS n FROM users', [], (err, row) => {
-      if (err) reject(err);
-      else resolve(row ? row.n : 0);
-    });
-  });
+export async function getUserByEmail(email) {
+  return get('SELECT * FROM users WHERE email = ?', [email]);
 }
 
-export function getUserByEmail(email) {
-  return new Promise((resolve, reject) => {
-    const database = getDb();
-    database.get('SELECT * FROM users WHERE email = ?', [email], (err, row) => {
-      if (err) reject(err);
-      else resolve(row || null);
-    });
-  });
-}
-
-export function getUserById(id) {
-  return new Promise((resolve, reject) => {
-    const database = getDb();
-    database.get('SELECT id, token_version FROM users WHERE id = ?', [id], (err, row) => {
-      if (err) reject(err);
-      else resolve(row || null);
-    });
-  });
+export async function getUserById(id) {
+  return get('SELECT id, token_version FROM users WHERE id = ?', [id]);
 }
 
 // Invalidates every outstanding session token for a user (see token.js authenticateRequest)
-export function bumpTokenVersion(userId) {
-  return new Promise((resolve, reject) => {
-    const database = getDb();
-    database.run(
-      'UPDATE users SET token_version = COALESCE(token_version, 0) + 1 WHERE id = ?',
-      [userId],
-      function (err) {
-        if (err) reject(err);
-        else resolve(this.changes > 0);
-      }
-    );
-  });
+export async function bumpTokenVersion(userId) {
+  const changes = await run(
+    'UPDATE users SET token_version = COALESCE(token_version, 0) + 1 WHERE id = ?',
+    [userId]
+  );
+  return changes > 0;
 }
 
-export function linkResultToUser(resultId, userId) {
-  return new Promise((resolve, reject) => {
-    const database = getDb();
-    database.run(
-      // Only claim unowned results — never re-assign a result that already belongs to a user
-      'UPDATE assessment_results SET user_id = ? WHERE id = ? AND user_id IS NULL',
-      [userId, resultId],
-      function (err) {
-        if (err) reject(err);
-        else resolve(this.changes > 0);
-      }
-    );
-  });
+export async function linkResultToUser(resultId, userId) {
+  // Only claim unowned results — never re-assign a result that already belongs to a user
+  const changes = await run(
+    'UPDATE assessment_results SET user_id = ? WHERE id = ? AND user_id IS NULL',
+    [userId, resultId]
+  );
+  return changes > 0;
 }
 
-export function getUserResults(userId) {
-  return new Promise((resolve, reject) => {
-    const database = getDb();
-    database.all(
-      'SELECT id, test_id, created_at FROM assessment_results WHERE user_id = ? ORDER BY created_at DESC',
-      [userId],
-      (err, rows) => {
-        if (err) reject(err);
-        else resolve(rows || []);
-      }
-    );
-  });
+export async function getUserResults(userId) {
+  return all(
+    'SELECT id, test_id, created_at FROM assessment_results WHERE user_id = ? ORDER BY created_at DESC',
+    [userId]
+  );
 }
 
-export function updateUserOTP(email, otpCode, expiresAt, purpose) {
-  return new Promise((resolve, reject) => {
-    const database = getDb();
-    // Store otp_last_sent_at as an ISO-8601 string — SQLite's CURRENT_TIMESTAMP
-    // ('YYYY-MM-DD HH:MM:SS' UTC) is ambiguous to JS Date parsing and breaks
-    // the resend-cooldown math across timezones.
-    database.run(
-      'UPDATE users SET otp_code = ?, otp_expires_at = ?, otp_purpose = ?, otp_last_sent_at = ?, otp_attempts = 0 WHERE email = ?',
-      [otpCode, expiresAt, purpose, new Date().toISOString(), email],
-      function (err) {
-        if (err) reject(err);
-        else resolve();
-      }
-    );
-  });
+// Total registered accounts — diagnostic for the ephemeral-disk wipe issue.
+export async function countUsers() {
+  const row = await get('SELECT COUNT(*) AS n FROM users');
+  return row ? Number(row.n) : 0;
 }
 
-export function incrementOtpAttempts(email) {
-  return new Promise((resolve, reject) => {
-    const database = getDb();
-    database.run(
-      'UPDATE users SET otp_attempts = COALESCE(otp_attempts, 0) + 1 WHERE email = ?',
-      [email],
-      function (err) {
-        if (err) return reject(err);
-        database.get('SELECT otp_attempts FROM users WHERE email = ?', [email], (err2, row) => {
-          if (err2) reject(err2);
-          else resolve(row ? row.otp_attempts : 0);
-        });
-      }
-    );
-  });
+export async function updateUserOTP(email, otpCode, expiresAt, purpose) {
+  // Store otp_last_sent_at as an ISO-8601 string so the resend-cooldown math
+  // is unambiguous in both drivers (SQLite has no native timezone type).
+  await run(
+    'UPDATE users SET otp_code = ?, otp_expires_at = ?, otp_purpose = ?, otp_last_sent_at = ?, otp_attempts = 0 WHERE email = ?',
+    [otpCode, expiresAt, purpose, new Date().toISOString(), email]
+  );
 }
 
-export function clearUserOTP(email) {
-  return new Promise((resolve, reject) => {
-    const database = getDb();
-    database.run(
-      'UPDATE users SET otp_code = NULL, otp_expires_at = NULL, otp_purpose = NULL, otp_attempts = 0 WHERE email = ?',
-      [email],
-      function (err) {
-        if (err) reject(err);
-        else resolve();
-      }
-    );
-  });
+export async function incrementOtpAttempts(email) {
+  await run(
+    'UPDATE users SET otp_attempts = COALESCE(otp_attempts, 0) + 1 WHERE email = ?',
+    [email]
+  );
+  const row = await get('SELECT otp_attempts FROM users WHERE email = ?', [email]);
+  return row ? row.otp_attempts : 0;
+}
+
+export async function clearUserOTP(email) {
+  await run(
+    'UPDATE users SET otp_code = NULL, otp_expires_at = NULL, otp_purpose = NULL, otp_attempts = 0 WHERE email = ?',
+    [email]
+  );
 }
 
 // Marks an account as email-verified and consumes any pending OTP.
-export function setUserEmailVerified(email) {
-  return new Promise((resolve, reject) => {
-    const database = getDb();
-    database.run(
-      'UPDATE users SET email_verified = 1, otp_code = NULL, otp_expires_at = NULL, otp_purpose = NULL, otp_attempts = 0 WHERE email = ?',
-      [email],
-      function (err) {
-        if (err) reject(err);
-        else resolve(this.changes > 0);
-      }
-    );
-  });
+export async function setUserEmailVerified(email) {
+  const changes = await run(
+    'UPDATE users SET email_verified = 1, otp_code = NULL, otp_expires_at = NULL, otp_purpose = NULL, otp_attempts = 0 WHERE email = ?',
+    [email]
+  );
+  return changes > 0;
 }
 
-export function updateUserPassword(email, newPasswordHash) {
-  return new Promise((resolve, reject) => {
-    const database = getDb();
-    database.run(
-      'UPDATE users SET password = ? WHERE email = ?',
-      [newPasswordHash, email],
-      function (err) {
-        if (err) reject(err);
-        else resolve();
-      }
-    );
-  });
+export async function updateUserPassword(email, newPasswordHash) {
+  await run('UPDATE users SET password = ? WHERE email = ?', [newPasswordHash, email]);
 }
 
-export function markOrderUsed(orderId) {
-  return new Promise((resolve, reject) => {
-    const database = getDb();
-    database.run(
-      // Only a PAID order can be consumed, and only once
-      "UPDATE orders SET status = 'USED', updated_at = CURRENT_TIMESTAMP WHERE order_id = ? AND status = 'PAID'",
-      [orderId],
-      function (err) {
-        if (err) reject(err);
-        else resolve(this.changes > 0);
-      }
-    );
-  });
+export async function resetUserPassword(email, newPasswordHash) {
+  await run(
+    'UPDATE users SET password = ?, otp_code = NULL, otp_expires_at = NULL, otp_purpose = NULL, otp_attempts = 0 WHERE email = ?',
+    [newPasswordHash, email]
+  );
 }
 
-export function resetUserPassword(email, newPasswordHash) {
-  return new Promise((resolve, reject) => {
-    const database = getDb();
-    database.run(
-      'UPDATE users SET password = ?, otp_code = NULL, otp_expires_at = NULL, otp_purpose = NULL, otp_attempts = 0 WHERE email = ?',
-      [newPasswordHash, email],
-      function (err) {
-        if (err) reject(err);
-        else resolve();
-      }
-    );
-  });
+// --- Assessment results -----------------------------------------------------
+
+export async function insertResult(id, encryptedAnswers, iv, userId = null, testId = null) {
+  await run(
+    'INSERT INTO assessment_results (id, encrypted_answers, iv, user_id, test_id) VALUES (?, ?, ?, ?, ?)',
+    [id, encryptedAnswers, iv, userId, testId]
+  );
+  return id;
+}
+
+export async function getResultById(id) {
+  return get(
+    'SELECT encrypted_answers, iv, user_id FROM assessment_results WHERE id = ?',
+    [id]
+  );
 }
 
 // --- Orders (payment status lives server-side, never trusted from the client) ---
 
-export function createOrder(orderId, serviceId, amount) {
-  return new Promise((resolve, reject) => {
-    const database = getDb();
-    database.run(
-      'INSERT INTO orders (order_id, service_id, amount) VALUES (?, ?, ?)',
-      [orderId, serviceId, amount],
-      function (err) {
-        if (err) reject(err);
-        else resolve(orderId);
-      }
-    );
-  });
+export async function createOrder(orderId, serviceId, amount) {
+  await run(
+    'INSERT INTO orders (order_id, service_id, amount) VALUES (?, ?, ?)',
+    [orderId, serviceId, amount]
+  );
+  return orderId;
 }
 
-export function getOrder(orderId) {
-  return new Promise((resolve, reject) => {
-    const database = getDb();
-    database.get('SELECT * FROM orders WHERE order_id = ?', [orderId], (err, row) => {
-      if (err) reject(err);
-      else resolve(row || null);
-    });
-  });
+export async function getOrder(orderId) {
+  return get('SELECT * FROM orders WHERE order_id = ?', [orderId]);
 }
 
-export function markOrderPaid(orderId) {
-  return new Promise((resolve, reject) => {
-    const database = getDb();
-    database.run(
-      "UPDATE orders SET status = 'PAID', updated_at = CURRENT_TIMESTAMP WHERE order_id = ?",
-      [orderId],
-      function (err) {
-        if (err) reject(err);
-        else resolve(this.changes > 0);
-      }
-    );
-  });
+export async function markOrderPaid(orderId) {
+  const changes = await run(
+    "UPDATE orders SET status = 'PAID', updated_at = CURRENT_TIMESTAMP WHERE order_id = ?",
+    [orderId]
+  );
+  return changes > 0;
 }
 
-export function linkOrderToResult(orderId, resultId) {
-  return new Promise((resolve, reject) => {
-    const database = getDb();
-    database.run(
-      // Single-use: only claim an order not already linked to another result
-      'UPDATE orders SET result_id = ?, updated_at = CURRENT_TIMESTAMP WHERE order_id = ? AND result_id IS NULL',
-      [resultId, orderId],
-      function (err) {
-        if (err) return reject(err);
-        if (this.changes === 0) return resolve(false);
-        database.run(
-          'UPDATE assessment_results SET order_id = ? WHERE id = ?',
-          [orderId, resultId],
-          function (err2) {
-            if (err2) reject(err2);
-            else resolve(true);
-          }
-        );
-      }
-    );
-  });
+export async function markOrderUsed(orderId) {
+  // Only a PAID order can be consumed, and only once
+  const changes = await run(
+    "UPDATE orders SET status = 'USED', updated_at = CURRENT_TIMESTAMP WHERE order_id = ? AND status = 'PAID'",
+    [orderId]
+  );
+  return changes > 0;
 }
 
-export function saveResultRegistration(resultId, encryptedRegistration, iv) {
-  return new Promise((resolve, reject) => {
-    const database = getDb();
-    database.run(
-      'UPDATE assessment_results SET registration = ?, registration_iv = ? WHERE id = ?',
-      [encryptedRegistration, iv, resultId],
-      function (err) {
-        if (err) reject(err);
-        else resolve(this.changes > 0);
-      }
-    );
-  });
+export async function linkOrderToResult(orderId, resultId) {
+  // Single-use: only claim an order not already linked to another result
+  const claimed = await run(
+    'UPDATE orders SET result_id = ?, updated_at = CURRENT_TIMESTAMP WHERE order_id = ? AND result_id IS NULL',
+    [resultId, orderId]
+  );
+  if (claimed === 0) return false;
+  await run(
+    'UPDATE assessment_results SET order_id = ? WHERE id = ?',
+    [orderId, resultId]
+  );
+  return true;
 }
 
-export function getResultFull(id) {
-  return new Promise((resolve, reject) => {
-    const database = getDb();
-    database.get(
-      'SELECT encrypted_answers, iv, user_id, test_id, order_id, registration, registration_iv, emailed_at FROM assessment_results WHERE id = ?',
-      [id],
-      (err, row) => {
-        if (err) reject(err);
-        else resolve(row || null);
-      }
-    );
-  });
+export async function saveResultRegistration(resultId, encryptedRegistration, iv) {
+  const changes = await run(
+    'UPDATE assessment_results SET registration = ?, registration_iv = ? WHERE id = ?',
+    [encryptedRegistration, iv, resultId]
+  );
+  return changes > 0;
 }
 
-export function markResultEmailed(resultId) {
-  return new Promise((resolve, reject) => {
-    const database = getDb();
-    database.run(
-      'UPDATE assessment_results SET emailed_at = CURRENT_TIMESTAMP WHERE id = ?',
-      [resultId],
-      function (err) {
-        if (err) reject(err);
-        else resolve(this.changes > 0);
-      }
-    );
-  });
+export async function getResultFull(id) {
+  return get(
+    'SELECT encrypted_answers, iv, user_id, test_id, order_id, registration, registration_iv, emailed_at FROM assessment_results WHERE id = ?',
+    [id]
+  );
+}
+
+export async function markResultEmailed(resultId) {
+  const changes = await run(
+    'UPDATE assessment_results SET emailed_at = CURRENT_TIMESTAMP WHERE id = ?',
+    [resultId]
+  );
+  return changes > 0;
 }
 
 // Initialize DB on module load
-getDb();
+ready().catch((err) => console.error('Database initialization failed:', err.message));
