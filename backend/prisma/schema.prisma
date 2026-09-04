@@ -230,3 +230,59 @@ model RefreshToken {
   expiresAt DateTime
   createdAt DateTime @default(now())
 }
+
+// ─────────────────────────────────────────────────────────────
+// MAIN-SITE TABLES (career guidance test / payments)
+// These tables are created and managed by backend/src/db.js via raw SQL
+// (the main site stores them in the same Postgres database). They are
+// declared here ONLY so `prisma db push` recognises them as owned and
+// never drops them as "drift". Keep the columns in sync with the
+// CREATE TABLE statements in db.js — do not query them via Prisma.
+// ─────────────────────────────────────────────────────────────
+
+model CareerUser {
+  id            String    @id @db.Text
+  name          String    @db.Text
+  email         String    @unique @db.Text
+  password      String    @db.Text
+  phone         String?   @db.Text
+  createdAt     DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  otpCode       String?   @map("otp_code") @db.Text
+  otpExpiresAt  DateTime? @map("otp_expires_at") @db.Timestamptz(6)
+  otpPurpose    String?   @map("otp_purpose") @db.Text
+  otpLastSentAt DateTime? @map("otp_last_sent_at") @db.Timestamptz(6)
+  otpAttempts   Int?      @default(0) @map("otp_attempts")
+  tokenVersion  Int?      @default(0) @map("token_version")
+  emailVerified Int?      @map("email_verified")
+
+  @@map("users")
+}
+
+model CareerAssessmentResult {
+  id               String    @id @db.Text
+  encryptedAnswers String    @map("encrypted_answers") @db.Text
+  iv               String    @db.Text
+  userId           String?   @map("user_id") @db.Text
+  testId           String?   @map("test_id") @db.Text
+  registration     String?   @db.Text
+  registrationIv   String?   @map("registration_iv") @db.Text
+  orderId          String?   @map("order_id") @db.Text
+  emailedAt        DateTime? @map("emailed_at") @db.Timestamptz(6)
+  createdAt        DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([userId], map: "idx_results_user")
+  @@map("assessment_results")
+}
+
+model CareerOrder {
+  orderId   String    @id @map("order_id") @db.Text
+  serviceId String    @map("service_id") @db.Text
+  amount    Float
+  status    String    @default("CREATED") @db.Text
+  resultId  String?   @map("result_id") @db.Text
+  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime? @map("updated_at") @db.Timestamptz(6)
+
+  @@index([createdAt], map: "idx_orders_created")
+  @@map("orders")
+}
