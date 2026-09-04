@@ -11,6 +11,8 @@ const AssessmentTestPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const resultId = searchParams.get('id');
+  // Retake flow: purchasers revisit via /my-results and skip the payment gate
+  const isRetake = searchParams.get('retake') === '1';
   const [registration, setRegistration] = useState<any>(null);
   const [isPaid, setIsPaid] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -26,9 +28,9 @@ const AssessmentTestPage: React.FC = () => {
     }
     // Check if career test was already paid this session
     const paid = sessionStorage.getItem('career_paid');
-    if (paid === 'true') setIsPaid(true);
+    if (paid === 'true' || isRetake) setIsPaid(true);
     setLoading(false);
-  }, []);
+  }, [isRetake]);
 
   if (loading) {
     return (

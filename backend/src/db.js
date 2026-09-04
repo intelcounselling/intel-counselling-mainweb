@@ -242,9 +242,21 @@ export async function linkResultToUser(resultId, userId) {
 
 export async function getUserResults(userId) {
   return all(
-    'SELECT id, test_id, created_at FROM assessment_results WHERE user_id = ? ORDER BY created_at DESC',
+    'SELECT id, test_id, order_id, created_at FROM assessment_results WHERE user_id = ? ORDER BY created_at DESC',
     [userId]
   );
+}
+
+// A result with a linked order was paid (orders are only linked to results
+// after the payment webhook verifies them). Counting these for a user gives
+// their career-test purchase entitlement — retakes and result re-views are
+// free once they own at least one paid career result.
+export async function getPaidCareerResultCount(userId) {
+  const row = await get(
+    "SELECT COUNT(*) AS n FROM assessment_results WHERE user_id = ? AND test_id = 'career' AND order_id IS NOT NULL",
+    [userId]
+  );
+  return row ? Number(row.n) : 0;
 }
 
 // Total registered accounts — diagnostic for the ephemeral-disk wipe issue.

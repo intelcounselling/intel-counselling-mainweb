@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, Loader2, Sparkles, Brain, Target, UserCheck, PhoneCall, Check, Monitor, MapPin } from 'lucide-react';
 import { setAuthSession } from '../utils/auth';
 import { apiClient } from '../utils/api';
@@ -32,6 +33,7 @@ const loadCashfreeScript = () => {
 };
 
 const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onSuccess, onClose }) => {
+  const navigate = useNavigate();
   const { demoMode, prices } = usePricing();
   const assessmentPrice = formatPrice(prices.career_assessment);
   const plusPrice = formatPrice(prices.career_assessment_plus);
@@ -574,6 +576,16 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
                   </div>
                 )}
               </form>
+
+              <div className="text-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => navigate('/my-results')}
+                  className="text-[10px] text-terracotta hover:underline font-bold"
+                >
+                  Already purchased? View & retake your results
+                </button>
+              </div>
             </div>
           ) : (
             <>

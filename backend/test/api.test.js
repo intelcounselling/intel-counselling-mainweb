@@ -13,6 +13,7 @@ process.env.ENCRYPTION_KEY = 'test-encryption-key';
 process.env.AUTH_TOKEN_SECRET = 'test-token-secret';
 process.env.CASHFREE_SECRET_KEY = 'test-cashfree-secret';
 delete process.env.BREVO_API_KEY; // never send real email from tests
+delete process.env.DATABASE_URL;  // tests always run against the SQLite driver
 const TMP_DB = path.join(os.tmpdir(), `intel-test-${Date.now()}-${Math.random().toString(36).slice(2)}.sqlite`);
 process.env.SQLITE_PATH = TMP_DB;
 
@@ -167,6 +168,59 @@ test('order lifecycle gates the career pipeline', async () => {
   // fails on the missing BREVO_API_KEY (500) — proving payment/identity gates pass.
   const gated = await post('/send-career-results', { resultId });
   assert.equal(gated.status, 500);
+});
+
+test('career purchase entitlement unlocks re-view, retake and re-send', async () => {
+  // Not entitled before any purchase
+  const before = await get('/career-access', { Authorization: `Bearer ${token}` });
+  assert.equal(before.status, 200);
+  assert.deepEqual(await before.json(), { entitled: false });
+
+  // Simulate a purchase: paid order linked to a career result
+  const orderId = 'ORDER_' + crypto.randomBytes(8).toString('hex');
+  await db.createOrder(orderId, 'career_assessment', 2999);
+  await db.markOrderPaid(orderId);
+  const paid = await post('/save-answers', {
+    answers: '4'.repeat(200),
+    orderId,
+    registration: { name: 'Tester', email: EMAIL },
+  });
+  assert.equal(paid.status, 200);
+  const { id: paidResultId } = await paid.json();
+
+  // Attach the purchase to the tester's account (logged-in purchase flow)
+  const link = await post('/link-result', { resultId: paidResultId }, { Authorization: `Bearer ${token}` });
+  assert.equal(link.status, 200);
+
+  // Now entitled
+  const after = await get('/career-access', { Authorization: `Bearer ${token}` });
+  assert.equal(after.status, 200);
+  assert.deepEqual(await after.json(), { entitled: true });
+
+  // user-results lists career results with their purchase status
+  const list = await (await get('/user-results', { Authorization: `Bearer ${token}` })).json();
+  const careerRows = list.results.filter((r) => r.test_id === 'career');
+  assert.equal(careerRows.length, 1);
+  assert.ok(careerRows[0].order_id, 'paid career result carries its order id');
+
+  // Retake: a fresh result owned by the entitled user (no order attached)
+  // passes the payment gate via the retake allowance → proceeds to Brevo (500).
+  const retake = await post(
+    '/save-answers',
+    { answers: '2'.repeat(200), registration: { name: 'Tester', email: EMAIL } },
+    { Authorization: `Bearer ${token}` }
+  );
+  assert.equal(retake.status, 200);
+  const { id: retakeId } = await retake.json();
+  const reEmail = await post('/send-career-results', { resultId: retakeId }, { Authorization: `Bearer ${token}` });
+  assert.equal(reEmail.status, 500);
+
+  // The retake allowance requires owning the result — someone else's result
+  // stays gated at 402 even for an entitled user.
+  const anonRetake = await post('/save-answers', { answers: '2'.repeat(200), registration: { name: 'Anon', email: 'anon@example.com' } });
+  const { id: anonRetakeId } = await anonRetake.json();
+  const gatedAnon = await post('/send-career-results', { resultId: anonRetakeId }, { Authorization: `Bearer ${token}` });
+  assert.equal(gatedAnon.status, 402);
 });
 
 test('booking emails require payment proof', async () => {

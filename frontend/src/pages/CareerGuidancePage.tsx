@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Sparkles, ArrowRight, Brain, Target, UserCheck, Calendar } from 'lucide-react';
+import { ArrowLeft, Sparkles, ArrowRight, Brain, Target, UserCheck, Calendar, FileText } from 'lucide-react';
 import SpotlightCard from '../components/SpotlightCard';
 import FadeIn from '../components/FadeIn';
 import { usePricing, formatPrice } from '../utils/pricing';
@@ -119,6 +119,15 @@ const CareerGuidancePage: React.FC = () => {
                 className="w-full sm:w-auto px-10 py-5 bg-terracotta hover:bg-terracotta/90 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all text-xs flex items-center justify-center gap-3"
               >
                 Get Access & Start <ArrowRight size={16} />
+              </button>
+            </div>
+
+            <div className="flex justify-center pt-6">
+              <button
+                onClick={() => navigate('/my-results')}
+                className="inline-flex items-center gap-2 text-xs font-bold text-white/50 hover:text-terracotta transition-colors uppercase tracking-widest"
+              >
+                <FileText size={13} /> Already purchased? View & retake your results
               </button>
             </div>
           </SpotlightCard>

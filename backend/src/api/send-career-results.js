@@ -1,7 +1,8 @@
 import PDFDocument from 'pdfkit-table';
 import { escapeHtml, plainText } from '../escape.js';
 import { decrypt } from '../encryption.js';
-import { getResultFull, getOrder, markResultEmailed } from '../db.js';
+import { getResultFull, getOrder, markResultEmailed, getPaidCareerResultCount } from '../db.js';
+import { authenticateRequest } from '../token.js';
 import { scoreCareerAnswers, TOTAL_QUESTIONS } from '../careerScoring.js';
 
 const MI_DESC = {
@@ -229,7 +230,15 @@ export default async function handler(req, res) {
     const order = storedResult.order_id ? await getOrder(storedResult.order_id) : null;
     // USED means the order's free session was claimed — payment itself is still valid
     if (!order || !['PAID', 'USED'].includes(order.status)) {
-      return res.status(402).json({ error: 'Payment not verified for this result' });
+      // Retake allowance: a signed-in user who owns this result and has at
+      // least one previously paid career result may re-take and re-receive
+      // their report without paying again.
+      const userId = await authenticateRequest(req);
+      const ownsResult = !!userId && storedResult.user_id === userId;
+      const paidCount = ownsResult ? await getPaidCareerResultCount(userId) : 0;
+      if (paidCount === 0) {
+        return res.status(402).json({ error: 'Payment not verified for this result' });
+      }
     }
 
     // Duplicate suppression: this result's report was already emailed.

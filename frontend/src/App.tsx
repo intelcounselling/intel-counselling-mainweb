@@ -13,6 +13,7 @@ const AssessmentsPage = lazy(() => import('./pages/AssessmentsPage'));
 const AssessmentTestPage = lazy(() => import('./pages/AssessmentTestPage'));
 const BookingPage = lazy(() => import('./pages/BookingPage'));
 const CareerGuidancePage = lazy(() => import('./pages/CareerGuidancePage'));
+const MyResultsPage = lazy(() => import('./pages/MyResultsPage'));
 
 // Minimal centered spinner shown briefly while a route chunk loads
 const RouteFallback = () => (
@@ -87,6 +88,7 @@ const AppContent: React.FC = () => {
           <Route path="/assessments" element={<AssessmentsPage />} />
           <Route path="/assessments/:testId" element={<AssessmentTestPage />} />
           <Route path="/career-assessment" element={<CareerGuidancePage />} />
+          <Route path="/my-results" element={<MyResultsPage />} />
           <Route path="/booking" element={<BookingPage />} />
         </Routes>
       </Suspense>
