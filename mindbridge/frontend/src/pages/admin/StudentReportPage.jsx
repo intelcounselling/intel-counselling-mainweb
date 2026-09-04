@@ -284,13 +284,21 @@ export default function StudentReportPage() {
   }
 
   if (error || !data) {
+    const status = error?.response?.status;
     return (
       <div className="min-h-screen bg-surface-50 flex items-center justify-center">
         <div className="text-center space-y-3">
           <p className="text-5xl">⚠️</p>
           <h2 className="text-xl font-bold text-surface-900">Failed to load report</h2>
-          <p className="text-surface-500 text-sm">The student data could not be retrieved.</p>
-          <button onClick={() => navigate(-1)} className="text-primary-600 text-sm underline">Go back</button>
+          {status === 401 || status === 403 ? (
+            <p className="text-surface-500 text-sm">
+              Your session could not be verified in this tab. Refresh the page or log in again.
+            </p>
+          ) : (
+            <p className="text-surface-500 text-sm">The student data could not be retrieved.</p>
+          )}
+          <button onClick={() => window.location.reload()} className="text-primary-600 text-sm underline">Refresh page</button>
+          <button onClick={() => navigate(-1)} className="text-primary-600 text-sm underline ml-3">Go back</button>
         </div>
       </div>
     );
