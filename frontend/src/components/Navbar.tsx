@@ -148,16 +148,13 @@ const Navbar: React.FC<NavbarProps> = ({ onBookClick, onAssessmentClick, onLogin
           <button 
             onClick={onBookClick}
             className="group relative overflow-hidden flex items-center justify-center gap-2
-                       bg-gradient-to-r from-[#C19B6C] via-[#d4a96e] to-[#1C3F39]
+                       bg-terracotta
                        text-white rounded-full font-bold transition-all duration-300
                        shadow-[0_0_0_1px_rgba(193,155,108,0.4),0_4px_20px_rgba(193,155,108,0.35)]
                        active:scale-95 px-3 md:px-5 lg:px-7 py-2 md:py-2.5 lg:py-3
                        text-[10px] lg:text-[13px] tracking-wide
                        hover:shadow-[0_0_0_2px_rgba(193,155,108,0.5),0_6px_28px_rgba(193,155,108,0.45)] hover:-translate-y-[1px]"
           >
-            {/* Shimmer sweep */}
-            <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent
-                             -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
             <span className="relative z-10 whitespace-nowrap hidden sm:inline">
               Book <span className="hidden lg:inline">Appointment</span>
             </span>
@@ -265,10 +262,9 @@ const Navbar: React.FC<NavbarProps> = ({ onBookClick, onAssessmentClick, onLogin
             <button 
               onClick={() => { onBookClick(); setIsMenuOpen(false); }}
               className="group relative overflow-hidden w-full py-5 rounded-2xl font-bold text-base
-                         bg-gradient-to-r from-[#C19B6C] via-[#d4a96e] to-[#1C3F39] text-white
+                         bg-terracotta text-white
                          shadow-[0_0_0_1px_rgba(193,155,108,0.4),0_6px_24px_rgba(193,155,108,0.4)]"
             >
-              <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
               <span className="relative z-10">Book Appointment</span>
             </button>
             {user ? (
