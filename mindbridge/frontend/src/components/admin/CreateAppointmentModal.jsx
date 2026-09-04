@@ -61,6 +61,24 @@ export default function CreateAppointmentModal({ isOpen, onClose, prefillStudent
     }
   }, [psychiatrists, selectedPsych]);
 
+  // Reset/sync form state every time the modal opens. The useState
+  // initializers below only run on the component's FIRST mount — and both
+  // AdminDashboard and AdminAppointments keep this modal mounted permanently
+  // (with prefillStudent=null), so without this effect the prefill never
+  // applies and stale state (previously selected student, old slot/notes)
+  // leaks into the next open — appointments could be created for the wrong
+  // student.
+  useEffect(() => {
+    if (!isOpen) return;
+    setSelectedStudent(prefillStudent || null);
+    setStep(prefillStudent ? 2 : 1);
+    setSearch('');
+    setSlot('');
+    setNotes('');
+    setMeetingLink('');
+    setSelectedResults([]);
+  }, [isOpen, prefillStudent]);
+
   const atRiskFirst = useMemo(() => [
     ...students.filter(s => s.alerts?.length > 0),
     ...students.filter(s => !s.alerts?.length),
