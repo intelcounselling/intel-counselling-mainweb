@@ -125,8 +125,6 @@ ALLOWED_ORIGINS=https://<vercel-frontend-domain>            # CORS in production
    running instance is **stale** and the newest deploy did not go live.
 4. Remember: free-tier instances spin down after 15 min idle; the first request
    after idle can take ~30–60 s (this is a cold start, not a failure).
-4. Remember: free-tier instances spin down after 15 min idle; the first request
-   after idle can take ~30–60 s (this is a cold start, not a failure).
 5. **Build fails at `prisma db push` with `FATAL: (ENOTFOUND) tenant/user
    postgres.<ref> not found`** — this is a Supabase (Supavisor) pooler
    rejection meaning the project ref `<ref>` in `DATABASE_URL`/`DIRECT_URL`
@@ -142,8 +140,6 @@ ALLOWED_ORIGINS=https://<vercel-frontend-domain>            # CORS in production
      → use the exact hostname Supabase shows for this project.
    Also: `DIRECT_URL` (used for migrations/db push) should ideally be the
    **direct** connection (`db.<ref>.supabase.co:5432`), not the pooled one.
-
-### Known limitation: SQLite on Render
 
 ### Known limitation: SQLite on Render
 
