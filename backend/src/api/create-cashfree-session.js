@@ -25,7 +25,7 @@ export default async function handler(req, res) {
 
     // Prices live server-side only — the client picks a service, never an amount.
     // Env overrides let pricing change without a deploy. DEMO_MODE=true makes
-    // every service ₹0.1 (see src/pricing.js).
+    // every service ₹1 (see src/pricing.js).
     const PRICES = getPrices();
 
     const orderAmount = PRICES[serviceId];

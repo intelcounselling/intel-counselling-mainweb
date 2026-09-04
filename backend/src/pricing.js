@@ -1,7 +1,7 @@
 // Central pricing source of truth.
 //
 // DEMO MODE: set the DEMO_MODE environment variable to "true" (or "1"/"yes")
-// and every service price collapses to ₹0.1 so payment flows can be
+// and every service price collapses to ₹1 so payment flows can be
 // demonstrated end-to-end (Cashfree sandbox / tiny live charge) without
 // touching real prices. Unset it (or set anything else) and normal pricing
 // returns — no code change needed, just a backend restart/redeploy.
@@ -9,7 +9,7 @@
 // The client never sends an amount; it only picks a serviceId. Displayed
 // prices come from GET /api/config so they always mirror what will be charged.
 
-export const DEMO_PRICE = 0.1;
+export const DEMO_PRICE = 1;
 
 const BASE_PRICES = {
   session_online: Number(process.env.SESSION_PRICE_ONLINE || 1600),
