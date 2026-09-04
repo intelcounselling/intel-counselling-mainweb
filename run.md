@@ -92,12 +92,15 @@ The backend is deployed as a Render Web Service at `https://intel-counselling.on
 | Start Command | `npm start` (runs `node server.js`) |
 | Health Check Path | `/api/health` |
 
-> **Note:** `backend/package-lock.json` is now committed, so the build command may
-> be either `npm install && npm run build` or the stricter `npm ci && npm run build`
-> (both run `prisma generate`). If you add/update backend dependencies, regenerate
-> the lockfile (`npm install --package-lock-only` inside `backend/`) and commit it.
+> **Note:** Dependency installs resolve through the **root workspace
+> lockfile** (`package-lock.json` at the repo root), which covers the
+> `frontend` and `backend` workspaces. When you add/update backend
+> dependencies, run `npm install` at the repo root and commit the updated
+> root lockfile. The old standalone `backend/package-lock.json` was removed
+> because it drifted out of sync and would break `npm ci`. Build command:
+> `npm install && npm run build` (runs `prisma generate`).
 > `engines.node` is pinned to `>=20` in `backend/package.json` so Render uses an
-> LTS version the dependency set (Prisma 5, sqlite3 native build) supports.
+> LTS version the dependency set (Prisma 5) supports.
 
 ### Required environment variables (Render → Environment)
 
