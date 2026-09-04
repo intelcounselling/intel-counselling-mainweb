@@ -6,14 +6,40 @@ import ClickSpark from './components/ClickSpark';
 import InteractiveBackground from './components/InteractiveBackground';
 import AuthModal from './components/AuthModal';
 
+// ── Stale-deploy recovery ─────────────────────────────────────
+// Lazy routes fetch content-hashed chunks. After a new deploy those
+// filenames no longer exist, so users with an already-open app (or a cached
+// index.html) get "Failed to fetch dynamically imported module" when they
+// navigate. Recover by reloading the page once — a full reload fetches the
+// fresh index.html with the new chunk names. The sessionStorage guard
+// prevents reload loops when the failure is genuine (e.g. offline).
+const CHUNK_ERROR = /failed to fetch dynamically imported module|importing a module script failed|error loading dynamically imported module|loading chunk/i;
+const CHUNK_RELOAD_KEY = 'vite:chunk-reload-at';
+
+function staleSafeLazy<T extends React.ComponentType<any>>(factory: () => Promise<{ default: T }>) {
+  return lazy(() =>
+    factory().catch((err) => {
+      if (CHUNK_ERROR.test(String(err?.message || err))) {
+        const last = Number(sessionStorage.getItem(CHUNK_RELOAD_KEY) || 0);
+        if (Date.now() - last > 10000) {
+          sessionStorage.setItem(CHUNK_RELOAD_KEY, String(Date.now()));
+          window.location.reload();
+          return new Promise<{ default: T }>(() => {}); // halt navigation — reloading
+        }
+      }
+      throw err;
+    })
+  );
+}
+
 // Pages (lazy-loaded for route-level code splitting)
-const Home = lazy(() => import('./pages/Home'));
-const ServicePage = lazy(() => import('./pages/ServicePage'));
-const AssessmentsPage = lazy(() => import('./pages/AssessmentsPage'));
-const AssessmentTestPage = lazy(() => import('./pages/AssessmentTestPage'));
-const BookingPage = lazy(() => import('./pages/BookingPage'));
-const CareerGuidancePage = lazy(() => import('./pages/CareerGuidancePage'));
-const MyResultsPage = lazy(() => import('./pages/MyResultsPage'));
+const Home = staleSafeLazy(() => import('./pages/Home'));
+const ServicePage = staleSafeLazy(() => import('./pages/ServicePage'));
+const AssessmentsPage = staleSafeLazy(() => import('./pages/AssessmentsPage'));
+const AssessmentTestPage = staleSafeLazy(() => import('./pages/AssessmentTestPage'));
+const BookingPage = staleSafeLazy(() => import('./pages/BookingPage'));
+const CareerGuidancePage = staleSafeLazy(() => import('./pages/CareerGuidancePage'));
+const MyResultsPage = staleSafeLazy(() => import('./pages/MyResultsPage'));
 
 // Minimal centered spinner shown briefly while a route chunk loads
 const RouteFallback = () => (

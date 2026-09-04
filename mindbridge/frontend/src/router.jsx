@@ -1,16 +1,16 @@
-import { lazy, Suspense } from 'react';
+﻿import { lazy, Suspense } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import ProtectedRoute from './utils/roleGuard';
 import { ROLE_DASHBOARDS } from './utils/roleGuard';
 import AppShell from './components/layout/AppShell';
 import useAuthStore from './store/authStore';
 
-// ── Auth ──────────────────────────────────────────────────────
+// â”€â”€ Auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 import Login from './pages/auth/Login';
 import ResetPassword from './pages/auth/ResetPassword';
 import ForgotPassword from './pages/auth/ForgotPassword';
 
-// ── Helper ────────────────────────────────────────────────────
+// â”€â”€ Helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const Loadable = (Component) => (props) => (
   <Suspense fallback={
     <div className="flex h-[calc(100vh-64px)] w-full items-center justify-center bg-surface-50">
@@ -24,41 +24,68 @@ const Loadable = (Component) => (props) => (
   </Suspense>
 );
 
-// ── Admin ─────────────────────────────────────────────
-const AdminDashboard = Loadable(lazy(() => import('./pages/admin/AdminDashboard')));
-const SchoolList = Loadable(lazy(() => import('./pages/admin/SchoolList')));
-const SchoolDetail = Loadable(lazy(() => import('./pages/admin/SchoolDetail')));
-const SchoolDashboard = Loadable(lazy(() => import('./pages/admin/SchoolDashboard')));
-const ClassManager = Loadable(lazy(() => import('./pages/admin/ClassManager')));
-const ClassAnalytics = Loadable(lazy(() => import('./pages/admin/ClassAnalytics')));
-const CreateFamily = Loadable(lazy(() => import('./pages/admin/CreateFamily')));
-const UserManagement = Loadable(lazy(() => import('./pages/admin/UserManagement')));
-const GenerateCredentials = Loadable(lazy(() => import('./pages/admin/GenerateCredentials')));
-const StudentReportPage = Loadable(lazy(() => import('./pages/admin/StudentReportPage')));
-const AdminAppointments = Loadable(lazy(() => import('./pages/admin/AdminAppointments')));
+// â”€â”€ Stale-deploy recovery â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Lazy routes fetch content-hashed chunks (e.g. ConcernForm-BnoQpt4n.js).
+// After a new deploy those filenames no longer exist, so users with an
+// already-open app (or a cached index.html) get "Failed to fetch dynamically
+// imported module" when they navigate. Recover by reloading the page once â€”
+// a full reload fetches the fresh index.html with the new chunk names. The
+// sessionStorage guard prevents reload loops when the failure is genuine
+// (e.g. the user is offline).
+const CHUNK_ERROR = /failed to fetch dynamically imported module|importing a module script failed|error loading dynamically imported module|loading chunk/i;
+const CHUNK_RELOAD_KEY = 'vite:chunk-reload-at';
 
-// ── Psychiatrist ──────────────────────────────────────────────
-const PsychiatristDashboard = Loadable(lazy(() => import('./pages/psychiatrist/PsychiatristDashboard')));
-const SchoolOverview = Loadable(lazy(() => import('./pages/psychiatrist/SchoolOverview')));
-const AlertsFeed = Loadable(lazy(() => import('./pages/psychiatrist/AlertsFeed')));
-const StudentProfile = Loadable(lazy(() => import('./pages/psychiatrist/StudentProfile')));
-const AppointmentManager = Loadable(lazy(() => import('./pages/psychiatrist/AppointmentManager')));
+function staleSafeLazy(factory) {
+  return lazy(() =>
+    factory().catch((err) => {
+      if (CHUNK_ERROR.test(String(err?.message || err))) {
+        const last = Number(sessionStorage.getItem(CHUNK_RELOAD_KEY) || 0);
+        if (Date.now() - last > 10000) {
+          sessionStorage.setItem(CHUNK_RELOAD_KEY, String(Date.now()));
+          window.location.reload();
+          return new Promise(() => {}); // halt navigation â€” the page is reloading
+        }
+      }
+      throw err;
+    })
+  );
+}
 
-// ── Parent ─────────────────────────────────────────────
-const ParentDashboard = Loadable(lazy(() => import('./pages/parent/ParentDashboard')));
-const ChildResults = Loadable(lazy(() => import('./pages/parent/ChildResults')));
-const AppointmentList = Loadable(lazy(() => import('./pages/parent/AppointmentList')));
-const ComparisonReport = Loadable(lazy(() => import('./pages/parent/ComparisonReport')));
+// â”€â”€ Admin â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const AdminDashboard = Loadable(staleSafeLazy(() => import('./pages/admin/AdminDashboard')));
+const SchoolList = Loadable(staleSafeLazy(() => import('./pages/admin/SchoolList')));
+const SchoolDetail = Loadable(staleSafeLazy(() => import('./pages/admin/SchoolDetail')));
+const SchoolDashboard = Loadable(staleSafeLazy(() => import('./pages/admin/SchoolDashboard')));
+const ClassManager = Loadable(staleSafeLazy(() => import('./pages/admin/ClassManager')));
+const ClassAnalytics = Loadable(staleSafeLazy(() => import('./pages/admin/ClassAnalytics')));
+const CreateFamily = Loadable(staleSafeLazy(() => import('./pages/admin/CreateFamily')));
+const UserManagement = Loadable(staleSafeLazy(() => import('./pages/admin/UserManagement')));
+const GenerateCredentials = Loadable(staleSafeLazy(() => import('./pages/admin/GenerateCredentials')));
+const StudentReportPage = Loadable(staleSafeLazy(() => import('./pages/admin/StudentReportPage')));
+const AdminAppointments = Loadable(staleSafeLazy(() => import('./pages/admin/AdminAppointments')));
 
-// ── Student ───────────────────────────────────────────────────
-const StudentDashboard = Loadable(lazy(() => import('./pages/student/StudentDashboard')));
-const TestList = Loadable(lazy(() => import('./pages/student/TestList')));
-const TakeTest = Loadable(lazy(() => import('./pages/student/TakeTest')));
-const ResultDetail = Loadable(lazy(() => import('./pages/student/ResultDetail')));
-const ConcernForm = Loadable(lazy(() => import('./pages/student/ConcernForm')));
+// â”€â”€ Psychiatrist â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const PsychiatristDashboard = Loadable(staleSafeLazy(() => import('./pages/psychiatrist/PsychiatristDashboard')));
+const SchoolOverview = Loadable(staleSafeLazy(() => import('./pages/psychiatrist/SchoolOverview')));
+const AlertsFeed = Loadable(staleSafeLazy(() => import('./pages/psychiatrist/AlertsFeed')));
+const StudentProfile = Loadable(staleSafeLazy(() => import('./pages/psychiatrist/StudentProfile')));
+const AppointmentManager = Loadable(staleSafeLazy(() => import('./pages/psychiatrist/AppointmentManager')));
 
-// ── Shared Settings ───────────────────────────────────────────
-const Settings = Loadable(lazy(() => import('./pages/Settings')));
+// â”€â”€ Parent â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const ParentDashboard = Loadable(staleSafeLazy(() => import('./pages/parent/ParentDashboard')));
+const ChildResults = Loadable(staleSafeLazy(() => import('./pages/parent/ChildResults')));
+const AppointmentList = Loadable(staleSafeLazy(() => import('./pages/parent/AppointmentList')));
+const ComparisonReport = Loadable(staleSafeLazy(() => import('./pages/parent/ComparisonReport')));
+
+// â”€â”€ Student â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const StudentDashboard = Loadable(staleSafeLazy(() => import('./pages/student/StudentDashboard')));
+const TestList = Loadable(staleSafeLazy(() => import('./pages/student/TestList')));
+const TakeTest = Loadable(staleSafeLazy(() => import('./pages/student/TakeTest')));
+const ResultDetail = Loadable(staleSafeLazy(() => import('./pages/student/ResultDetail')));
+const ConcernForm = Loadable(staleSafeLazy(() => import('./pages/student/ConcernForm')));
+
+// â”€â”€ Shared Settings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const Settings = Loadable(staleSafeLazy(() => import('./pages/Settings')));
 
 const ADMIN_ROLES = ['SUPER_ADMIN', 'SCHOOL_ADMIN'];
 
@@ -80,7 +107,7 @@ const router = createBrowserRouter([
     element: <ProtectedRoute><ResetPassword /></ProtectedRoute>,
   },
 
-  // ── Admin ──────────────────────────────────────────────────
+  // â”€â”€ Admin â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   {
     path: '/admin',
     element: (
@@ -104,7 +131,7 @@ const router = createBrowserRouter([
     ],
   },
 
-  // ── Psychiatrist ───────────────────────────────────────────
+  // â”€â”€ Psychiatrist â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   {
     path: '/psychiatrist',
     element: (
@@ -123,7 +150,7 @@ const router = createBrowserRouter([
     ],
   },
 
-  // ── Parent ─────────────────────────────────────────────────
+  // â”€â”€ Parent â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   {
     path: '/parent',
     element: (
@@ -141,7 +168,7 @@ const router = createBrowserRouter([
     ],
   },
 
-  // ── Student ────────────────────────────────────────────────
+  // â”€â”€ Student â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   {
     path: '/student',
     element: (
@@ -160,13 +187,13 @@ const router = createBrowserRouter([
     ],
   },
 
-  // ── 404 ────────────────────────────────────────────────────
+  // â”€â”€ 404 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   {
     path: '*',
     element: (
       <div className="min-h-screen bg-surface-50 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-8xl mb-4">🧠</p>
+          <p className="text-8xl mb-4">ðŸ§ </p>
           <h1 className="text-3xl font-bold text-surface-900 mb-2">Page Not Found</h1>
           <p className="text-surface-500 mb-6">The page you're looking for doesn't exist.</p>
           <a href="/" className="text-primary-600 underline">Go home</a>
