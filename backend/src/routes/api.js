@@ -12,6 +12,8 @@ import sendInquiryEmailHandler from '../api/send-inquiry-email.js';
 import sendRegistrationEmailHandler from '../api/send-registration-email.js';
 import registerHandler from '../api/register.js';
 import loginHandler from '../api/login.js';
+import verifyEmailHandler from '../api/verify-email.js';
+import resendVerificationHandler from '../api/resend-verification.js';
 import logoutAllHandler from '../api/logout-all.js';
 import linkResultHandler from '../api/link-result.js';
 import userResultsHandler from '../api/user-results.js';
@@ -97,6 +99,8 @@ router.get('/db-status', async (req, res) => {
 });
 router.post('/register', authLimiter, registerHandler);
 router.post('/login', authLimiter, loginHandler);
+router.post('/verify-email', authLimiter, verifyEmailHandler);
+router.post('/resend-verification', authLimiter, resendVerificationHandler);
 router.post('/logout-all', authLimiter, logoutAllHandler);
 router.post('/forgot-password', authLimiter, forgotPasswordHandler);
 router.post('/verify-otp', authLimiter, verifyOtpHandler);

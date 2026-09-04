@@ -49,6 +49,21 @@ function getDb() {
           if (!rows.some(r => r.name === 'token_version')) {
             db.run('ALTER TABLE users ADD COLUMN token_version INTEGER DEFAULT 0', () => {});
           }
+          // Purpose-scoped OTPs: a code issued for email verification can never
+          // be replayed against password reset (and vice versa).
+          if (!rows.some(r => r.name === 'otp_purpose')) {
+            db.run('ALTER TABLE users ADD COLUMN otp_purpose TEXT', () => {});
+          }
+          // Per-account resend cooldown timestamp (ISO string).
+          if (!rows.some(r => r.name === 'otp_last_sent_at')) {
+            db.run('ALTER TABLE users ADD COLUMN otp_last_sent_at DATETIME', () => {});
+          }
+          // Email verification flag. NULL = legacy account created before
+          // verification existed — treated as verified (grandfathered) so
+          // existing users are never locked out. 0 = pending verification.
+          if (!rows.some(r => r.name === 'email_verified')) {
+            db.run('ALTER TABLE users ADD COLUMN email_verified INTEGER', () => {});
+          }
         }
       });
     });
@@ -139,7 +154,7 @@ export function createUser(id, name, email, password, phone) {
   return new Promise((resolve, reject) => {
     const database = getDb();
     database.run(
-      'INSERT INTO users (id, name, email, password, phone) VALUES (?, ?, ?, ?, ?)',
+      'INSERT INTO users (id, name, email, password, phone, email_verified) VALUES (?, ?, ?, ?, ?, 0)',
       [id, name, email, password, phone],
       function (err) {
         if (err) reject(err);
@@ -213,12 +228,15 @@ export function getUserResults(userId) {
   });
 }
 
-export function updateUserOTP(email, otpCode, expiresAt) {
+export function updateUserOTP(email, otpCode, expiresAt, purpose) {
   return new Promise((resolve, reject) => {
     const database = getDb();
+    // Store otp_last_sent_at as an ISO-8601 string — SQLite's CURRENT_TIMESTAMP
+    // ('YYYY-MM-DD HH:MM:SS' UTC) is ambiguous to JS Date parsing and breaks
+    // the resend-cooldown math across timezones.
     database.run(
-      'UPDATE users SET otp_code = ?, otp_expires_at = ?, otp_attempts = 0 WHERE email = ?',
-      [otpCode, expiresAt, email],
+      'UPDATE users SET otp_code = ?, otp_expires_at = ?, otp_purpose = ?, otp_last_sent_at = ?, otp_attempts = 0 WHERE email = ?',
+      [otpCode, expiresAt, purpose, new Date().toISOString(), email],
       function (err) {
         if (err) reject(err);
         else resolve();
@@ -248,11 +266,26 @@ export function clearUserOTP(email) {
   return new Promise((resolve, reject) => {
     const database = getDb();
     database.run(
-      'UPDATE users SET otp_code = NULL, otp_expires_at = NULL, otp_attempts = 0 WHERE email = ?',
+      'UPDATE users SET otp_code = NULL, otp_expires_at = NULL, otp_purpose = NULL, otp_attempts = 0 WHERE email = ?',
       [email],
       function (err) {
         if (err) reject(err);
         else resolve();
+      }
+    );
+  });
+}
+
+// Marks an account as email-verified and consumes any pending OTP.
+export function setUserEmailVerified(email) {
+  return new Promise((resolve, reject) => {
+    const database = getDb();
+    database.run(
+      'UPDATE users SET email_verified = 1, otp_code = NULL, otp_expires_at = NULL, otp_purpose = NULL, otp_attempts = 0 WHERE email = ?',
+      [email],
+      function (err) {
+        if (err) reject(err);
+        else resolve(this.changes > 0);
       }
     );
   });
@@ -291,7 +324,7 @@ export function resetUserPassword(email, newPasswordHash) {
   return new Promise((resolve, reject) => {
     const database = getDb();
     database.run(
-      'UPDATE users SET password = ?, otp_code = NULL, otp_expires_at = NULL WHERE email = ?',
+      'UPDATE users SET password = ?, otp_code = NULL, otp_expires_at = NULL, otp_purpose = NULL, otp_attempts = 0 WHERE email = ?',
       [newPasswordHash, email],
       function (err) {
         if (err) reject(err);

@@ -1,9 +1,8 @@
 import { getUserByEmail, updateUserOTP } from '../db.js';
-import {
-  generateOtp, hashOtp, otpExpiresAt, sendOtpEmail,
-  checkResendCooldown, OTP_PURPOSE,
-} from '../otp.js';
+import { generateOtp, hashOtp, otpExpiresAt, sendOtpEmail, checkResendCooldown, OTP_PURPOSE } from '../otp.js';
 
+// Re-sends the email-verification code. Anti-enumeration: unknown or already
+// verified accounts get the same generic success response as pending ones.
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
@@ -20,7 +19,6 @@ export default async function handler(req, res) {
 
   try {
     const { email } = req.body;
-
     if (!email) {
       return res.status(400).json({ error: 'Missing email' });
     }
@@ -28,14 +26,20 @@ export default async function handler(req, res) {
     const trimmedEmail = String(email).trim().toLowerCase();
     const user = await getUserByEmail(trimmedEmail);
 
+    const genericResponse = () =>
+      res.status(200).json({ success: true, message: 'If the account exists and is unverified, a new code has been sent.' });
+
     if (!user) {
-      // Return success to prevent email harvesting
-      console.log(`Password reset requested for non-existent email: ${trimmedEmail}`);
-      return res.status(200).json({ success: true, message: 'If the account exists, an OTP code has been sent.' });
+      console.log(`Verification resend requested for non-existent email: ${trimmedEmail}`);
+      return genericResponse();
     }
 
-    // Per-account cooldown — prevents using this endpoint to spam someone's
-    // inbox / burn the Brevo quota even when rotating IPs.
+    if (user.email_verified === 1 || user.email_verified === true) {
+      return genericResponse();
+    }
+
+    // Per-account cooldown — stops OTP email spam / Brevo quota burning even
+    // when the attacker rotates IPs (the IP limiter alone can't do that).
     const cooldown = checkResendCooldown(user.otp_last_sent_at);
     if (!cooldown.allowed) {
       return res.status(429).json({
@@ -45,25 +49,23 @@ export default async function handler(req, res) {
       });
     }
 
-    // Generate 6-digit OTP, stored hashed and purpose-scoped so a verification
-    // code can never be replayed here (or vice versa).
     const otp = generateOtp();
-    await updateUserOTP(trimmedEmail, hashOtp(otp), otpExpiresAt(), OTP_PURPOSE.RESET_PASSWORD);
+    await updateUserOTP(trimmedEmail, hashOtp(otp), otpExpiresAt(), OTP_PURPOSE.VERIFY_EMAIL);
 
     const delivered = await sendOtpEmail({
       to: trimmedEmail,
       name: user.name,
       otp,
-      purpose: OTP_PURPOSE.RESET_PASSWORD,
+      purpose: OTP_PURPOSE.VERIFY_EMAIL,
     });
 
     if (!delivered) {
-      return res.status(500).json({ error: 'Failed to send OTP email. Please try again later.' });
+      return res.status(502).json({ error: 'Failed to send the verification email. Please try again shortly.' });
     }
 
-    res.status(200).json({ success: true, message: 'If the account exists, an OTP code has been sent.' });
+    return genericResponse();
   } catch (error) {
-    console.error('Error in forgot password handler:', error);
+    console.error('Error in resend-verification handler:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 }

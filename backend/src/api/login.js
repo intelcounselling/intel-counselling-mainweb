@@ -1,4 +1,4 @@
-import { getUserByEmail, updateUserPassword } from '../db.js';
+import { getUserByEmail, updateUserPassword, setUserEmailVerified } from '../db.js';
 import { hashPassword, verifyPassword } from '../password.js';
 import { signToken } from '../token.js';
 
@@ -23,7 +23,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing email or password' });
     }
 
-    const user = await getUserByEmail(email);
+    const trimmedEmail = String(email).trim().toLowerCase();
+    const user = await getUserByEmail(trimmedEmail);
     if (!user) {
       return res.status(400).json({ error: 'Invalid email or password' });
     }
@@ -31,6 +32,20 @@ export default async function handler(req, res) {
     const { valid, needsUpgrade } = await verifyPassword(password, user.password);
     if (!valid) {
       return res.status(400).json({ error: 'Invalid email or password' });
+    }
+
+    // NOTE: the unverified check deliberately sits AFTER password validation —
+    // putting it before would let attackers probe which emails have accounts
+    // without knowing any password.
+    // email_verified is NULL for accounts created before verification existed
+    // — grandfather them as verified so existing users are never locked out.
+    if (user.email_verified == null) {
+      await setUserEmailVerified(trimmedEmail);
+    } else if (user.email_verified !== 1 && user.email_verified !== true) {
+      return res.status(403).json({
+        error: 'Please verify your email address first. Check your inbox for the 6-digit code, or request a new one.',
+        code: 'EMAIL_NOT_VERIFIED',
+      });
     }
 
     // Transparently migrate legacy unsalted SHA-256 hashes to scrypt

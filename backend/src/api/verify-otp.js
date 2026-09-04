@@ -1,8 +1,6 @@
-import crypto from 'crypto';
-import { getUserByEmail, resetUserPassword, incrementOtpAttempts, clearUserOTP } from '../db.js';
+import { getUserByEmail, resetUserPassword, incrementOtpAttempts, clearUserOTP, bumpTokenVersion } from '../db.js';
 import { hashPassword } from '../password.js';
-
-const MAX_OTP_ATTEMPTS = 5;
+import { otpMatches, sendPasswordChangedEmail, OTP_PURPOSE, OTP_MAX_ATTEMPTS } from '../otp.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -25,10 +23,20 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const trimmedEmail = email.trim().toLowerCase();
+    // Server-side password policy — never trust the client's check alone.
+    if (typeof newPassword !== 'string' || newPassword.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    }
+
+    const trimmedEmail = String(email).trim().toLowerCase();
     const user = await getUserByEmail(trimmedEmail);
 
     if (!user || !user.otp_code || !user.otp_expires_at) {
+      return res.status(400).json({ error: 'Invalid or expired OTP' });
+    }
+
+    // Purpose-scoped: only codes issued for password reset may complete a reset.
+    if (user.otp_purpose !== OTP_PURPOSE.RESET_PASSWORD) {
       return res.status(400).json({ error: 'Invalid or expired OTP' });
     }
 
@@ -38,24 +46,32 @@ export default async function handler(req, res) {
     }
 
     // Lock out brute-force attempts: the OTP is only 6 digits
-    if ((user.otp_attempts || 0) >= MAX_OTP_ATTEMPTS) {
+    if ((user.otp_attempts || 0) >= OTP_MAX_ATTEMPTS) {
       await clearUserOTP(trimmedEmail);
       return res.status(429).json({ error: 'Too many attempts. Please request a new OTP.' });
     }
 
-    // Verify OTP code (constant-time comparison)
-    const hashedProvidedOtp = crypto.createHash('sha256').update(otp.trim()).digest('hex');
-    const a = Buffer.from(hashedProvidedOtp);
-    const b = Buffer.from(user.otp_code);
-    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+    // Verify OTP code (constant-time comparison against the stored hash)
+    if (!otpMatches(otp, user.otp_code)) {
       const attempts = await incrementOtpAttempts(trimmedEmail);
-      if (attempts >= MAX_OTP_ATTEMPTS) {
+      if (attempts >= OTP_MAX_ATTEMPTS) {
         await clearUserOTP(trimmedEmail);
       }
       return res.status(400).json({ error: 'Invalid or expired OTP' });
     }
 
     await resetUserPassword(trimmedEmail, await hashPassword(newPassword));
+
+    // Revoke every outstanding session — an attacker (or old device) holding a
+    // pre-reset token must not keep access.
+    await bumpTokenVersion(user.id).catch((err) =>
+      console.error('Failed to bump token version after password reset:', err)
+    );
+
+    // Best-effort security notification (never blocks the reset response).
+    sendPasswordChangedEmail(trimmedEmail, user.name).catch((err) =>
+      console.error('Password-changed notification failed:', err)
+    );
 
     res.status(200).json({
       success: true,

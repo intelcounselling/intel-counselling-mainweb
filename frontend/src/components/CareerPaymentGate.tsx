@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Loader2, Sparkles, Brain, Target, UserCheck, PhoneCall, Check, Monitor, MapPin } from 'lucide-react';
 import { setAuthSession } from '../utils/auth';
 import { apiClient } from '../utils/api';
@@ -48,7 +48,7 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
     }
   });
 
-  const [authMode, setAuthMode] = useState<'login' | 'register' | 'forgot' | 'reset'>('register');
+  const [authMode, setAuthMode] = useState<'login' | 'register' | 'verify' | 'forgot' | 'reset'>('register');
   const [authName, setAuthName] = useState('');
   const [authEmail, setAuthEmail] = useState('');
   const [authPhone, setAuthPhone] = useState('');
@@ -59,12 +59,66 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [authSuccessMsg, setAuthSuccessMsg] = useState<string | null>(null);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  // Ticks down the resend-cooldown once per second while it's active.
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const t = setTimeout(() => setResendCooldown((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendCooldown]);
+
+  const startResendCooldown = (seconds = 60) => setResendCooldown(seconds);
+
+  const handleResendVerification = async () => {
+    setAuthLoading(true);
+    setAuthError(null);
+    setAuthSuccessMsg(null);
+    try {
+      await apiClient.post('/api/resend-verification', { email: authEmail });
+      setAuthSuccessMsg('A new verification code has been sent to your email.');
+      startResendCooldown(60);
+    } catch (err: any) {
+      // Honour the server's per-account cooldown if we raced ahead of it.
+      if (err?.data?.retryAfterSeconds) {
+        startResendCooldown(err.data.retryAfterSeconds);
+      }
+      setAuthError(err.message || 'Something went wrong');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthLoading(true);
     setAuthError(null);
     setAuthSuccessMsg(null);
+
+    if (authMode === 'verify') {
+      if (!authOtp || authOtp.trim().length !== 6) {
+        setAuthError('Enter the 6-digit code from your email');
+        setAuthLoading(false);
+        return;
+      }
+      try {
+        const data = await apiClient.post<any>('/api/verify-email', { email: authEmail, otp: authOtp.trim() });
+        if (!data.user) {
+          throw new Error(data.error || 'Verification failed. Please try again.');
+        }
+        setAuthSession(data.user, data.token);
+        registration.name = data.user.name;
+        registration.email = data.user.email;
+        registration.phone = data.user.phone;
+        localStorage.setItem('assessment_registration', JSON.stringify(registration));
+        setUser(data.user);
+      } catch (err: any) {
+        setAuthError(err.message || 'Something went wrong');
+      } finally {
+        setAuthLoading(false);
+      }
+      return;
+    }
 
     if (authMode === 'forgot') {
       try {
@@ -114,6 +168,17 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
     try {
       const data = await apiClient.post<any>(url, body);
 
+      // New registrations return no session — the user must confirm the
+      // 6-digit code emailed to them first.
+      if (authMode === 'register' && data.requiresVerification) {
+        setAuthMode('verify');
+        setAuthOtp('');
+        setAuthPassword('');
+        setAuthSuccessMsg(data.message || `We sent a verification code to ${authEmail}.`);
+        startResendCooldown(60);
+        return;
+      }
+
       if (!data.user) {
         throw new Error(data.error || 'Authentication failed. Please try again.');
       }
@@ -126,6 +191,15 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
       localStorage.setItem('assessment_registration', JSON.stringify(registration));
       setUser(data.user);
     } catch (err: any) {
+      // Login rejected because the account exists but was never verified —
+      // route the user into the verification step instead of a dead end.
+      if (err?.data?.code === 'EMAIL_NOT_VERIFIED') {
+        setAuthMode('verify');
+        setAuthOtp('');
+        setAuthPassword('');
+        setAuthSuccessMsg(`We sent a verification code to ${authEmail}. Enter it below to continue.`);
+        return;
+      }
       setAuthError(err.message || 'Something went wrong');
     } finally {
       setAuthLoading(false);
@@ -398,6 +472,44 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
                   </>
                 )}
 
+                {authMode === 'verify' && (
+                  <>
+                    <div className="bg-terracotta/5 border border-terracotta/20 rounded-xl p-3 text-center">
+                      <p className="text-[11px] text-intel-dark/70 font-semibold leading-relaxed">
+                        We sent a 6-digit verification code to
+                        <span className="text-terracotta font-black"> {authEmail}</span>
+                      </p>
+                    </div>
+                    <input
+                      required
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="6-digit Verification Code"
+                      value={authOtp}
+                      onChange={e => setAuthOtp(e.target.value.replace(/\D/g, ''))}
+                      className="w-full bg-white border border-black/5 rounded-xl px-3.5 py-3 text-sm tracking-[0.4em] text-center text-intel-dark outline-none focus:border-terracotta transition-colors"
+                    />
+                    <div className="flex items-center justify-between">
+                      <button
+                        type="button"
+                        disabled={resendCooldown > 0 || authLoading}
+                        onClick={handleResendVerification}
+                        className="text-[10px] text-terracotta hover:underline font-bold disabled:opacity-40 disabled:hover:no-underline"
+                      >
+                        {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend code'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setAuthMode('login'); setAuthOtp(''); setAuthSuccessMsg(null); setAuthError(null); }}
+                        className="text-[10px] text-intel-dark/60 hover:text-intel-dark underline font-bold"
+                      >
+                        Back to Login
+                      </button>
+                    </div>
+                  </>
+                )}
+
                 {authMode === 'reset' && (
                   <>
                     <input 
@@ -437,9 +549,11 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
                     ? 'Register & Continue' 
                     : authMode === 'login' 
                       ? 'Login & Continue' 
-                      : authMode === 'forgot' 
-                        ? 'Send OTP Code' 
-                        : 'Reset Password'}
+                      : authMode === 'verify'
+                        ? 'Verify Email & Continue'
+                        : authMode === 'forgot' 
+                          ? 'Send OTP Code' 
+                          : 'Reset Password'}
                 </button>
 
                 {(authMode === 'forgot' || authMode === 'reset') && (
