@@ -57,6 +57,7 @@ router.put('/alerts/:id/resolve', ...admin, validateUUID('id'), ctrl.resolveAler
 // Admin Appointments
 router.get('/appointments', ...admin, ctrl.getAdminAppointments);
 router.post('/appointments', ...admin, ctrl.createAdminAppointment);
+router.put('/appointments/:id/status', ...admin, validateUUID('id'), ctrl.updateAdminAppointmentStatus);
 router.get('/appointment-students', ...admin, ctrl.getStudentsForAppointment);
 router.get('/students/:id/history', ...admin, validateUUID('id'), ctrl.getStudentTestHistory);
 

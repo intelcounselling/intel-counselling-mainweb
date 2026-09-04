@@ -295,7 +295,7 @@ function StudentDetailPanel({ studentId, onClose, onSchedule }) {
 }
 
 // ── Day detail panel ──────────────────────────────────────────
-function DayPanel({ year, month, day, appointments, onClose, onSelectStudent, onNewAppt }) {
+function DayPanel({ year, month, day, appointments, onClose, onSelectStudent, onNewAppt, onUpdateStatus, statusPendingId }) {
   const dayAppts = appointments.filter(a => {
     const d = new Date(a.slot);
     return d.getFullYear() === year && d.getMonth() === month && d.getDate() === day;
@@ -391,6 +391,25 @@ function DayPanel({ year, month, day, appointments, onClose, onSelectStudent, on
                       ))}
                     </div>
                   )}
+                  {(appt.status === 'PENDING' || appt.status === 'CONFIRMED') && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onUpdateStatus(appt.id, 'COMPLETED'); }}
+                      disabled={statusPendingId === appt.id}
+                      className="mt-3 w-full py-2 rounded-xl bg-primary-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-primary-700 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+                    >
+                      <CheckCircle size={12} />
+                      {statusPendingId === appt.id ? 'Updating…' : 'Mark as Done'}
+                    </button>
+                  )}
+                  {appt.status === 'COMPLETED' && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onUpdateStatus(appt.id, 'CONFIRMED'); }}
+                      disabled={statusPendingId === appt.id}
+                      className="mt-3 w-full py-2 rounded-xl bg-white border border-surface-200 text-surface-500 text-[10px] font-bold uppercase tracking-widest hover:text-surface-700 transition-colors disabled:opacity-50"
+                    >
+                      Reopen (set back to Confirmed)
+                    </button>
+                  )}
                 </div>
               );
             })}
@@ -402,8 +421,10 @@ function DayPanel({ year, month, day, appointments, onClose, onSelectStudent, on
 }
 
 // ── List view row ─────────────────────────────────────────────
-function ListRow({ appt, onClick }) {
+function ListRow({ appt, onClick, onUpdateStatus, statusPendingId }) {
   const hasAlert = appt.patient?.alerts?.length > 0;
+  const canMarkDone = appt.status === 'PENDING' || appt.status === 'CONFIRMED';
+  const pending = statusPendingId === appt.id;
   return (
     <div
       onClick={onClick}
@@ -429,13 +450,33 @@ function ListRow({ appt, onClick }) {
           {formatDateTime(appt.slot)} · Dr. {appt.psychiatrist?.firstName} {appt.psychiatrist?.lastName}
         </p>
       </div>
-      <div className="flex items-center gap-2 flex-shrink-0">
-        {appt.patient?.alerts?.[0] && (
-          <SeverityBadge severity={appt.patient.alerts[0].severity} size="xs" />
+      <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          {appt.patient?.alerts?.[0] && (
+            <SeverityBadge severity={appt.patient.alerts[0].severity} size="xs" />
+          )}
+          <span className={`text-xs px-2.5 py-1 rounded-full border font-medium ${STATUS_COLORS[appt.status] || ''}`}>
+            {appt.status}
+          </span>
+        </div>
+        {canMarkDone && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onUpdateStatus(appt.id, 'COMPLETED'); }}
+            disabled={pending}
+            className="text-[9px] font-black uppercase tracking-widest text-primary-600 hover:underline disabled:opacity-50 flex items-center gap-1"
+          >
+            <CheckCircle size={10} /> {pending ? 'Updating…' : 'Mark as Done'}
+          </button>
         )}
-        <span className={`text-xs px-2.5 py-1 rounded-full border font-medium ${STATUS_COLORS[appt.status] || ''}`}>
-          {appt.status}
-        </span>
+        {appt.status === 'COMPLETED' && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onUpdateStatus(appt.id, 'CONFIRMED'); }}
+            disabled={pending}
+            className="text-[9px] font-bold uppercase tracking-widest text-surface-400 hover:text-surface-600 hover:underline disabled:opacity-50"
+          >
+            Reopen
+          </button>
+        )}
       </div>
     </div>
   );
@@ -444,6 +485,8 @@ function ListRow({ appt, onClick }) {
 // ── Main exported page ────────────────────────────────────────
 export default function AdminAppointments() {
   const today = new Date();
+  const qc = useQueryClient();
+  const { error: toastError } = useToast();
   const [view, setView] = useState('calendar');
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
@@ -458,6 +501,24 @@ export default function AdminAppointments() {
     queryFn: () =>
       api.get('/admin/appointments', { params: { month: month + 1, year } }).then(r => r.data),
   });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ id, status }) => api.put(`/admin/appointments/${id}/status`, { status }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-appointments'] });
+      qc.invalidateQueries({ queryKey: ['admin-severe-no-appt'] });
+      qc.invalidateQueries({ queryKey: ['admin-student-history'] });
+    },
+    onError: (e) => toastError(e?.response?.data?.error || 'Failed to update appointment'),
+  });
+
+  const handleUpdateStatus = useCallback((id, status) => {
+    updateStatusMutation.mutate({ id, status });
+  }, [updateStatusMutation]);
+
+  const statusPendingId = updateStatusMutation.isPending && updateStatusMutation.variables
+    ? updateStatusMutation.variables.id
+    : null;
 
   const appointments = data?.appointments || [];
   const alertCount = appointments.filter(a => a.patient?.alerts?.length > 0).length;
@@ -587,6 +648,8 @@ export default function AdminAppointments() {
                       key={appt.id}
                       appt={appt}
                       onClick={() => handleSelectStudent(appt.patient?.id)}
+                      onUpdateStatus={handleUpdateStatus}
+                      statusPendingId={statusPendingId}
                     />
                   ))}
                 </div>
@@ -612,6 +675,8 @@ export default function AdminAppointments() {
                   onClose={() => { setSelectedDay(null); setPanelMode(null); }}
                   onSelectStudent={handleSelectStudent}
                   onNewAppt={openNewAppt}
+                  onUpdateStatus={handleUpdateStatus}
+                  statusPendingId={statusPendingId}
                 />
               ) : panelMode === 'student' && selectedStudentId ? (
                 <StudentDetailPanel
