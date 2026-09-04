@@ -1,6 +1,6 @@
 const prisma = require('../prisma');
 const { parsePagination, buildPaginationMeta } = require('../utils/pagination');
-const { generateCredentials, regeneratePassword, syncUserToFirebase, updateFirebasePassword, deleteFirebaseUser } = require('../services/credential.service');
+const { generateCredentials, generatePassword, regeneratePassword, syncUserToFirebase, updateFirebasePassword, deleteFirebaseUser } = require('../services/credential.service');
 const { sendCredentialsEmail } = require('../services/email.service');
 const { generateDetailedStudentReport } = require('../services/pdf.service');
 const logger = require('../utils/logger');
@@ -1278,6 +1278,63 @@ async function getPsychiatristsForAdmin(req, res) {
   }
 }
 
+// SUPER_ADMIN only: create a psychiatrist without the bulk-CSV flow, so the
+// scheduling modal is never blocked by "no psychiatrists available".
+async function createPsychiatrist(req, res) {
+  try {
+    const { firstName, lastName, email, schoolIds } = req.body;
+
+    if (!firstName || !lastName || !email) {
+      return res.status(400).json({ error: 'firstName, lastName, and email are required' });
+    }
+
+    const normalizedEmail = String(email).trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      return res.status(400).json({ error: 'Invalid email address' });
+    }
+
+    const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    if (existing) {
+      return res.status(409).json({ error: 'Email already registered' });
+    }
+
+    const plainPassword = generatePassword(10);
+    const passwordHash = await require('bcryptjs').hash(plainPassword, 12);
+
+    // Optional school assignments (must all exist)
+    let schoolsConnect = [];
+    if (Array.isArray(schoolIds) && schoolIds.length) {
+      const schools = await prisma.school.findMany({ where: { id: { in: schoolIds } } });
+      schoolsConnect = schools.map((s) => ({ id: s.id }));
+    }
+
+    const user = await prisma.user.create({
+      data: {
+        email: normalizedEmail,
+        passwordHash,
+        role: 'PSYCHIATRIST',
+        firstName: String(firstName).trim(),
+        lastName: String(lastName).trim(),
+        mustResetPassword: true,
+        ...(schoolsConnect.length && { assignedSchools: { connect: schoolsConnect } }),
+      },
+    });
+
+    // Non-blocking Firebase sync so Google login works for them too
+    syncUserToFirebase(normalizedEmail, plainPassword, `${firstName} ${lastName}`.trim()).catch(() => {});
+
+    logger.info(`Psychiatrist created by super admin: ${normalizedEmail}`);
+
+    res.status(201).json({
+      psychiatrist: { id: user.id, firstName: user.firstName, lastName: user.lastName, email: user.email },
+      // Shown once so the admin can hand the credentials over
+      credentials: { email: normalizedEmail, password: plainPassword },
+    });
+  } catch (err) {
+    handleError(res, err, 'createPsychiatrist');
+  }
+}
+
 async function getStudentTestHistory(req, res) {
   try {
     const { id } = req.params;
@@ -1356,5 +1413,6 @@ module.exports = {
   createAdminAppointment,
   getStudentsForAppointment,
   getPsychiatristsForAdmin,
+  createPsychiatrist,
   getStudentTestHistory,
 };
