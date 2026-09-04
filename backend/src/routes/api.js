@@ -20,6 +20,7 @@ import userResultsHandler from '../api/user-results.js';
 import forgotPasswordHandler from '../api/forgot-password.js';
 import verifyOtpHandler from '../api/verify-otp.js';
 import { getUserByEmail } from '../db.js';
+import { isDemoMode, getPrices } from '../pricing.js';
 
 const router = express.Router();
 
@@ -53,6 +54,15 @@ const generalLimiter = rateLimit({
 router.use(generalLimiter);
 
 router.get('/health', (req, res) => res.status(200).send('OK'));
+
+// Public pricing/session config. The client displays these prices but never
+// charges from them — create-cashfree-session re-derives the amount here.
+router.get('/config', (req, res) => {
+  res.json({
+    demoMode: isDemoMode(),
+    prices: getPrices(),
+  });
+});
 
 // Temporary diagnostic: tests DB connectivity and returns exact error on failure.
 // Remove once production SQLite/disk issue is confirmed resolved.

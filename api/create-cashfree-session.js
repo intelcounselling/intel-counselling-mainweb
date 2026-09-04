@@ -22,13 +22,19 @@ export default async function handler(req, res) {
     const { serviceId, serviceName, customerName, customerEmail, customerPhone } = req.body;
 
     // Prices live server-side only — the client picks a service, never an amount.
-    // Env overrides let pricing change without a deploy.
+    // Env overrides let pricing change without a deploy. DEMO_MODE=true makes
+    // every service ₹0.1 (mirrors backend/src/pricing.js).
+    const isDemoMode = ['true', '1', 'yes'].includes(String(process.env.DEMO_MODE || '').trim().toLowerCase());
+    const DEMO_PRICE = 0.1;
     const PRICES = {
       session_online: Number(process.env.SESSION_PRICE_ONLINE || 1600),
       session_inperson: Number(process.env.SESSION_PRICE_INPERSON || 2000),
       career_assessment: Number(process.env.CAREER_PRICE_ASSESSMENT || 2999),
       career_assessment_plus: Number(process.env.CAREER_PRICE_PLUS || 4999),
     };
+    if (isDemoMode) {
+      for (const key of Object.keys(PRICES)) PRICES[key] = DEMO_PRICE;
+    }
 
     const orderAmount = PRICES[serviceId];
     if (!Number.isFinite(orderAmount) || orderAmount <= 0) {

@@ -111,7 +111,21 @@ JWT_REFRESH_SECRET=<random>          # Mindbridge portal refresh tokens
 FIREBASE_SERVICE_ACCOUNT={"type":"service_account",...}   # Optional — falls back to local JWT
 CASHFREE_APP_ID / CASHFREE_SECRET_KEY / BREVO_API_KEY       # Payments + email
 ALLOWED_ORIGINS=https://<vercel-frontend-domain>            # CORS in production
+DEMO_MODE=true|false                        # Optional — every price becomes ₹0.1 when true (see below)
 ```
+
+### Demo mode (₹0.1 prices)
+
+Set `DEMO_MODE=true` on the backend (Render → Environment, or root `.env.local`
+locally) and **restart/redeploy** — every service price becomes ₹0.1:
+
+- `create-cashfree-session` charges ₹0.1 for every service (the amount is
+  derived server-side in `backend/src/pricing.js`; the client never sends one).
+- `GET /api/config` returns `{ demoMode: true, prices: { ...all 0.1 } }` and the
+  frontend (`CareerPaymentGate`, `BookingModal`, `CareerGuidancePage`) displays
+  ₹0.1 with a small "Demo" badge.
+- Set `DEMO_MODE=false` (or remove it) and restart — normal prices return.
+  No code changes are required to toggle it in either direction.
 
 ### Diagnosing a failed deploy
 

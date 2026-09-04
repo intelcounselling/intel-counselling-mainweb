@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Sparkles, ArrowRight, Brain, Target, UserCheck, Calendar } from 'lucide-react';
 import SpotlightCard from '../components/SpotlightCard';
 import FadeIn from '../components/FadeIn';
+import { usePricing, formatPrice } from '../utils/pricing';
 
 const CareerGuidancePage: React.FC = () => {
   const navigate = useNavigate();
+  const { demoMode, prices } = usePricing();
 
   return (
     <div className="relative min-h-screen pt-24 pb-12 md:pt-32 md:pb-24 px-6 bg-[#F7EBD3]">
@@ -104,7 +106,12 @@ const CareerGuidancePage: React.FC = () => {
             <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-8 border-t border-white/10">
               <div className="text-left">
                 <span className="text-xs font-bold text-white/40 block mb-1 uppercase tracking-wider">Packages from</span>
-                <span className="text-4xl md:text-5xl font-black text-white serif tracking-tight">₹2,999</span>
+                <span className="text-4xl md:text-5xl font-black text-white serif tracking-tight">₹{formatPrice(prices.career_assessment)}</span>
+                {demoMode && (
+                  <span className="ml-3 align-middle bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border border-amber-200">
+                    Demo Mode
+                  </span>
+                )}
               </div>
 
               <button 

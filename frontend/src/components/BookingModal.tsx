@@ -4,13 +4,9 @@ import { CheckCircle2, ChevronRight, ArrowLeft, Video, ShieldCheck, MapPin, Moni
 import { MI_QUESTIONS, INTEREST_QUESTIONS, PERSONALITY_QUESTIONS } from './TestQuestions';
 import { CLINICAL_CONFIGS } from './ClinicalQuestions';
 import { apiClient } from '../utils/api';
+import { usePricing } from '../utils/pricing';
 
 const ALL_QUESTIONS = [...MI_QUESTIONS, ...INTEREST_QUESTIONS, ...PERSONALITY_QUESTIONS];
-
-const SESSION_PRICES = {
-  online: 1600,
-  inperson: 2000
-};
 
 const getAvailableSlots = (date: string) => [
   '09:00 AM', '10:30 AM', '01:00 PM', '02:30 PM', '04:00 PM'
@@ -146,6 +142,8 @@ const CashfreePaymentStep: React.FC<{
 };
 
 const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
+  const { prices } = usePricing();
+  const sessionPrices = { online: prices.session_online, inperson: prices.session_inperson };
   const [searchParams] = useSearchParams();
   const isFreeBooking = searchParams.get('freeBooking') === 'true';
   const [step, setStep] = useState<number>(1);
@@ -632,14 +630,14 @@ const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
                       <Monitor size={24} /> 
                       <div className="flex flex-col items-center">
                         <span>Online</span>
-                        <span className="text-[10px] opacity-60 font-normal">₹{SESSION_PRICES.online}</span>
+                        <span className="text-[10px] opacity-60 font-normal">₹{sessionPrices.online}</span>
                       </div>
                     </button>
                     <button type="button" onClick={() => setDetails({ ...details, sessionMode: 'inperson' })} className={`flex flex-col items-center gap-2 p-5 rounded-2xl border-2 transition-all font-bold text-sm ${details.sessionMode === 'inperson' ? 'border-serene-green bg-serene-green text-white shadow-lg' : 'border-white/10 bg-white/5 text-white hover:border-white/20'}`}>
                       <MapPin size={24} />
                       <div className="flex flex-col items-center">
                         <span>In-Person</span>
-                        <span className="text-[10px] opacity-60 font-normal">₹{SESSION_PRICES.inperson}</span>
+                        <span className="text-[10px] opacity-60 font-normal">₹{sessionPrices.inperson}</span>
                       </div>
                     </button>
                   </div>
@@ -724,7 +722,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
                 id: details.sessionMode === 'online' ? 'session_online' : 'session_inperson',
                 name: details.mainConcerns.length ? details.mainConcerns.join(', ') : 'General Consultation',
                 // Display only — the charged amount is decided server-side from the id
-                price: details.sessionMode === 'online' ? SESSION_PRICES.online : SESSION_PRICES.inperson
+                price: details.sessionMode === 'online' ? sessionPrices.online : sessionPrices.inperson
               }
             }}
             onSuccess={(link, orderId) => handleBookingSuccess(details.sessionMode === 'online' ? link : '', orderId)}

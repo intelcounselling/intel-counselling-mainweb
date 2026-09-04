@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Loader2, Sparkles, Brain, Target, UserCheck, PhoneCall, Check, Monitor, MapPin } from 'lucide-react';
 import { setAuthSession } from '../utils/auth';
 import { apiClient } from '../utils/api';
+import { usePricing, formatPrice } from '../utils/pricing';
 
 interface CareerPaymentGateProps {
   registration: any;
@@ -31,6 +32,9 @@ const loadCashfreeScript = () => {
 };
 
 const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onSuccess, onClose }) => {
+  const { demoMode, prices } = usePricing();
+  const assessmentPrice = formatPrice(prices.career_assessment);
+  const plusPrice = formatPrice(prices.career_assessment_plus);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedPackage, setSelectedPackage] = useState<'assessment_only' | 'assessment_explanation'>('assessment_only');
@@ -595,7 +599,7 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
                     >
                       <div className="flex justify-between items-center w-full">
                         <span className="font-bold text-xs text-intel-dark">Assessment Only</span>
-                        <span className="font-black text-sm text-terracotta">₹2,999</span>
+                        <span className="font-black text-sm text-terracotta">₹{assessmentPrice}</span>
                       </div>
                       <p className="text-[10px] text-intel-dark/60 leading-relaxed font-medium">Interest Test + Aptitude Test + Intelligence Test + Score Report (PDF)</p>
                     </button>
@@ -611,7 +615,7 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
                     >
                       <div className="flex justify-between items-center w-full">
                         <span className="font-bold text-xs text-intel-dark">Assessment + Result Explanation</span>
-                        <span className="font-black text-sm text-terracotta">₹4,999</span>
+                        <span className="font-black text-sm text-terracotta">₹{plusPrice}</span>
                       </div>
                       <p className="text-[10px] text-intel-dark/60 leading-relaxed font-medium">Three tests + Detailed Report + 30–45 min interpretation session</p>
                     </button>
@@ -702,8 +706,13 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
                     <span className="text-xs font-black uppercase text-intel-dark/40">Total Amount:</span>
                     <div className="text-right">
                       <span className="text-3xl font-black text-intel-dark">
-                        {selectedPackage === 'assessment_only' ? '₹2,999' : '₹4,999'}
+                        ₹{selectedPackage === 'assessment_only' ? assessmentPrice : plusPrice}
                       </span>
+                      {demoMode && (
+                        <span className="ml-2 align-middle bg-amber-100 text-amber-700 text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-full border border-amber-200">
+                          Demo
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -727,7 +736,7 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
                       Processing...
                     </>
                   ) : (
-                    `Pay ${selectedPackage === 'assessment_only' ? '₹2,999' : '₹4,999'} & Begin`
+                    `Pay ₹${selectedPackage === 'assessment_only' ? assessmentPrice : plusPrice} & Begin`
                   )}
                 </button>
 
