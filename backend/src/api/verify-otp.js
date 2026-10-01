@@ -1,4 +1,4 @@
-import { getUserByEmail, resetUserPassword, incrementOtpAttempts, clearUserOTP, bumpTokenVersion } from '../db.js';
+import { getUserByEmail, resetUserPassword, claimOtpAttempt, clearUserOTP, bumpTokenVersion } from '../db.js';
 import { hashPassword } from '../password.js';
 import { otpMatches, sendPasswordChangedEmail, OTP_PURPOSE, OTP_MAX_ATTEMPTS } from '../otp.js';
 
@@ -45,18 +45,15 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'OTP has expired' });
     }
 
-    // Lock out brute-force attempts: the OTP is only 6 digits
-    if ((user.otp_attempts || 0) >= OTP_MAX_ATTEMPTS) {
+    // Lock out brute force (6-digit code). The guess is spent atomically BEFORE
+    // comparing, so parallel requests can't exceed the attempt budget.
+    if (!(await claimOtpAttempt(trimmedEmail, OTP_MAX_ATTEMPTS))) {
       await clearUserOTP(trimmedEmail);
       return res.status(429).json({ error: 'Too many attempts. Please request a new OTP.' });
     }
 
     // Verify OTP code (constant-time comparison against the stored hash)
     if (!otpMatches(otp, user.otp_code)) {
-      const attempts = await incrementOtpAttempts(trimmedEmail);
-      if (attempts >= OTP_MAX_ATTEMPTS) {
-        await clearUserOTP(trimmedEmail);
-      }
       return res.status(400).json({ error: 'Invalid or expired OTP' });
     }
 

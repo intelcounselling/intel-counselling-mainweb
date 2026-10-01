@@ -84,6 +84,21 @@ async function initPg() {
       updated_at TIMESTAMPTZ
     )
   `);
+  await pgPool.query(`
+    CREATE TABLE IF NOT EXISTS bookings (
+      id TEXT PRIMARY KEY,
+      order_id TEXT,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      service_name TEXT,
+      session_mode TEXT,
+      appointment_date TEXT,
+      appointment_time TEXT,
+      meet_link TEXT,
+      is_free INTEGER DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
   await pgPool.query('CREATE INDEX IF NOT EXISTS idx_results_user ON assessment_results(user_id)');
   await pgPool.query('CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at)');
   console.log('Connected to PostgreSQL database (persistent — survives redeploys)');
@@ -135,6 +150,21 @@ async function initSqlite() {
       result_id TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME
+    )
+  `);
+  await runSqlite(`
+    CREATE TABLE IF NOT EXISTS bookings (
+      id TEXT PRIMARY KEY,
+      order_id TEXT,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      service_name TEXT,
+      session_mode TEXT,
+      appointment_date TEXT,
+      appointment_time TEXT,
+      meet_link TEXT,
+      is_free INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
   await runSqlite('CREATE INDEX IF NOT EXISTS idx_results_user ON assessment_results(user_id)');
@@ -274,6 +304,17 @@ export async function updateUserOTP(email, otpCode, expiresAt, purpose) {
   );
 }
 
+// Atomically spends one guess. Returns false when the attempt budget is gone.
+// Increment-and-check in ONE statement (before comparing the code) means
+// parallel requests can't each read "4 attempts used" and all get a try.
+export async function claimOtpAttempt(email, max) {
+  const changes = await run(
+    'UPDATE users SET otp_attempts = COALESCE(otp_attempts, 0) + 1 WHERE email = ? AND COALESCE(otp_attempts, 0) < ?',
+    [email, max]
+  );
+  return changes > 0;
+}
+
 export async function incrementOtpAttempts(email) {
   await run(
     'UPDATE users SET otp_attempts = COALESCE(otp_attempts, 0) + 1 WHERE email = ?',
@@ -320,13 +361,6 @@ export async function insertResult(id, encryptedAnswers, iv, userId = null, test
   return id;
 }
 
-export async function getResultById(id) {
-  return get(
-    'SELECT encrypted_answers, iv, user_id FROM assessment_results WHERE id = ?',
-    [id]
-  );
-}
-
 // --- Orders (payment status lives server-side, never trusted from the client) ---
 
 export async function createOrder(orderId, serviceId, amount) {
@@ -341,9 +375,11 @@ export async function getOrder(orderId) {
   return get('SELECT * FROM orders WHERE order_id = ?', [orderId]);
 }
 
+// Only CREATED → PAID. Re-verifying an already consumed (USED) order must not
+// flip it back to PAID, or one payment could confirm unlimited bookings.
 export async function markOrderPaid(orderId) {
   const changes = await run(
-    "UPDATE orders SET status = 'PAID', updated_at = CURRENT_TIMESTAMP WHERE order_id = ?",
+    "UPDATE orders SET status = 'PAID', updated_at = CURRENT_TIMESTAMP WHERE order_id = ? AND status = 'CREATED'",
     [orderId]
   );
   return changes > 0;
@@ -353,6 +389,16 @@ export async function markOrderUsed(orderId) {
   // Only a PAID order can be consumed, and only once
   const changes = await run(
     "UPDATE orders SET status = 'USED', updated_at = CURRENT_TIMESTAMP WHERE order_id = ? AND status = 'PAID'",
+    [orderId]
+  );
+  return changes > 0;
+}
+
+// Undo a markOrderUsed claim when the work it guarded (e.g. sending the
+// booking emails) failed, so the customer can retry with the same payment.
+export async function releaseOrder(orderId) {
+  const changes = await run(
+    "UPDATE orders SET status = 'PAID', updated_at = CURRENT_TIMESTAMP WHERE order_id = ? AND status = 'USED'",
     [orderId]
   );
   return changes > 0;
@@ -393,6 +439,20 @@ export async function markResultEmailed(resultId) {
     [resultId]
   );
   return changes > 0;
+}
+
+// --- Bookings (durable record — the confirmation emails alone are not one) ---
+
+export async function createBooking(b) {
+  await run(
+    'INSERT INTO bookings (id, order_id, name, email, service_name, session_mode, appointment_date, appointment_time, meet_link, is_free) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [b.id, b.orderId, b.name, b.email, b.serviceName, b.sessionMode, b.date, b.time, b.meetLink, b.isFree ? 1 : 0]
+  );
+  return b.id;
+}
+
+export async function getBookingsByOrder(orderId) {
+  return all('SELECT * FROM bookings WHERE order_id = ?', [orderId]);
 }
 
 // Initialize DB on module load

@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { encrypt } from '../encryption.js';
-import { insertResult, getOrder, linkOrderToResult, saveResultRegistration } from '../db.js';
+import { insertResult, getOrder, linkOrderToResult, saveResultRegistration, getPaidCareerResultCount } from '../db.js';
 import { authenticateRequest } from '../token.js';
 
 export default async function handler(req, res) {
@@ -52,11 +52,12 @@ export default async function handler(req, res) {
     }
 
     // Optional paid-order link (career tests only, single-use, must be verified PAID)
+    let order = null;
     if (orderId !== undefined && orderId !== null) {
       if (typeof orderId !== 'string' || !/^ORDER_[a-f0-9]+$/.test(orderId)) {
         return res.status(400).json({ error: 'Invalid orderId' });
       }
-      const order = await getOrder(orderId);
+      order = await getOrder(orderId);
       if (!order || order.status !== 'PAID' || !String(order.service_id).startsWith('career') || order.result_id) {
         return res.status(409).json({ error: 'Order already used or not eligible' });
       }
@@ -66,11 +67,21 @@ export default async function handler(req, res) {
     // could attach a result to someone else's account.
     const userId = await authenticateRequest(req);
 
-    const { encrypted, iv } = encrypt(answers);
-    const id = crypto.randomUUID();
-
     // Default to 'career' if answers length is 200
     const resolvedTestId = testId || (answers.length === 200 ? 'career' : null);
+
+    // The career assessment is a paid product: storing (and so re-viewing or
+    // emailing) a result requires a verified PAID order, or a signed-in account
+    // that already owns a paid career result (free retakes).
+    if (resolvedTestId === 'career' && !order) {
+      const entitled = userId ? (await getPaidCareerResultCount(userId)) > 0 : false;
+      if (!entitled) {
+        return res.status(402).json({ error: 'Payment required to save a career assessment result' });
+      }
+    }
+
+    const { encrypted, iv } = encrypt(answers);
+    const id = crypto.randomUUID();
 
     await insertResult(id, encrypted, iv, userId || null, resolvedTestId);
 
@@ -87,7 +98,9 @@ export default async function handler(req, res) {
       }
     }
 
-    res.status(200).json({ id });
+    // Only the "+ session" package includes the complimentary session — the
+    // client uses this to decide whether to offer it at all.
+    res.status(200).json({ id, freeSessionAvailable: order?.service_id === 'career_assessment_plus' });
   } catch (error) {
     console.error('Error saving answers:', error);
     res.status(500).json({ error: 'Internal Server Error' });

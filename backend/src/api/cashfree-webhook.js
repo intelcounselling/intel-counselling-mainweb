@@ -12,6 +12,14 @@ function verifySignature(req) {
     return false;
   }
 
+  // Reject stale deliveries so a captured webhook can't be replayed later.
+  // Cashfree re-signs each retry with a fresh timestamp (epoch ms or seconds).
+  const ts = Number(timestamp);
+  const tsMs = ts < 1e12 ? ts * 1000 : ts;
+  if (!Number.isFinite(tsMs) || Math.abs(Date.now() - tsMs) > 5 * 60 * 1000) {
+    return false;
+  }
+
   try {
     const expected = crypto
       .createHmac('sha256', secret)

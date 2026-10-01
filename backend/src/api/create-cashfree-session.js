@@ -50,7 +50,7 @@ export default async function handler(req, res) {
         order_currency: 'INR',
         order_id: orderId,
         customer_details: {
-          customer_id: 'CUST_' + Date.now().toString().slice(-6),
+          customer_id: 'CUST_' + crypto.randomBytes(6).toString('hex'),
           customer_name: customerName || 'John Doe',
           customer_email: customerEmail || 'johndoe@example.com',
           customer_phone: customerPhone || '9999999999',

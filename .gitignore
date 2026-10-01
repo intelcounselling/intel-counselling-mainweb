@@ -37,3 +37,7 @@ database.sqlite*
 # Backend runtime data
 backend/uploads/
 backend/backups/
+
+# Local tool state
+.freebuff/
+.claude/

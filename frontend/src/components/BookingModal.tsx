@@ -150,6 +150,9 @@ const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
   const [meetLink, setMeetLink] = useState('');
   const [isFreeProcessing, setIsFreeProcessing] = useState(false);
   const [freeBookingError, setFreeBookingError] = useState<string | null>(null);
+  // Paid booking after payment: emails are the only record of the booking, so
+  // don't show "Thank You" until the server has confirmed them.
+  const [paidConfirm, setPaidConfirm] = useState<{ orderId: string; link: string; failed: boolean } | null>(null);
   const [details, setDetails] = useState(() => {
     let savedReg = null;
     try {
@@ -382,11 +385,11 @@ const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
       freeResultId: isFreeBooking ? extractFreeResultId() : undefined
     };
 
-    const confirmBooking = () => {
+    const confirmBooking = (serverLink?: string | null) => {
       localStorage.removeItem('career_booked_session_mode');
       localStorage.removeItem('career_booked_date');
       localStorage.removeItem('career_booked_time');
-      setMeetLink(link);
+      setMeetLink(serverLink || link);
       setStep(10); // Final Confirmation Step
     };
 
@@ -408,15 +411,16 @@ const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
       return;
     }
 
-    // Paid flow: payment is already server-verified, confirm immediately and
-    // send the emails in the background.
-    confirmBooking();
-
+    // Paid flow: the server claims the order and sends the emails. If that
+    // fails the order is released, so the customer can retry without paying again.
+    setPaidConfirm({ orderId: orderId || '', link, failed: false });
     try {
-      await apiClient.post('/api/send-booking-email', emailBody);
-      console.log("Confirmation emails sent via Brevo.");
+      const data = await apiClient.post<any>('/api/send-booking-email', emailBody);
+      setPaidConfirm(null);
+      confirmBooking(data?.meetLink);
     } catch (error) {
       console.error("Failed to send confirmation emails:", error);
+      setPaidConfirm({ orderId: orderId || '', link, failed: true });
     }
   };
 
@@ -714,7 +718,31 @@ const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
         </form>
 
         {/* --- STEP 9: PAYMENT (only shown for paid bookings) --- */}
-        {step === 9 && !isFreeBooking && (
+        {step === 9 && paidConfirm && (
+          <div className="py-8 text-center">
+            {paidConfirm.failed ? (
+              <div className="text-red-400 text-sm bg-red-500/10 p-4 rounded-xl border border-red-500/20">
+                <p className="mb-4">
+                  Your payment went through, but we couldn't confirm your booking just now.
+                  Please retry — you won't be charged again. If it keeps failing, contact us
+                  with order ID <strong>{paidConfirm.orderId}</strong>.
+                </p>
+                <button
+                  onClick={() => handleBookingSuccess(paidConfirm.link, paidConfirm.orderId)}
+                  className="bg-serene-green text-white px-6 py-3 rounded-xl font-bold"
+                >
+                  Retry confirmation
+                </button>
+              </div>
+            ) : (
+              <p className="text-white/60 flex items-center justify-center gap-2">
+                <Loader2 size={18} className="animate-spin" /> Confirming your booking...
+              </p>
+            )}
+          </div>
+        )}
+
+        {step === 9 && !isFreeBooking && !paidConfirm && (
           <CashfreePaymentStep
             bookingDetails={{
               ...details,
