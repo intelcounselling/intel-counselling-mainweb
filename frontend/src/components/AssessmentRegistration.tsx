@@ -1,14 +1,18 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { User, Mail, Phone, Calendar, ArrowRight, Loader2, Sparkles, ShieldCheck, Heart } from 'lucide-react';
 import { apiClient } from '../utils/api';
+import { setAuthSession, getAuthToken } from '../utils/auth';
 
 interface AssessmentRegistrationProps {
-  testId: string;
-  onComplete: (data: any) => void;
+  // Shown when the intake gates a test; omitted on the standalone /profile page
+  testTitle?: string;
+  onComplete: () => void;
   onClose: () => void;
 }
 
-const AssessmentRegistration: React.FC<AssessmentRegistrationProps> = ({ testId, onComplete, onClose }) => {
+// Intake form, filled once per account and stored (encrypted) server-side.
+// Re-opening it pre-fills the saved details so they can be edited.
+const AssessmentRegistration: React.FC<AssessmentRegistrationProps> = ({ testTitle, onComplete, onClose }) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -19,20 +23,29 @@ const AssessmentRegistration: React.FC<AssessmentRegistrationProps> = ({ testId,
     reason: '',
     consent: false
   });
-  
+  const [loaded, setLoaded] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const getTestTitle = () => {
-    switch (testId) {
-      case 'career': return 'Career Guidance Assessment';
-      case 'phq9': return 'Depression Screening (PHQ-9)';
-      case 'gad7': return 'Anxiety Screening (GAD-7)';
-      case 'pss10': return 'Stress Self-Check (PSS-10)';
-      case 'sleep': return 'Sleep Hygiene Check';
-      default: return 'Self-Assessment';
-    }
-  };
+  useEffect(() => {
+    apiClient.get<any>('/api/profile')
+      .then((data) => {
+        const p = data.profile || {};
+        setFormData((f) => ({
+          ...f,
+          name: data.user?.name || '',
+          email: data.user?.email || '',
+          phone: p.phone || data.user?.phone || '',
+          age: p.age || '',
+          gender: p.gender || '',
+          occupation: p.occupation || '',
+          reason: p.reason || '',
+          consent: !!data.profile,
+        }));
+      })
+      .catch((err) => setError(err.message || 'Could not load your details.'))
+      .finally(() => setLoaded(true));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,33 +53,39 @@ const AssessmentRegistration: React.FC<AssessmentRegistrationProps> = ({ testId,
       setError('Please consent to the privacy and assessment terms.');
       return;
     }
-    
+
     setIsSubmitting(true);
     setError('');
 
     try {
-      // Send registration alert email to admin
-      await apiClient.post('/api/send-registration-email', {
-        ...formData,
-        testId,
-        testTitle: getTestTitle(),
-        registeredAt: new Date().toLocaleString()
-      });
-      
-      // Save details to localStorage
-      localStorage.setItem('assessment_registration', JSON.stringify(formData));
-      
-      // Call onComplete to proceed to the test
-      onComplete(formData);
+      const { name, phone, age, gender, occupation, reason } = formData;
+      const data = await apiClient.put<any>('/api/profile', { name, phone, age, gender, occupation, reason });
+      // Keep the cached session user (navbar name etc.) in step with the account
+      setAuthSession(data.user, getAuthToken());
+
+      // First intake only: notify the clinic of the new client (best effort)
+      if (data.firstTime) {
+        apiClient.post('/api/send-registration-email', {
+          ...formData,
+          testTitle: testTitle || 'Account intake',
+          registeredAt: new Date().toLocaleString(),
+        }).catch((err) => console.warn('Registration notification failed:', err));
+      }
+      onComplete();
     } catch (err: any) {
-      console.warn('Registration dispatch error:', err);
-      // Fallback: save to localStorage and let the user take the test even if offline or API fails
-      localStorage.setItem('assessment_registration', JSON.stringify(formData));
-      onComplete(formData);
+      setError(err.message || 'Could not save your details. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  if (!loaded) {
+    return (
+      <div className="min-h-screen bg-[#F6F7F9] flex items-center justify-center">
+        <Loader2 size={32} className="animate-spin text-terracotta" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F6F7F9] pt-20 md:pt-28 pb-12 px-4 flex items-center justify-center">
@@ -90,7 +109,9 @@ const AssessmentRegistration: React.FC<AssessmentRegistrationProps> = ({ testId,
             Client Information
           </h2>
           <p className="text-intel-dark/60 max-w-md mx-auto text-sm md:text-base font-light leading-relaxed">
-            Please provide your basic details before we begin the <strong>{getTestTitle()}</strong>. Your privacy is strictly protected.
+            {testTitle
+              ? <>Please provide your basic details before we begin the <strong>{testTitle}</strong>. You only need to do this once.</>
+              : <>These details are saved securely on your account and used for every assessment.</>}
           </p>
         </div>
 
@@ -119,12 +140,11 @@ const AssessmentRegistration: React.FC<AssessmentRegistrationProps> = ({ testId,
                 <Mail size={12} /> Email Address
               </label>
               <input 
-                required
+                readOnly
                 type="email" 
-                placeholder="email@example.com"
-                className="w-full bg-[#F4EFE6]/30 border border-black/5 rounded-2xl px-5 py-3.5 text-base outline-none focus:border-terracotta focus:bg-white focus:ring-4 focus:ring-terracotta/10 transition-all text-intel-dark font-medium"
+                title="Your account email"
+                className="w-full bg-black/5 border border-black/5 rounded-2xl px-5 py-3.5 text-base outline-none text-intel-dark/60 font-medium cursor-not-allowed"
                 value={formData.email}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
               />
             </div>
 
@@ -244,7 +264,7 @@ const AssessmentRegistration: React.FC<AssessmentRegistrationProps> = ({ testId,
               disabled={isSubmitting}
               className="w-full sm:flex-1 bg-terracotta text-white px-12 py-6 rounded-3xl font-black text-base uppercase tracking-widest hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl flex items-center justify-center gap-3 group disabled:opacity-50 disabled:scale-100"
             >
-              {isSubmitting ? 'Registering...' : 'Register & Start'} 
+              {isSubmitting ? 'Saving...' : testTitle ? 'Save & Start' : 'Save Details'} 
               {!isSubmitting && <ArrowRight size={22} className="group-hover:translate-x-1 transition-transform" />}
             </button>
             <p className="text-[10px] font-bold opacity-40 uppercase tracking-[0.15em] flex items-center gap-1.5">

@@ -99,6 +99,9 @@ async function initPg() {
       created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  // Intake profile (encrypted JSON) — added after launch, so ALTER for existing tables
+  await pgPool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS profile TEXT');
+  await pgPool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_iv TEXT');
   await pgPool.query('CREATE INDEX IF NOT EXISTS idx_results_user ON assessment_results(user_id)');
   await pgPool.query('CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at)');
   console.log('Connected to PostgreSQL database (persistent — survives redeploys)');
@@ -190,6 +193,8 @@ async function initSqlite() {
   await addColumn('assessment_results', 'registration_iv', 'TEXT');
   await addColumn('assessment_results', 'order_id', 'TEXT');
   await addColumn('assessment_results', 'emailed_at', 'DATETIME');
+  await addColumn('users', 'profile', 'TEXT');
+  await addColumn('users', 'profile_iv', 'TEXT');
 }
 
 function ready() {
@@ -242,6 +247,36 @@ export function createUser(id, name, email, password, phone) {
     'INSERT INTO users (id, name, email, password, phone, email_verified) VALUES (?, ?, ?, ?, ?, 0)',
     [id, name, email, password, phone]
   ).then(() => id);
+}
+
+// Google sign-in: the email is already proven, so the account starts verified.
+export function createVerifiedUser(id, name, email, password, phone = null) {
+  return run(
+    'INSERT INTO users (id, name, email, password, phone, email_verified) VALUES (?, ?, ?, ?, ?, 1)',
+    [id, name, email, password, phone]
+  ).then(() => id);
+}
+
+// Google proved ownership of an email whose password-registration was never
+// verified: replace the unproven password and revoke any sessions it created.
+export async function claimUnverifiedAccount(email, password) {
+  const changes = await run(
+    'UPDATE users SET email_verified = 1, password = ?, otp_code = NULL, otp_expires_at = NULL, otp_purpose = NULL, otp_attempts = 0, token_version = COALESCE(token_version, 0) + 1 WHERE email = ? AND email_verified = 0',
+    [password, email]
+  );
+  return changes > 0;
+}
+
+export async function getAccountById(id) {
+  return get('SELECT id, name, email, phone, profile, profile_iv FROM users WHERE id = ?', [id]);
+}
+
+export async function setUserProfile(id, name, phone, profile, profileIv) {
+  const changes = await run(
+    'UPDATE users SET name = ?, phone = ?, profile = ?, profile_iv = ? WHERE id = ?',
+    [name, phone, profile, profileIv, id]
+  );
+  return changes > 0;
 }
 
 export async function getUserByEmail(email) {

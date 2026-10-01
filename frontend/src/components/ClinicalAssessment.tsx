@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { X, ArrowRight, ArrowLeft, Shield, HeartPulse, CheckCircle, Link } from 'lucide-react';
 import { ClinicalConfig } from './ClinicalQuestions';
-import { authHeaders } from '../utils/auth';
+import { authHeaders, useAuthUser, PENDING_RESULT_KEY } from '../utils/auth';
+import { apiClient } from '../utils/api';
 
 interface ClinicalAssessmentProps {
   config: ClinicalConfig;
@@ -12,6 +13,7 @@ interface ClinicalAssessmentProps {
 const ClinicalAssessment: React.FC<ClinicalAssessmentProps> = ({ config, onClose }) => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const user = useAuthUser();
   const [step, setStep] = useState(-1); // -1 is the intro page
   const [answers, setAnswers] = useState<number[]>([]);
   const [result, setResult] = useState<any | null>(null);
@@ -70,34 +72,15 @@ const ClinicalAssessment: React.FC<ClinicalAssessmentProps> = ({ config, onClose
     let totalScore = 0;
     
     if (!isInitialLoad) {
-      let registration = null;
-      try {
-        const savedReg = localStorage.getItem('assessment_registration');
-        if (savedReg) {
-          registration = JSON.parse(savedReg);
-        }
-      } catch (e) {
-        console.error('Failed to parse registration for save-answers:', e);
-      }
-
-      // Save anonymously and reference the result only by its opaque id — raw answers
-      // (including the PHQ-9 self-harm item) must never appear in the URL or share links.
-      fetch('/api/save-answers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          answers: finalAnswers.join(''),
-          testId: config.id,
-          registration
+      // Save by opaque id only — raw answers (including the PHQ-9 self-harm item)
+      // must never appear in the URL. Signed in → the result joins the account.
+      apiClient.post<any>('/api/save-answers', { answers: finalAnswers.join(''), testId: config.id })
+        .then(data => {
+          if (data.id) {
+            setSearchParams({ id: data.id }, { replace: true });
+          }
         })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.id) {
-          setSearchParams({ id: data.id }, { replace: true });
-        }
-      })
-      .catch(err => console.error('Failed to save clinical answers:', err));
+        .catch(err => console.error('Failed to save clinical answers:', err));
     }
     
     finalAnswers.forEach((val, idx) => {
@@ -220,6 +203,22 @@ const ClinicalAssessment: React.FC<ClinicalAssessmentProps> = ({ config, onClose
             </div>
           ) : (
             <div className="animate-in fade-in zoom-in-95 duration-700 max-w-2xl mx-auto text-center py-8">
+               {!user && searchParams.get('id') && (
+                 <div className="mb-8 p-5 rounded-3xl bg-serene-green/10 border border-serene-green/30 flex flex-col sm:flex-row items-center gap-4 text-left print:hidden">
+                   <p className="flex-1 text-sm text-intel-dark/80 font-medium">
+                     Want to keep this result? Sign in or create a free account to save it alongside your other assessments.
+                   </p>
+                   <button
+                     onClick={() => {
+                       try { localStorage.setItem(PENDING_RESULT_KEY, searchParams.get('id') || ''); } catch (e) { /* storage unavailable */ }
+                       navigate('/login?next=/my-results');
+                     }}
+                     className="shrink-0 bg-serene-green text-white px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] hover:opacity-90"
+                   >
+                     Save to my account
+                   </button>
+                 </div>
+               )}
                <div className={`inline-flex items-center justify-center w-24 h-24 rounded-full ${config.color} text-white mb-8 shadow-xl`}>
                  <Shield size={40} />
                </div>

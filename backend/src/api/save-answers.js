@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { encrypt } from '../encryption.js';
 import { insertResult, getOrder, linkOrderToResult, saveResultRegistration, getPaidCareerResultCount } from '../db.js';
 import { authenticateRequest } from '../token.js';
+import { registrationFor } from '../profile.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -66,6 +67,12 @@ export default async function handler(req, res) {
     // Owner identity comes only from the auth token — a client-supplied userId
     // could attach a result to someone else's account.
     const userId = await authenticateRequest(req);
+
+    // Signed-in users: identity + intake come from the account, never the client
+    if (userId) {
+      const accountRegistration = await registrationFor(userId);
+      if (accountRegistration) sanitizedRegistration = accountRegistration;
+    }
 
     // Default to 'career' if answers length is 200
     const resolvedTestId = testId || (answers.length === 200 ? 'career' : null);

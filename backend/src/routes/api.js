@@ -18,6 +18,8 @@ import linkResultHandler from '../api/link-result.js';
 import userResultsHandler from '../api/user-results.js';
 import careerAccessHandler from '../api/career-access.js';
 import forgotPasswordHandler from '../api/forgot-password.js';
+import googleLoginHandler from '../api/google-login.js';
+import profileHandler from '../api/profile.js';
 import verifyOtpHandler from '../api/verify-otp.js';
 import { countUsers } from '../db.js';
 import { isDemoMode, getPrices } from '../pricing.js';
@@ -82,6 +84,9 @@ router.get('/db-status', async (req, res) => {
 });
 router.post('/register', authLimiter, registerHandler);
 router.post('/login', authLimiter, loginHandler);
+router.post('/google-login', authLimiter, googleLoginHandler);
+router.get('/profile', profileHandler);
+router.put('/profile', profileHandler);
 router.post('/verify-email', authLimiter, verifyEmailHandler);
 router.post('/resend-verification', authLimiter, resendVerificationHandler);
 router.post('/logout-all', authLimiter, logoutAllHandler);

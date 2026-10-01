@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Sparkles, Brain, Activity, HeartPulse, Moon, ArrowRight, History, Loader2, Calendar, Smartphone } from 'lucide-react';
+import { ArrowLeft, Sparkles, Brain, Activity, HeartPulse, Moon, ArrowRight, History, Smartphone } from 'lucide-react';
 import SpotlightCard from './SpotlightCard';
 import FadeIn from './FadeIn';
-import { authHeaders, clearAuthSession } from '../utils/auth';
+import { useAuthUser } from '../utils/auth';
 
 interface TestOptionsProps {
   onBack: () => void;
@@ -12,54 +12,11 @@ interface TestOptionsProps {
 
 const TestOptions: React.FC<TestOptionsProps> = ({ onBack, onSelectTest }) => {
   const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
-  const [pastResults, setPastResults] = useState<any[]>([]);
-  const [loadingResults, setLoadingResults] = useState(false);
+  const user = useAuthUser();
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
-
-    const checkUser = () => {
-      try {
-        const saved = localStorage.getItem('auth_user');
-        const parsed = saved ? JSON.parse(saved) : null;
-        setUser(parsed);
-        if (parsed) {
-          fetchResults();
-        } else {
-          setPastResults([]);
-        }
-      } catch (e) {
-        clearAuthSession();
-        setUser(null);
-        setPastResults([]);
-      }
-    };
-    checkUser();
   }, []);
-
-  const fetchResults = async () => {
-    setLoadingResults(true);
-    try {
-      const res = await fetch('/api/user-results', { headers: authHeaders() });
-      if (res.status === 401) {
-        // Session expired or invalid — clear it and show the logged-out state
-        clearAuthSession();
-        setUser(null);
-        setPastResults([]);
-        return;
-      }
-      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-      const data = await res.json();
-      if (data.results) {
-        setPastResults(data.results);
-      }
-    } catch (e) {
-      console.error('Failed to fetch user results:', e);
-    } finally {
-      setLoadingResults(false);
-    }
-  };
 
   const freeTests = [
     {
@@ -132,76 +89,23 @@ const TestOptions: React.FC<TestOptionsProps> = ({ onBack, onSelectTest }) => {
           </FadeIn>
         </div>
 
-        {/* User's Past Saved Results */}
-        {user && (
-          <FadeIn>
-            <div className="mb-16">
-              <div className="flex items-center gap-3 mb-8 border-b border-black/5 pb-4">
-                <History size={24} className="text-terracotta" />
-                <h2 className="text-xl md:text-3xl font-black serif text-intel-dark">Your Assessment Reports</h2>
-              </div>
-              
-              {loadingResults ? (
-                <div className="flex justify-center items-center py-8">
-                  <Loader2 className="animate-spin text-terracotta" size={24} />
-                  <span className="ml-2.5 text-sm font-semibold text-intel-dark/60">Retrieving your reports...</span>
-                </div>
-              ) : pastResults.length > 0 ? (
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                  {pastResults.map((res: any, idx: number) => {
-                    const dateObj = new Date(res.created_at);
-                    const formattedDate = dateObj.toLocaleDateString(undefined, {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    });
-                    const formattedTime = dateObj.toLocaleTimeString(undefined, {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    });
-
-                    const testId = res.test_id || 'career';
-                    const clinicalTest = freeTests.find(t => t.id === testId);
-                    const resultTitle = clinicalTest
-                      ? `${clinicalTest.title} (${clinicalTest.shortTitle})`
-                      : 'Career Guidance Assessment';
-
-                    return (
-                      <div
-                        key={res.id}
-                        onClick={() => navigate(`/assessments/${testId}?id=${res.id}`)}
-                        className="group cursor-pointer bg-white border border-black/5 p-6 rounded-3xl hover:border-terracotta/40 hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
-                      >
-                        <div>
-                          <div className="w-10 h-10 bg-terracotta/10 text-terracotta rounded-2xl flex items-center justify-center mb-4">
-                            <Sparkles size={18} />
-                          </div>
-                          <span className="text-[9px] font-black text-terracotta uppercase tracking-wider font-inter mb-1 block">
-                            Attempt #{pastResults.length - idx}
-                          </span>
-                          <h4 className="font-bold text-sm text-intel-dark mb-1">
-                            {resultTitle}
-                          </h4>
-                          <p className="text-[10px] text-intel-dark/50 flex items-center gap-1">
-                            <Calendar size={10} /> {formattedDate} at {formattedTime}
-                          </p>
-                        </div>
-                        <div className="mt-6 pt-4 border-t border-black/5 flex items-center justify-between text-xs font-bold text-terracotta group-hover:translate-x-1 transition-transform">
-                          <span>View Detailed Report</span>
-                          <ArrowRight size={14} />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="bg-white/40 border border-black/5 p-8 rounded-3xl text-center">
-                  <p className="text-sm text-intel-dark/60">You haven't completed any assessments yet. Start your premium or free tests below!</p>
-                </div>
-              )}
-            </div>
-          </FadeIn>
-        )}
+        {/* Results live in one place: the account dashboard */}
+        <FadeIn>
+          <div className="mb-16 p-6 rounded-3xl bg-white border border-black/5 shadow-sm flex flex-col sm:flex-row items-center gap-4">
+            <History size={24} className="text-terracotta shrink-0" />
+            <p className="flex-1 text-sm text-intel-dark/70 font-medium text-center sm:text-left">
+              {user
+                ? <>Signed in as <strong className="text-intel-dark">{user.name}</strong> — every result you complete is saved to your account.</>
+                : <>Sign in to keep every result in one place and retake tests anytime. Free screenings work without an account too.</>}
+            </p>
+            <button
+              onClick={() => navigate(user ? '/my-results' : '/login?next=/assessments')}
+              className="shrink-0 bg-intel-dark text-white px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] hover:opacity-90 flex items-center gap-2"
+            >
+              {user ? 'View My Results' : 'Sign In'} <ArrowRight size={12} />
+            </button>
+          </div>
+        </FadeIn>
 
 
         {/* Free Assessments Section */}

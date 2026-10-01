@@ -183,25 +183,13 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
       shouldSendEmailRef.current = true;
       localStorage.removeItem(PROGRESS_KEY);
 
-      // Attach the registration details so the server stores identity with the result
-      let registration: any = null;
-      try {
-        const savedReg = localStorage.getItem('assessment_registration');
-        if (savedReg) {
-          const parsed = JSON.parse(savedReg);
-          if (parsed && parsed.name && parsed.email) registration = parsed;
-        }
-      } catch (e) {
-        console.error('Failed to parse registration details', e);
-      }
-
       // Attach the verified payment order so the server can mark this result as paid
       const orderId = localStorage.getItem('career_order_id');
 
-      // Save encrypted answers to DB and update URL with UUID
+      // Save encrypted answers to DB and update URL with UUID. Identity and
+      // intake details are attached server-side from the signed-in account.
       apiClient.post<any>('/api/save-answers', {
         answers: finalAnswers.join(''),
-        ...(registration ? { registration } : {}),
         ...(orderId ? { orderId } : {})
       })
         .then(data => {

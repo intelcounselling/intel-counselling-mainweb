@@ -39,6 +39,7 @@ const AssessmentTestPage = staleSafeLazy(() => import('./pages/AssessmentTestPag
 const BookingPage = staleSafeLazy(() => import('./pages/BookingPage'));
 const CareerGuidancePage = staleSafeLazy(() => import('./pages/CareerGuidancePage'));
 const MyResultsPage = staleSafeLazy(() => import('./pages/MyResultsPage'));
+const SignInPage = staleSafeLazy(() => import('./pages/SignInPage'));
 
 // Minimal centered spinner shown briefly while a route chunk loads
 const RouteFallback = () => (
@@ -101,7 +102,6 @@ const AppContent: React.FC = () => {
       
       <Navbar 
         onBookClick={() => navigate('/services/personal')}
-        onLoginClick={() => window.open('https://intel-counselling-frontend.vercel.app', '_blank')}
         forcePill={!isHome}
       />
       
@@ -113,6 +113,7 @@ const AppContent: React.FC = () => {
           <Route path="/assessments/:testId" element={<AssessmentTestPage />} />
           <Route path="/career-assessment" element={<CareerGuidancePage />} />
           <Route path="/my-results" element={<MyResultsPage />} />
+          <Route path="/login" element={<SignInPage />} />
           <Route path="/booking" element={<BookingPage />} />
         </Routes>
       </Suspense>
