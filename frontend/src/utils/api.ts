@@ -1,4 +1,4 @@
-import { authHeaders } from './auth';
+import { authHeaders, clearAuthSession } from './auth';
 
 export class ApiError extends Error {
   public status: number;
@@ -59,10 +59,9 @@ async function request<T>(url: string, options: RequestOptions = {}): Promise<T>
     if (!response.ok) {
       const errorMessage = responseData?.error || responseData?.message || `Request failed with status ${response.status}`;
       
-      // Handle unauthorized session
-      if (response.status === 401) {
-        console.warn('Session expired or unauthorized. Clearing authentication.');
-        // Optional: clearAuthSession() or redirect
+      // A rejected token (expired / logged out everywhere) ends the local session
+      if (response.status === 401 && headers.has('Authorization')) {
+        clearAuthSession();
       }
       
       throw new ApiError(errorMessage, response.status, responseData);

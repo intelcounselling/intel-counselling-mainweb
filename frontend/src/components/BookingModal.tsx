@@ -4,6 +4,7 @@ import { CheckCircle2, ChevronRight, ArrowLeft, Video, ShieldCheck, MapPin, Moni
 import { MI_QUESTIONS, INTEREST_QUESTIONS, PERSONALITY_QUESTIONS } from './TestQuestions';
 import { CLINICAL_CONFIGS } from './ClinicalQuestions';
 import { apiClient } from '../utils/api';
+import { useAuthUser } from '../utils/auth';
 import { usePricing } from '../utils/pricing';
 
 const ALL_QUESTIONS = [...MI_QUESTIONS, ...INTEREST_QUESTIONS, ...PERSONALITY_QUESTIONS];
@@ -153,27 +154,20 @@ const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
   // Paid booking after payment: emails are the only record of the booking, so
   // don't show "Thank You" until the server has confirmed them.
   const [paidConfirm, setPaidConfirm] = useState<{ orderId: string; link: string; failed: boolean } | null>(null);
+  const user = useAuthUser();
   const [details, setDetails] = useState(() => {
-    let savedReg = null;
-    try {
-      const saved = localStorage.getItem('assessment_registration');
-      if (saved) savedReg = JSON.parse(saved);
-    } catch (e) {
-      console.error('Failed to parse registration details', e);
-    }
-
     const savedSessionMode = (localStorage.getItem('career_booked_session_mode') as 'online' | 'inperson' | '') || '';
     const savedDate = localStorage.getItem('career_booked_date') || '';
     const savedTime = localStorage.getItem('career_booked_time') || '';
 
     return {
-      name: savedReg?.name || '',
-      age: savedReg?.age || '',
-      phone: savedReg?.phone || '',
-      email: savedReg?.email || '',
-      gender: savedReg?.gender || '',
+      name: user?.name || '',
+      age: '',
+      phone: user?.phone || '',
+      email: user?.email || '',
+      gender: '',
       mainConcerns: [] as string[],
-      briefDetails: savedReg?.reason || '',
+      briefDetails: '',
       currentState: { stress: '', sleep: '', focus: '' },
       riskCheck: '',
       expectations: [] as string[],
@@ -186,6 +180,25 @@ const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
   });
 
   const [careerResult, setCareerResult] = useState<any | null>(null);
+
+  // Signed in: pre-fill from the saved intake so details aren't typed twice
+  useEffect(() => {
+    if (!user) return;
+    apiClient.get<any>('/api/profile')
+      .then((d) => {
+        const p = d.profile || {};
+        setDetails((prev) => ({
+          ...prev,
+          name: prev.name || d.user?.name || '',
+          email: prev.email || d.user?.email || '',
+          phone: prev.phone || p.phone || d.user?.phone || '',
+          age: prev.age || p.age || '',
+          gender: prev.gender || p.gender || '',
+          briefDetails: prev.briefDetails || p.reason || '',
+        }));
+      })
+      .catch(() => {});
+  }, [user?.id]);
   const [clinicalResult, setClinicalResult] = useState<any | null>(null);
 
   useEffect(() => {

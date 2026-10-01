@@ -1,24 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, Loader2, Sparkles, Brain, Target, UserCheck, PhoneCall, Check, Monitor, MapPin, FileText, RotateCcw, BadgeCheck } from 'lucide-react';
-import { setAuthSession } from '../utils/auth';
+import { ShieldCheck, Loader2, Sparkles, Brain, Target, UserCheck, PhoneCall, Check, Monitor, MapPin, RotateCcw, BadgeCheck } from 'lucide-react';
 import { apiClient } from '../utils/api';
 import { usePricing, formatPrice } from '../utils/pricing';
 
-const formatResultDate = (value: string) => {
-  try {
-    const d = new Date(value.includes('T') ? value : value.replace(' ', 'T') + 'Z');
-    if (Number.isNaN(d.getTime())) return value;
-    return d.toLocaleString(undefined, {
-      day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit',
-    });
-  } catch {
-    return value;
-  }
-};
-
 interface CareerPaymentGateProps {
-  registration: any;
+  // The signed-in account (the page guarantees one) — used for checkout details
+  customer: { id: string; name: string; email: string; phone?: string | null };
   onSuccess: () => void;
   onClose: () => void;
 }
@@ -44,8 +31,7 @@ const loadCashfreeScript = () => {
   });
 };
 
-const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onSuccess, onClose }) => {
-  const navigate = useNavigate();
+const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ customer, onSuccess, onClose }) => {
   const { demoMode, prices } = usePricing();
   const assessmentPrice = formatPrice(prices.career_assessment);
   const plusPrice = formatPrice(prices.career_assessment_plus);
@@ -56,211 +42,26 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
 
-  // Authentication states
-  const [user, setUser] = useState<any>(() => {
-    try {
-      const saved = localStorage.getItem('auth_user');
-      return saved ? JSON.parse(saved) : null;
-    } catch (e) {
-      return null;
-    }
-  });
-
-  const [authMode, setAuthMode] = useState<'login' | 'register' | 'verify' | 'forgot' | 'reset'>('register');
-  const [authName, setAuthName] = useState('');
-  const [authEmail, setAuthEmail] = useState('');
-  const [authPhone, setAuthPhone] = useState('');
-  const [authPassword, setAuthPassword] = useState('');
-  const [authOtp, setAuthOtp] = useState('');
-  const [authNewPassword, setAuthNewPassword] = useState('');
-  const [authConfirmPassword, setAuthConfirmPassword] = useState('');
-  const [authLoading, setAuthLoading] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [authSuccessMsg, setAuthSuccessMsg] = useState<string | null>(null);
-  const [resendCooldown, setResendCooldown] = useState(0);
-
-  // Ticks down the resend-cooldown once per second while it's active.
-  useEffect(() => {
-    if (resendCooldown <= 0) return;
-    const t = setTimeout(() => setResendCooldown((s) => s - 1), 1000);
-    return () => clearTimeout(t);
-  }, [resendCooldown]);
-
-  // --- Previous results + purchase entitlement for the signed-in user ------
-  const [prevResults, setPrevResults] = useState<any[]>([]);
+  // --- Purchase entitlement for the signed-in account --------------------
   const [entitled, setEntitled] = useState(false);
-  const [accessLoading, setAccessLoading] = useState(false);
+  const [accessLoading, setAccessLoading] = useState(true);
   // null = follow the entitlement default (packages hidden once entitled)
   const [packagesOverride, setPackagesOverride] = useState<boolean | null>(null);
   const showPackages = packagesOverride ?? !entitled;
 
   useEffect(() => {
-    if (!user) {
-      setPrevResults([]);
-      setEntitled(false);
-      setAccessLoading(false);
-      setPackagesOverride(null);
-      return;
-    }
     let alive = true;
-    setAccessLoading(true);
-    Promise.all([
-      apiClient.get<any>('/api/user-results').catch(() => null),
-      apiClient.get<any>('/api/career-access').catch(() => null),
-    ]).then(([resultsRes, accessRes]) => {
-      if (!alive) return;
-      const all: any[] = resultsRes?.results || [];
-      setPrevResults(all.filter((r: any) => (r.test_id || 'career') === 'career'));
-      setEntitled(!!accessRes?.entitled);
-      setAccessLoading(false);
-    });
+    apiClient.get<any>('/api/career-access')
+      .then((r) => alive && setEntitled(!!r?.entitled))
+      .catch(() => {})
+      .finally(() => alive && setAccessLoading(false));
     return () => { alive = false; };
-  }, [user?.id]);
+  }, [customer.id]);
 
   // Retake: entitlement is enforced server-side (career-access +
   // send-career-results); here we just skip the payment step.
   const handleRetake = () => {
     onSuccess();
-  };
-
-  const startResendCooldown = (seconds = 60) => setResendCooldown(seconds);
-
-  const handleResendVerification = async () => {
-    setAuthLoading(true);
-    setAuthError(null);
-    setAuthSuccessMsg(null);
-    try {
-      await apiClient.post('/api/resend-verification', { email: authEmail });
-      setAuthSuccessMsg('A new verification code has been sent to your email.');
-      startResendCooldown(60);
-    } catch (err: any) {
-      // Honour the server's per-account cooldown if we raced ahead of it.
-      if (err?.data?.retryAfterSeconds) {
-        startResendCooldown(err.data.retryAfterSeconds);
-      }
-      setAuthError(err.message || 'Something went wrong');
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
-  const handleAuthSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAuthLoading(true);
-    setAuthError(null);
-    setAuthSuccessMsg(null);
-
-    if (authMode === 'verify') {
-      if (!authOtp || authOtp.trim().length !== 6) {
-        setAuthError('Enter the 6-digit code from your email');
-        setAuthLoading(false);
-        return;
-      }
-      try {
-        const data = await apiClient.post<any>('/api/verify-email', { email: authEmail, otp: authOtp.trim() });
-        if (!data.user) {
-          throw new Error(data.error || 'Verification failed. Please try again.');
-        }
-        setAuthSession(data.user, data.token);
-        registration.name = data.user.name;
-        registration.email = data.user.email;
-        registration.phone = data.user.phone;
-        localStorage.setItem('assessment_registration', JSON.stringify(registration));
-        setUser(data.user);
-      } catch (err: any) {
-        setAuthError(err.message || 'Something went wrong');
-      } finally {
-        setAuthLoading(false);
-      }
-      return;
-    }
-
-    if (authMode === 'forgot') {
-      try {
-        await apiClient.post('/api/forgot-password', { email: authEmail });
-        setAuthSuccessMsg(
-          `If an account exists for ${authEmail}, a 6-digit code has been sent. Check your inbox and spam folder.`
-        );
-        setAuthMode('reset');
-      } catch (err: any) {
-        setAuthError(err.message || 'Something went wrong');
-      } finally {
-        setAuthLoading(false);
-      }
-      return;
-    }
-
-    if (authMode === 'reset') {
-      if (authNewPassword !== authConfirmPassword) {
-        setAuthError('Passwords do not match');
-        setAuthLoading(false);
-        return;
-      }
-      if (authNewPassword.length < 8) {
-        setAuthError('Password must be at least 8 characters');
-        setAuthLoading(false);
-        return;
-      }
-      try {
-        await apiClient.post('/api/verify-otp', { email: authEmail, otp: authOtp, newPassword: authNewPassword });
-        setAuthSuccessMsg('Password reset successfully! Please login.');
-        setAuthMode('login');
-        setAuthPassword('');
-        setAuthOtp('');
-        setAuthNewPassword('');
-        setAuthConfirmPassword('');
-      } catch (err: any) {
-        setAuthError(err.message || 'Something went wrong');
-      } finally {
-        setAuthLoading(false);
-      }
-      return;
-    }
-
-    const url = authMode === 'login' ? '/api/login' : '/api/register';
-    const body = authMode === 'login'
-      ? { email: authEmail, password: authPassword }
-      : { name: authName, email: authEmail, password: authPassword, phone: authPhone };
-
-    try {
-      const data = await apiClient.post<any>(url, body);
-
-      // New registrations return no session — the user must confirm the
-      // 6-digit code emailed to them first.
-      if (authMode === 'register' && data.requiresVerification) {
-        setAuthMode('verify');
-        setAuthOtp('');
-        setAuthPassword('');
-        setAuthSuccessMsg(data.message || `We sent a verification code to ${authEmail}.`);
-        startResendCooldown(60);
-        return;
-      }
-
-      if (!data.user) {
-        throw new Error(data.error || 'Authentication failed. Please try again.');
-      }
-
-      setAuthSession(data.user, data.token);
-      // update registration state
-      registration.name = data.user.name;
-      registration.email = data.user.email;
-      registration.phone = data.user.phone;
-      localStorage.setItem('assessment_registration', JSON.stringify(registration));
-      setUser(data.user);
-    } catch (err: any) {
-      // Login rejected because the account exists but was never verified —
-      // route the user into the verification step instead of a dead end.
-      if (err?.data?.code === 'EMAIL_NOT_VERIFIED') {
-        setAuthMode('verify');
-        setAuthOtp('');
-        setAuthPassword('');
-        setAuthSuccessMsg(`We sent a verification code to ${authEmail}. Enter it below to continue.`);
-        return;
-      }
-      setAuthError(err.message || 'Something went wrong');
-    } finally {
-      setAuthLoading(false);
-    }
   };
 
   const today = new Date().toISOString().split('T')[0];
@@ -294,9 +95,9 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
       const data = await apiClient.post<any>('/api/create-cashfree-session', {
         serviceId: serviceId,
         serviceName: serviceName,
-        customerName: registration.name,
-        customerEmail: registration.email,
-        customerPhone: registration.phone || '9999999999'
+        customerName: customer.name,
+        customerEmail: customer.email,
+        customerPhone: customer.phone || '9999999999'
       });
 
       // Initialize Cashfree
@@ -434,209 +235,6 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
 
         {/* Right: Payment Detail & Auth */}
         <div className="w-full lg:w-[380px] p-8 md:p-12 flex flex-col justify-between border-t lg:border-t-0 lg:border-l border-black/5 bg-[#FDFBF7]">
-          {!user ? (
-            <div className="space-y-4 my-auto">
-              <div className="text-center mb-6">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-terracotta/10 border border-terracotta/20 text-terracotta text-[10px] font-bold uppercase tracking-wider mb-3">
-                  Account Required
-                </div>
-                <h4 className="font-bold text-lg text-intel-dark serif">Login or Register first</h4>
-                <p className="text-xs text-intel-dark/60 mt-1">An account is required to start the assessment, save your progress, and access reports later.</p>
-              </div>
-
-              {authError && (
-                <div className="bg-red-50 text-red-600 text-xs p-3 rounded-xl border border-red-100 font-semibold text-center">
-                  {authError}
-                </div>
-              )}
-
-              {authSuccessMsg && (
-                <div className="bg-emerald-50 text-emerald-600 text-xs p-3 rounded-xl border border-emerald-100 font-semibold text-center">
-                  {authSuccessMsg}
-                </div>
-              )}
-
-              <div className="flex bg-black/5 p-1 rounded-xl">
-                <button 
-                  type="button" 
-                  onClick={() => { setAuthMode('register'); setAuthSuccessMsg(null); setAuthError(null); }} 
-                  className={`flex-1 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${authMode === 'register' ? 'bg-white text-intel-dark shadow-sm' : 'text-intel-dark/60 hover:text-intel-dark'}`}
-                >
-                  Register
-                </button>
-                <button 
-                  type="button" 
-                  onClick={() => { setAuthMode('login'); setAuthSuccessMsg(null); setAuthError(null); }} 
-                  className={`flex-1 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${authMode === 'login' ? 'bg-white text-intel-dark shadow-sm' : 'text-intel-dark/60 hover:text-intel-dark'}`}
-                >
-                  Login
-                </button>
-              </div>
-
-              <form onSubmit={handleAuthSubmit} className="space-y-3">
-                {authMode === 'register' && (
-                  <>
-                    <input 
-                      required 
-                      type="text" 
-                      placeholder="Full Name" 
-                      value={authName} 
-                      onChange={e => setAuthName(e.target.value)} 
-                      className="w-full bg-white border border-black/5 rounded-xl px-3.5 py-3 text-xs text-intel-dark outline-none focus:border-terracotta transition-colors"
-                    />
-                    <input 
-                      type="tel" 
-                      placeholder="Phone Number" 
-                      value={authPhone} 
-                      onChange={e => setAuthPhone(e.target.value)} 
-                      className="w-full bg-white border border-black/5 rounded-xl px-3.5 py-3 text-xs text-intel-dark outline-none focus:border-terracotta transition-colors"
-                    />
-                  </>
-                )}
-
-                {(authMode === 'login' || authMode === 'register' || authMode === 'forgot') && (
-                  <input 
-                    required 
-                    type="email" 
-                    placeholder="Email Address" 
-                    value={authEmail} 
-                    onChange={e => setAuthEmail(e.target.value)} 
-                    className="w-full bg-white border border-black/5 rounded-xl px-3.5 py-3 text-xs text-intel-dark outline-none focus:border-terracotta transition-colors"
-                  />
-                )}
-
-                {(authMode === 'login' || authMode === 'register') && (
-                  <>
-                    <input 
-                      required 
-                      type="password" 
-                      placeholder="Password" 
-                      value={authPassword} 
-                      onChange={e => setAuthPassword(e.target.value)} 
-                      className="w-full bg-white border border-black/5 rounded-xl px-3.5 py-3 text-xs text-intel-dark outline-none focus:border-terracotta transition-colors"
-                    />
-                    {authMode === 'login' && (
-                      <div className="flex justify-end">
-                        <button 
-                          type="button" 
-                          onClick={() => { setAuthMode('forgot'); setAuthSuccessMsg(null); setAuthError(null); }} 
-                          className="text-[10px] text-terracotta hover:underline font-bold"
-                        >
-                          Forgot Password?
-                        </button>
-                      </div>
-                    )}
-                  </>
-                )}
-
-                {authMode === 'verify' && (
-                  <>
-                    <div className="bg-terracotta/5 border border-terracotta/20 rounded-xl p-3 text-center">
-                      <p className="text-[11px] text-intel-dark/70 font-semibold leading-relaxed">
-                        We sent a 6-digit verification code to
-                        <span className="text-terracotta font-black"> {authEmail}</span>
-                      </p>
-                    </div>
-                    <input
-                      required
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={6}
-                      placeholder="6-digit Verification Code"
-                      value={authOtp}
-                      onChange={e => setAuthOtp(e.target.value.replace(/\D/g, ''))}
-                      className="w-full bg-white border border-black/5 rounded-xl px-3.5 py-3 text-sm tracking-[0.4em] text-center text-intel-dark outline-none focus:border-terracotta transition-colors"
-                    />
-                    <div className="flex items-center justify-between">
-                      <button
-                        type="button"
-                        disabled={resendCooldown > 0 || authLoading}
-                        onClick={handleResendVerification}
-                        className="text-[10px] text-terracotta hover:underline font-bold disabled:opacity-40 disabled:hover:no-underline"
-                      >
-                        {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend code'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { setAuthMode('login'); setAuthOtp(''); setAuthSuccessMsg(null); setAuthError(null); }}
-                        className="text-[10px] text-intel-dark/60 hover:text-intel-dark underline font-bold"
-                      >
-                        Back to Login
-                      </button>
-                    </div>
-                  </>
-                )}
-
-                {authMode === 'reset' && (
-                  <>
-                    <input 
-                      required 
-                      type="text" 
-                      placeholder="6-digit OTP Code" 
-                      value={authOtp} 
-                      onChange={e => setAuthOtp(e.target.value)} 
-                      className="w-full bg-white border border-black/5 rounded-xl px-3.5 py-3 text-xs text-intel-dark outline-none focus:border-terracotta transition-colors"
-                    />
-                    <input 
-                      required 
-                      type="password" 
-                      placeholder="New Password (min 8 chars)" 
-                      value={authNewPassword} 
-                      onChange={e => setAuthNewPassword(e.target.value)} 
-                      className="w-full bg-white border border-black/5 rounded-xl px-3.5 py-3 text-xs text-intel-dark outline-none focus:border-terracotta transition-colors"
-                    />
-                    <input 
-                      required 
-                      type="password" 
-                      placeholder="Confirm New Password" 
-                      value={authConfirmPassword} 
-                      onChange={e => setAuthConfirmPassword(e.target.value)} 
-                      className="w-full bg-white border border-black/5 rounded-xl px-3.5 py-3 text-xs text-intel-dark outline-none focus:border-terracotta transition-colors"
-                    />
-                  </>
-                )}
-                
-                <button 
-                  type="submit" 
-                  disabled={authLoading} 
-                  className="w-full bg-intel-dark text-white py-4 rounded-xl font-bold text-xs uppercase tracking-widest transition-all disabled:opacity-50 hover:bg-black/90 mt-4 flex items-center justify-center gap-1.5 shadow-md"
-                >
-                  {authLoading && <Loader2 size={12} className="animate-spin" />}
-                  {authMode === 'register' 
-                    ? 'Register & Continue' 
-                    : authMode === 'login' 
-                      ? 'Login & Continue' 
-                      : authMode === 'verify'
-                        ? 'Verify Email & Continue'
-                        : authMode === 'forgot' 
-                          ? 'Send OTP Code' 
-                          : 'Reset Password'}
-                </button>
-
-                {(authMode === 'forgot' || authMode === 'reset') && (
-                  <div className="text-center mt-2">
-                    <button 
-                      type="button" 
-                      onClick={() => { setAuthMode('login'); setAuthSuccessMsg(null); setAuthError(null); }} 
-                      className="text-[10px] text-intel-dark/60 hover:text-intel-dark underline font-bold"
-                    >
-                      Back to Login
-                    </button>
-                  </div>
-                )}
-              </form>
-
-              <div className="text-center pt-2">
-                <button
-                  type="button"
-                  onClick={() => navigate('/my-results')}
-                  className="text-[10px] text-terracotta hover:underline font-bold"
-                >
-                  Already purchased? View & retake your results
-                </button>
-              </div>
-            </div>
-          ) : (
             <>
               <div>
                 {accessLoading ? (
@@ -660,42 +258,6 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
                         >
                           <RotateCcw size={12} /> Retake Test — Free
                         </button>
-                      </div>
-                    )}
-
-                    {prevResults.length > 0 && (
-                      <div className="mb-6">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-1.5">
-                            <FileText size={12} className="text-intel-dark/40" />
-                            <span className="text-[10px] font-black uppercase tracking-widest text-intel-dark/40">Previous Results</span>
-                          </div>
-                          <button
-                            onClick={() => navigate('/my-results')}
-                            className="text-[9px] text-terracotta hover:underline font-black uppercase tracking-widest"
-                          >
-                            My Results
-                          </button>
-                        </div>
-                        <div className="space-y-2">
-                          {prevResults.map(r => (
-                            <div key={r.id} className="flex items-center justify-between gap-3 p-3 bg-white border border-black/5 rounded-xl">
-                              <div className="min-w-0">
-                                <p className="text-[11px] font-bold text-intel-dark truncate">Career Guidance Assessment</p>
-                                <p className="text-[10px] text-intel-dark/50 font-medium">{formatResultDate(r.created_at)}</p>
-                              </div>
-                              {r.order_id && (
-                                <span className="shrink-0 bg-serene-green/10 text-serene-green text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border border-serene-green/30">Paid</span>
-                              )}
-                              <button
-                                onClick={() => navigate(`/assessments/career?id=${encodeURIComponent(r.id)}`)}
-                                className="shrink-0 px-4 py-2 bg-intel-dark text-white rounded-lg font-black uppercase tracking-widest text-[9px] hover:opacity-90 transition-opacity"
-                              >
-                                View
-                              </button>
-                            </div>
-                          ))}
-                        </div>
                       </div>
                     )}
 
@@ -888,7 +450,6 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ registration, onS
               </div>
               )}
             </>
-          )}
         </div>
 
       </div>

@@ -115,7 +115,20 @@ FIREBASE_SERVICE_ACCOUNT={"type":"service_account",...}   # Optional — falls b
 CASHFREE_APP_ID / CASHFREE_SECRET_KEY / BREVO_API_KEY       # Payments + email
 ALLOWED_ORIGINS=https://<vercel-frontend-domain>            # CORS in production
 DEMO_MODE=true|false                        # Optional — every price becomes ₹0.1 when true (see below)
+GOOGLE_CLIENT_ID=<id>.apps.googleusercontent.com   # "Sign in with Google" (must match the frontend's)
+GOOGLE_CLIENT_EMAIL / GOOGLE_PRIVATE_KEY / GOOGLE_CALENDAR_ID   # Meet links for online bookings
 ```
+
+### Frontend (Vercel → Environment)
+
+```env
+VITE_GOOGLE_CLIENT_ID=<id>.apps.googleusercontent.com   # Same OAuth client ID; button is hidden when unset
+```
+
+Create the client in Google Cloud Console → APIs & Services → Credentials →
+OAuth client ID (type **Web application**) and add the site's origins
+(e.g. `https://<your-domain>` and `http://localhost:3000`) under
+**Authorized JavaScript origins**. No client secret is needed.
 
 ### Demo mode (₹1 prices)
 

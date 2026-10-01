@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Info, Users, Calendar, Heart, Layers, LogIn, Menu, X, Image as ImageIcon, Sparkles } from 'lucide-react';
-import { clearAuthSession, authHeaders } from '../utils/auth';
+import { Home, Info, Users, Calendar, Heart, Layers, LogIn, LogOut, Menu, X, Image as ImageIcon, Sparkles, UserRound } from 'lucide-react';
+import { clearAuthSession, authHeaders, useAuthUser } from '../utils/auth';
 
 interface NavbarProps {
   onBookClick: () => void;
@@ -15,37 +15,16 @@ interface NavbarProps {
 const Navbar: React.FC<NavbarProps> = ({ onBookClick, onAssessmentClick, onLoginClick, onLogoClick, forcePill }) => {
   const [scrolled, setScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const user = useAuthUser();
   const isPill = forcePill || scrolled;
   const navigate = useNavigate();
   const location = useLocation();
 
-  useEffect(() => {
-    const checkUser = () => {
-      try {
-        const saved = localStorage.getItem('auth_user');
-        setUser(saved ? JSON.parse(saved) : null);
-      } catch (e) {
-        clearAuthSession();
-        setUser(null);
-      }
-    };
-    checkUser();
-    // Periodically poll local storage or run on focus to ensure sync
-    const interval = setInterval(checkUser, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
   const handleLogout = () => {
     // Fire-and-forget: revoke every outstanding session token server-side.
     // Local logout proceeds regardless of whether this call succeeds.
-    try {
-      fetch('/api/logout-all', { method: 'POST', headers: authHeaders() }).catch(() => {});
-    } catch (e) {
-      // ignore — logout must never be blocked by a network failure
-    }
-    clearAuthSession();
-    setUser(null);
+    fetch('/api/logout-all', { method: 'POST', headers: authHeaders() }).catch(() => {});
+    clearAuthSession(true);
     navigate('/');
   };
 
@@ -163,31 +142,34 @@ const Navbar: React.FC<NavbarProps> = ({ onBookClick, onAssessmentClick, onLogin
             </span>
           </button>
           
-          {user ? (
-            <button 
+          <button
+            onClick={() => navigate(user ? '/my-results' : '/login')}
+            className="flex items-center justify-center bg-main text-intel-dark rounded-full transition-all duration-300 shadow-lg active:scale-95 px-3 md:px-4 lg:px-6 py-2 md:py-2.5 lg:py-3 font-black text-[9px] lg:text-[10px] uppercase tracking-widest hover:bg-white"
+          >
+            <div className="items-center gap-1.5 whitespace-nowrap hidden sm:flex">
+              {user ? <>My Results <UserRound size={13} className="hidden lg:block" /></> : <>Sign In <LogIn size={13} className="hidden lg:block" /></>}
+            </div>
+            <span className="sm:hidden">
+              <UserRound size={16} />
+            </span>
+          </button>
+          {user && (
+            <button
               onClick={handleLogout}
-              className="flex items-center justify-center bg-terracotta text-white rounded-full transition-all duration-300 shadow-lg active:scale-95 px-3 md:px-4 lg:px-6 py-2 md:py-2.5 lg:py-3 font-black text-[9px] lg:text-[10px] uppercase tracking-widest hover:opacity-90"
+              aria-label="Log out"
+              title={`Log out (${user.name.split(' ')[0]})`}
+              className="flex items-center justify-center text-white/60 hover:text-white w-8 h-8 rounded-full hover:bg-white/10 transition-colors"
             >
-              <div className="items-center gap-1.5 whitespace-nowrap hidden sm:flex">
-                Logout ({user.name.split(' ')[0]}) <LogIn size={13} className="hidden lg:block" />
-              </div>
-              <span className="sm:hidden">
-                <LogIn size={16} />
-              </span>
+              <LogOut size={15} />
             </button>
-          ) : (
-            <a 
-              href="https://student.intelcounselling.com/login"
-              className="flex items-center justify-center bg-main text-intel-dark rounded-full transition-all duration-300 shadow-lg active:scale-95 px-3 md:px-4 lg:px-6 py-2 md:py-2.5 lg:py-3 font-black text-[9px] lg:text-[10px] uppercase tracking-widest hover:bg-white"
-            >
-              <div className="items-center gap-1.5 whitespace-nowrap hidden sm:flex">
-                Student Portal <LogIn size={13} className="hidden lg:block" />
-              </div>
-              <span className="sm:hidden">
-                <LogIn size={16} />
-              </span>
-            </a>
           )}
+          {/* Separate, school-issued Mindbridge login — not the site account */}
+          <a
+            href="https://student.intelcounselling.com/login"
+            className="hidden lg:block text-white/50 hover:text-white text-[9px] font-black uppercase tracking-widest whitespace-nowrap px-1"
+          >
+            School Portal
+          </a>
         </div>
 
         <button 
@@ -267,21 +249,26 @@ const Navbar: React.FC<NavbarProps> = ({ onBookClick, onAssessmentClick, onLogin
             >
               <span className="relative z-10">Book Appointment</span>
             </button>
-            {user ? (
-              <button 
+            <button
+              onClick={() => { navigate(user ? '/my-results' : '/login'); setIsMenuOpen(false); }}
+              className="w-full py-5 bg-main text-intel-dark rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg flex items-center justify-center gap-2"
+            >
+              {user ? <>My Results <UserRound size={18} /></> : <>Sign In <LogIn size={18} /></>}
+            </button>
+            {user && (
+              <button
                 onClick={() => { handleLogout(); setIsMenuOpen(false); }}
-                className="w-full py-5 bg-terracotta text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg flex items-center justify-center gap-2"
+                className="w-full py-4 text-white/70 rounded-2xl font-black text-xs uppercase tracking-[0.2em] border border-white/10 flex items-center justify-center gap-2"
               >
-                Logout ({user.name}) <LogIn size={18} />
+                Log out ({user.name.split(' ')[0]}) <LogOut size={16} />
               </button>
-            ) : (
-              <a 
-                href="https://student.intelcounselling.com/login"
-                className="w-full py-5 bg-main text-intel-dark rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg flex items-center justify-center gap-2"
-              >
-                Student Portal <LogIn size={18} />
-              </a>
             )}
+            <a
+              href="https://student.intelcounselling.com/login"
+              className="w-full py-3 text-white/50 text-[10px] font-black uppercase tracking-[0.2em] text-center"
+            >
+              School Portal (Mindbridge)
+            </a>
           </div>
         </div>
       </div>

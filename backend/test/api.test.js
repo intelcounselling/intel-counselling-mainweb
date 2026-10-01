@@ -21,6 +21,8 @@ const express = (await import('express')).default;
 const apiRouter = (await import('../src/routes/api.js')).default;
 const db = await import('../src/db.js');
 const { scoreCareerAnswers } = await import('../src/careerScoring.js');
+const { signInWithGoogleIdentity } = await import('../src/api/google-login.js');
+const { decrypt } = await import('../src/encryption.js');
 const { hashOtp, OTP_PURPOSE } = await import('../src/otp.js');
 
 let server;
@@ -352,6 +354,57 @@ test('cashfree webhook rejects bad signatures and accepts valid ones', async () 
   });
   assert.equal(good.status, 200);
   assert.equal((await db.getOrder(orderId)).status, 'PAID');
+});
+
+test('profile: intake is saved encrypted on the account and reused for results', async () => {
+  const auth = { Authorization: `Bearer ${token}` };
+  const put = (body) => fetch(`${base}/api/profile`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json', ...auth }, body: JSON.stringify(body),
+  });
+
+  assert.equal((await get('/profile')).status, 401);
+  assert.equal((await (await get('/profile', auth)).json()).complete, false);
+
+  assert.equal((await put({ phone: '9000000000', age: 'abc', gender: 'Other', occupation: 'Student' })).status, 400);
+  assert.equal((await put({ phone: '9000000000' })).status, 400, 'required fields enforced');
+
+  const saved = await put({ phone: '9000000000', age: 22, gender: 'Other', occupation: 'Student', reason: 'curious' });
+  assert.equal(saved.status, 200);
+  assert.equal((await saved.json()).firstTime, true);
+
+  const prof = await (await get('/profile', auth)).json();
+  assert.equal(prof.complete, true);
+  assert.equal(prof.profile.occupation, 'Student');
+
+  // Stored encrypted, not as plain JSON
+  const raw = await db.getAccountById(userId);
+  assert.ok(!String(raw.profile).includes('Student'));
+
+  // A signed-in result gets the account's details, ignoring client-sent identity
+  const res = await post('/save-answers', { answers: '1'.repeat(9), testId: 'phq9', registration: { name: 'Spoof', email: 'spoof@example.com' } }, auth);
+  assert.equal(res.status, 200);
+  const { id } = await res.json();
+  const row = await db.getResultFull(id);
+  const reg = JSON.parse(decrypt(row.registration, row.registration_iv));
+  assert.equal(reg.email, EMAIL);
+  assert.equal(reg.occupation, 'Student');
+  assert.equal(row.user_id, userId);
+});
+
+test('google sign-in: creates verified accounts and evicts unverified squatters', async () => {
+  // Not configured → 503, never a crash
+  assert.equal((await post('/google-login', { credential: 'x' })).status, 503);
+
+  const fresh = await signInWithGoogleIdentity({ email: 'NewGoogle@Example.com', name: 'New Google' });
+  assert.equal(fresh.user.email, 'newgoogle@example.com');
+  assert.equal((await get('/user-results', { Authorization: `Bearer ${fresh.token}` })).status, 200);
+
+  // Squatter registers the victim's email with a password but never verifies
+  const victim = 'victim@example.com';
+  await post('/register', { name: 'Squatter', email: victim, password: 'squatter-pass-1' });
+  await signInWithGoogleIdentity({ email: victim, name: 'Real Owner' });
+  const squatterLogin = await post('/login', { email: victim, password: 'squatter-pass-1' });
+  assert.equal(squatterLogin.status, 400, 'squatter password no longer works');
 });
 
 test('logout-all revokes outstanding tokens', async () => {
