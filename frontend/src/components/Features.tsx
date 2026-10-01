@@ -112,9 +112,6 @@ const Features: React.FC = () => {
                               </li>
                             ))}
                           </ul>
-                          <div className="mt-4 hidden md:flex items-center gap-2 text-[10px] font-black text-terracotta uppercase tracking-[0.4em] justify-center cursor-pointer hover:text-white transition-colors">
-                            Learn More <ChevronRight size={12} />
-                          </div>
                         </div>
                       </div>
                     </div>

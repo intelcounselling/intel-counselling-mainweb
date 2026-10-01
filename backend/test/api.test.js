@@ -36,8 +36,9 @@ before(async () => {
     server = app.listen(0, resolve);
   });
   base = `http://127.0.0.1:${server.address().port}`;
-  // Let the async table/column migrations drain through sqlite's queue
-  await new Promise((r) => setTimeout(r, 500));
+  // Any query awaits db.js's ready() — i.e. every table/column migration —
+  // so tests never race the schema (a fixed sleep flaked under CPU load).
+  await db.countUsers();
 });
 
 after(async () => {

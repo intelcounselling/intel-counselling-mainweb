@@ -1,6 +1,9 @@
-
 import React from 'react';
-import { Heart, Mail, Phone, MapPin, Twitter, Instagram, Facebook } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Heart, Mail, Phone, MapPin } from 'lucide-react';
+import { CLINIC, SCHOOL_PORTAL_URL } from '../utils/site';
+
+const linkClass = 'hover:text-terracotta transition-colors duration-300';
 
 const Footer: React.FC = () => {
   return (
@@ -11,65 +14,71 @@ const Footer: React.FC = () => {
 
           {/* Brand */}
           <div className="sm:col-span-2 md:col-span-1">
-            <div className="flex items-center gap-2 mb-5 sm:mb-8">
+            <Link to="/" className="flex items-center gap-2 mb-5 sm:mb-8 w-fit">
               <div className="p-1.5 bg-terracotta rounded-lg text-white">
                 <Heart size={18} fill="currentColor" />
               </div>
               <span className="font-bold text-xl sm:text-2xl tracking-tight">Intel Counselling</span>
-            </div>
+            </Link>
             <p className="text-white/60 leading-relaxed mb-6 sm:mb-8 text-sm sm:text-base">
               Dedicated to providing compassionate, research-driven mental health care.
               Covering the emotional needs of individuals across different life stages —
               from children and adolescents to adults and senior citizens.
             </p>
-            <div className="flex gap-3 sm:gap-4">
-              <SocialIcon icon={<Twitter size={16} />} label="Twitter" />
-              <SocialIcon icon={<Instagram size={16} />} label="Instagram" />
-              <SocialIcon icon={<Facebook size={16} />} label="Facebook" />
-            </div>
+            <Link
+              to="/booking"
+              className="inline-flex items-center justify-center bg-terracotta text-white rounded-full px-6 py-3 font-bold text-sm hover:opacity-90 transition-opacity"
+            >
+              Book an Appointment
+            </Link>
           </div>
 
           {/* Clinic links */}
-          <div>
+          <nav aria-label="Clinic">
             <h4 className="font-bold text-base sm:text-xl mb-5 sm:mb-8">Clinic</h4>
             <ul className="space-y-3 sm:space-y-4 text-white/60 text-sm sm:text-base">
-              <li><a href="#" className="hover:text-terracotta transition-colors duration-300">Our Approach</a></li>
-              <li><a href="#" className="hover:text-terracotta transition-colors duration-300">Practitioners</a></li>
-              <li><a href="#" className="hover:text-terracotta transition-colors duration-300">Therapy Services</a></li>
-              <li><a href="#" className="hover:text-terracotta transition-colors duration-300">Self-Assessment</a></li>
+              <li><Link to="/#approach" className={linkClass}>Our Approach</Link></li>
+              <li><Link to="/#founders" className={linkClass}>Practitioners</Link></li>
+              <li><Link to="/#services" className={linkClass}>Therapy Services</Link></li>
+              <li><Link to="/assessments" className={linkClass}>Self-Assessment</Link></li>
+              <li><Link to="/career-assessment" className={linkClass}>Career Guidance</Link></li>
             </ul>
-          </div>
+          </nav>
 
           {/* Resources */}
-          <div>
+          <nav aria-label="Resources">
             <h4 className="font-bold text-base sm:text-xl mb-5 sm:mb-8">Resources</h4>
             <ul className="space-y-3 sm:space-y-4 text-white/60 text-sm sm:text-base">
-              <li><a href="#" className="hover:text-terracotta transition-colors duration-300">Wellness Blog</a></li>
-              <li><a href="#" className="hover:text-terracotta transition-colors duration-300">Crisis Support</a></li>
-              <li><a href="#" className="hover:text-terracotta transition-colors duration-300">Patient Portal</a></li>
-              <li><a href="#" className="hover:text-terracotta transition-colors duration-300">FAQ</a></li>
+              <li><Link to="/crisis-support" className={linkClass}>Crisis Support</Link></li>
+              <li><Link to="/my-results" className={linkClass}>My Account &amp; Results</Link></li>
+              <li><Link to="/#inquiry" className={linkClass}>Contact Us</Link></li>
+              <li><a href={SCHOOL_PORTAL_URL} className={linkClass}>School Portal</a></li>
             </ul>
-          </div>
+          </nav>
 
           {/* Contact */}
           <div>
             <h4 className="font-bold text-base sm:text-xl mb-5 sm:mb-8">Contact</h4>
             <ul className="space-y-3 sm:space-y-4 text-white/60 text-sm sm:text-base">
-              <li className="flex items-start gap-3">
-                <MapPin size={16} className="text-terracotta shrink-0 mt-0.5 sm:mt-1" />
-                <span className="leading-relaxed">
-                  144, Seetha Patabi Nagar,<br />
-                  Maruthi Nagar, Ayappakkam,<br />
-                  Chennai, Tamil Nadu 600077, India.
-                </span>
+              <li>
+                <a href={CLINIC.mapsHref} target="_blank" rel="noopener noreferrer" className={`flex items-start gap-3 ${linkClass}`}>
+                  <MapPin size={16} className="text-terracotta shrink-0 mt-0.5 sm:mt-1" />
+                  <span className="leading-relaxed">
+                    {CLINIC.addressLines.map((line) => <React.Fragment key={line}>{line}<br /></React.Fragment>)}
+                  </span>
+                </a>
               </li>
-              <li className="flex items-center gap-3">
-                <Phone size={16} className="text-terracotta shrink-0" />
-                <span>+91 9363524174</span>
+              <li>
+                <a href={CLINIC.phoneHref} className={`flex items-center gap-3 ${linkClass}`}>
+                  <Phone size={16} className="text-terracotta shrink-0" />
+                  <span>{CLINIC.phone}</span>
+                </a>
               </li>
-              <li className="flex items-center gap-3">
-                <Mail size={16} className="text-terracotta shrink-0" />
-                <span className="break-all">intelcounselling@gmail.com</span>
+              <li>
+                <a href={CLINIC.emailHref} className={`flex items-center gap-3 ${linkClass}`}>
+                  <Mail size={16} className="text-terracotta shrink-0" />
+                  <span className="break-all">{CLINIC.email}</span>
+                </a>
               </li>
             </ul>
           </div>
@@ -84,15 +93,16 @@ const Footer: React.FC = () => {
               and developmental planning. They are not diagnostic instruments and do not replace clinical evaluation or standardized
               psychological testing. Always seek the advice of your physician or other qualified health provider.
               <br /><br />
-              If you are experiencing a mental health crisis or emergency, please call your local emergency services or the
-              National Suicide Prevention Lifeline at <strong className="text-white/60">988</strong> immediately.
+              If you are experiencing a mental health crisis or emergency, call <a href="tel:112" className="text-white/70 underline">112</a> or
+              the Tele-MANAS helpline at <a href="tel:14416" className="text-white/70 underline">14416</a> immediately. See{' '}
+              <Link to="/crisis-support" className="text-white/70 underline">Crisis Support</Link> for more help.
             </p>
           </div>
           <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4">
-            <p>© 2026 Intel Counselling. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} Intel Counselling. All rights reserved.</p>
             <div className="flex gap-5 sm:gap-8">
-              <a href="#" className="hover:text-white transition-colors duration-300 underline underline-offset-4 decoration-white/10 hover:decoration-white">Privacy Policy</a>
-              <a href="#" className="hover:text-white transition-colors duration-300 underline underline-offset-4 decoration-white/10 hover:decoration-white">Terms of Service</a>
+              <Link to="/privacy" className="hover:text-white transition-colors duration-300 underline underline-offset-4 decoration-white/10 hover:decoration-white">Privacy Policy</Link>
+              <Link to="/terms" className="hover:text-white transition-colors duration-300 underline underline-offset-4 decoration-white/10 hover:decoration-white">Terms of Service</Link>
             </div>
           </div>
         </div>
@@ -100,16 +110,5 @@ const Footer: React.FC = () => {
     </footer>
   );
 };
-
-const SocialIcon: React.FC<{ icon: React.ReactNode; label: string }> = ({ icon, label }) => (
-  <a
-    href="#" aria-label={label}
-    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/5 flex items-center justify-center
-               text-white/60 hover:text-white hover:bg-terracotta hover:scale-110
-               transition-all duration-300 ease-out active:scale-90"
-  >
-    {icon}
-  </a>
-);
 
 export default Footer;

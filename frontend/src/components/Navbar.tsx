@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Home, Info, Users, Calendar, Heart, Layers, LogIn, LogOut, Menu, X, Image as ImageIcon, Sparkles, UserRound } from 'lucide-react';
 import { clearAuthSession, authHeaders, useAuthUser } from '../utils/auth';
+import { SCHOOL_PORTAL_URL } from '../utils/site';
 
 interface NavbarProps {
   onBookClick: () => void;
@@ -41,8 +42,8 @@ const Navbar: React.FC<NavbarProps> = ({ onBookClick, onAssessmentClick, onLogin
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
     e.preventDefault();
     setIsMenuOpen(false);
-    if (id === 'career-assessment') {
-      navigate('/career-assessment');
+    if (id === 'assessments') {
+      navigate('/assessments');
       return;
     }
     if (id === 'top') {
@@ -66,6 +67,7 @@ const Navbar: React.FC<NavbarProps> = ({ onBookClick, onAssessmentClick, onLogin
     { id: 'top', label: 'Home', icon: <Home size={18} /> },
     { id: 'approach', label: 'Approach', icon: <Info size={18} /> },
     { id: 'services', label: 'Services', icon: <Layers size={18} /> },
+    { id: 'assessments', label: 'Assessments', icon: <Sparkles size={18} /> },
     { id: 'gallery', label: 'Gallery', icon: <ImageIcon size={18} /> },
     { id: 'founders', label: 'Founders', icon: <Users size={18} /> },
   ];
@@ -96,11 +98,12 @@ const Navbar: React.FC<NavbarProps> = ({ onBookClick, onAssessmentClick, onLogin
         </div>
 
         {/* Center Navigation Links - Hidden on mobile, visible on md+ */}
-        <div className="hidden md:flex items-center gap-0.5 sm:gap-4 lg:gap-8 mx-auto xl:ml-24 overflow-x-auto no-scrollbar mask-edges">
+        <div className="hidden xl:flex items-center gap-0.5 lg:gap-2 xl:gap-6 mx-auto xl:ml-12 overflow-x-auto no-scrollbar mask-edges">
           {navLinks.map((link) => (
             <a 
               key={link.id}
-              href={`#${link.id}`}
+              href={link.id === 'assessments' ? '/assessments' : `/#${link.id}`}
+              aria-label={link.label}
               onClick={(e) => handleNavClick(e, link.id)}
               className="relative flex items-center justify-center transition-all duration-300 group px-1.5 sm:px-3 py-2 rounded-full hover:bg-white/5"
             >
@@ -165,8 +168,8 @@ const Navbar: React.FC<NavbarProps> = ({ onBookClick, onAssessmentClick, onLogin
           )}
           {/* Separate, school-issued Mindbridge login — not the site account */}
           <a
-            href="https://student.intelcounselling.com/login"
-            className="hidden lg:block text-white/50 hover:text-white text-[9px] font-black uppercase tracking-widest whitespace-nowrap px-1"
+            href={SCHOOL_PORTAL_URL}
+            className="hidden xl:block text-white/50 hover:text-white text-[9px] font-black uppercase tracking-widest whitespace-nowrap px-1"
           >
             School Portal
           </a>
@@ -174,7 +177,7 @@ const Navbar: React.FC<NavbarProps> = ({ onBookClick, onAssessmentClick, onLogin
 
         <button 
           onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className="md:hidden flex items-center justify-center text-white/70 w-7 h-7 mx-0.5 shrink-0 hover:text-white"
+          className="xl:hidden flex items-center justify-center text-white/70 w-7 h-7 mx-0.5 shrink-0 hover:text-white"
         >
           <Menu size={18} />
         </button>
@@ -264,7 +267,7 @@ const Navbar: React.FC<NavbarProps> = ({ onBookClick, onAssessmentClick, onLogin
               </button>
             )}
             <a
-              href="https://student.intelcounselling.com/login"
+              href={SCHOOL_PORTAL_URL}
               className="w-full py-3 text-white/50 text-[10px] font-black uppercase tracking-[0.2em] text-center"
             >
               School Portal (Mindbridge)

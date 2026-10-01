@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { X, ArrowRight, ArrowLeft, Shield, HeartPulse, CheckCircle, Link } from 'lucide-react';
+import { X, ArrowRight, ArrowLeft, Shield, HeartPulse, CheckCircle } from 'lucide-react';
 import { ClinicalConfig } from './ClinicalQuestions';
 import { authHeaders, useAuthUser, PENDING_RESULT_KEY } from '../utils/auth';
 import { apiClient } from '../utils/api';
@@ -163,7 +163,7 @@ const ClinicalAssessment: React.FC<ClinicalAssessmentProps> = ({ config, onClose
                 <div className="h-1.5 w-24 md:w-48 bg-black/5 rounded-full overflow-hidden">
                    <div className={`h-full ${config.color} transition-all duration-300`} style={{ width: `${((step + 1) / config.questions.length) * 100}%` }}></div>
                 </div>
-                <span className="text-[10px] font-bold text-black/40 uppercase tracking-widest">{step + 1} / {config.questions.length}</span>
+                <span className="text-[10px] font-bold text-black/40 uppercase tracking-widest whitespace-nowrap">{step + 1} / {config.questions.length}</span>
               </>
             )}
           </div>
@@ -241,6 +241,7 @@ const ClinicalAssessment: React.FC<ClinicalAssessmentProps> = ({ config, onClose
                     <div className="bg-white/60 p-4 rounded-2xl border border-red-100">
                       <p className="font-bold text-sm uppercase tracking-wider mb-2 opacity-80">Immediate Support Helplines:</p>
                       <ul className="space-y-2 text-sm md:text-base font-semibold">
+                        <li className="flex items-center gap-2">📞 <span className="opacity-80">Tele-MANAS (Govt. of India, 24×7):</span> <a href="tel:14416" className="underline hover:text-red-600">14416</a></li>
                         <li className="flex items-center gap-2">📞 <span className="opacity-80">Kiran Mental Health Helpline (India):</span> <a href="tel:18005990019" className="underline hover:text-red-600">1800-599-0019</a></li>
                         <li className="flex items-center gap-2">📞 <span className="opacity-80">AASRA (Crisis Intervention):</span> <a href="tel:+919820466726" className="underline hover:text-red-600">+91-9820466726</a></li>
                         <li className="flex items-center gap-2">🚨 <span className="opacity-80">Emergency Services:</span> Dial 112 or your local emergency number</li>
@@ -273,19 +274,11 @@ const ClinicalAssessment: React.FC<ClinicalAssessmentProps> = ({ config, onClose
                    {result.band.ctaText || "Book a Consultation"}
                  </button>
                  
-                 <button 
-                     onClick={() => {
-                        const savedId = searchParams.get('id');
-                        if (!savedId) {
-                          alert('Your result is still being saved — please try again in a moment.');
-                          return;
-                        }
-                        navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}?id=${savedId}`);
-                        alert("Result link copied to clipboard you can now share it!");
-                     }}
-                     className="flex items-center justify-center gap-3 w-full md:w-auto px-6 py-5 bg-white text-intel-dark border-2 border-black/10 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-black/5 transition-all shadow-sm md:mb-8"
-                   >
-                     <Link size={16} /> Share Result
+                 <button
+                   onClick={() => navigate(user ? '/my-results' : '/assessments')}
+                   className="flex items-center justify-center gap-3 w-full md:w-auto px-6 py-5 bg-white text-intel-dark border-2 border-black/10 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-black/5 transition-all shadow-sm md:mb-8"
+                 >
+                   {user ? 'My Results' : 'Other Assessments'}
                  </button>
                </div>
 

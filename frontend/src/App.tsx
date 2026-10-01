@@ -40,6 +40,10 @@ const BookingPage = staleSafeLazy(() => import('./pages/BookingPage'));
 const CareerGuidancePage = staleSafeLazy(() => import('./pages/CareerGuidancePage'));
 const MyResultsPage = staleSafeLazy(() => import('./pages/MyResultsPage'));
 const SignInPage = staleSafeLazy(() => import('./pages/SignInPage'));
+const CrisisSupportPage = staleSafeLazy(() => import('./pages/InfoPages').then((m) => ({ default: m.CrisisSupportPage })));
+const PrivacyPage = staleSafeLazy(() => import('./pages/InfoPages').then((m) => ({ default: m.PrivacyPage })));
+const TermsPage = staleSafeLazy(() => import('./pages/InfoPages').then((m) => ({ default: m.TermsPage })));
+const NotFoundPage = staleSafeLazy(() => import('./pages/InfoPages').then((m) => ({ default: m.NotFoundPage })));
 
 // Minimal centered spinner shown briefly while a route chunk loads
 const RouteFallback = () => (
@@ -54,13 +58,18 @@ const ScrollToTop = () => {
 
   useEffect(() => {
     if (hash) {
-      setTimeout(() => {
-        const id = hash.replace('#', '');
+      // The target page may still be lazy-loading — retry briefly until the
+      // section exists so links like /#services land on the right spot.
+      const id = hash.replace('#', '');
+      let tries = 0;
+      const timer = setInterval(() => {
         const element = document.getElementById(id);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth' });
+        if (element || ++tries > 30) {
+          clearInterval(timer);
+          element?.scrollIntoView({ behavior: 'smooth' });
         }
-      }, 0);
+      }, 100);
+      return () => clearInterval(timer);
     } else {
       window.scrollTo(0, 0);
     }
@@ -114,6 +123,10 @@ const AppContent: React.FC = () => {
           <Route path="/career-assessment" element={<CareerGuidancePage />} />
           <Route path="/my-results" element={<MyResultsPage />} />
           <Route path="/login" element={<SignInPage />} />
+          <Route path="/crisis-support" element={<CrisisSupportPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="*" element={<NotFoundPage />} />
           <Route path="/booking" element={<BookingPage />} />
         </Routes>
       </Suspense>

@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { SCHOOL_PORTAL_URL } from '../utils/site';
 import { ArrowLeft, CheckCircle, User, GraduationCap, Briefcase, Calendar, ShieldCheck, Heart, Brain, Zap, Monitor, Users, Sparkles, Sprout } from 'lucide-react';
 import { LazyImage } from './ui/LazyImage';
 
@@ -101,7 +102,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ view, onBack, onBook }) =
   if (!content) return null;
 
   return (
-    <div className="relative min-h-screen bg-transparent pt-16 md:pt-24 pb-12 md:pb-24 px-6 overflow-hidden">
+    <div className="relative min-h-screen bg-transparent pt-24 md:pt-32 pb-12 md:pb-24 px-4 sm:px-6 overflow-hidden">
       <div className="max-w-6xl mx-auto relative z-10">
         <button
           onClick={onBack}
@@ -236,7 +237,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ view, onBack, onBook }) =
                       For student package directly contact <a href="mailto:intelcounselling@gmail.com" className="text-serene-green hover:underline">intelcounselling@gmail.com</a>
                     </p>
                     <button
-                      onClick={() => window.open('https://intel-counselling-frontend.vercel.app/login', '_blank')}
+                      onClick={() => window.open(SCHOOL_PORTAL_URL, '_blank', 'noopener')}
                       className="w-full bg-serene-green text-[#FFFFFF] font-black py-4 md:py-5 rounded-2xl flex items-center justify-center gap-3 hover:opacity-90 transition-all active:scale-[0.98] shadow-xl text-sm md:text-base !text-white"
                     >
                       <span className="!text-white">Login to Portal</span> <User size={18} className="text-white" />
