@@ -1,7 +1,7 @@
 import { getUserByEmail, setUserEmailVerified } from '../db.js';
 import { signToken } from '../token.js';
 import { otpMatches, OTP_PURPOSE, OTP_MAX_ATTEMPTS } from '../otp.js';
-import { incrementOtpAttempts, clearUserOTP } from '../db.js';
+import { claimOtpAttempt, clearUserOTP } from '../db.js';
 
 // Confirms the 6-digit code sent at registration. On success the account is
 // marked verified and the user is logged in (session token returned).
@@ -55,17 +55,14 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'This code has expired. Please request a new one.' });
     }
 
-    // Lock out brute force: 6-digit code space means unlimited guessing wins.
-    if ((user.otp_attempts || 0) >= OTP_MAX_ATTEMPTS) {
+    // Lock out brute force (6-digit code space). The guess is spent atomically
+    // BEFORE comparing, so parallel requests can't exceed the attempt budget.
+    if (!(await claimOtpAttempt(trimmedEmail, OTP_MAX_ATTEMPTS))) {
       await clearUserOTP(trimmedEmail);
       return res.status(429).json({ error: 'Too many attempts. Please request a new code.' });
     }
 
     if (!otpMatches(otp, user.otp_code)) {
-      const attempts = await incrementOtpAttempts(trimmedEmail);
-      if (attempts >= OTP_MAX_ATTEMPTS) {
-        await clearUserOTP(trimmedEmail);
-      }
       return res.status(400).json({ error: 'Invalid or expired verification code' });
     }
 

@@ -15,6 +15,8 @@ const ALL_QUESTIONS: Question[] = [
   ...PERSONALITY_QUESTIONS
 ];
 
+const PROGRESS_KEY = 'career_progress';
+
 const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -25,6 +27,7 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
   const [showSectionIntro, setShowSectionIntro] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [savedResultId, setSavedResultId] = useState<string | null>(null);
+  const [freeSessionAvailable, setFreeSessionAvailable] = useState(false);
   const shouldSendEmailRef = useRef(false);
 
   useEffect(() => {
@@ -37,6 +40,7 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
       apiClient.get<any>(`/api/load-answers?id=${encodeURIComponent(resultId)}`)
         .then(data => {
           if (data.answers && data.answers.length === ALL_QUESTIONS.length) {
+            setFreeSessionAvailable(!!data.freeSessionAvailable);
             const parsedAnswers = data.answers.split('').map(Number);
             setAnswers(parsedAnswers);
             setStep(ALL_QUESTIONS.length);
@@ -70,8 +74,26 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
           console.error('Failed to save legacy answers to DB:', err);
           processResults(parsedAnswers, true);
         });
+    } else {
+      // Resume an in-progress attempt — a refresh shouldn't wipe 200 answers
+      try {
+        const saved = JSON.parse(localStorage.getItem(PROGRESS_KEY) || 'null');
+        if (saved && Array.isArray(saved.answers) && saved.answers.length > 0 && saved.answers.length < ALL_QUESTIONS.length) {
+          setAnswers(saved.answers);
+          setStep(saved.answers.length);
+          setShowSectionIntro(false);
+        }
+      } catch (e) {
+        console.error('Failed to restore assessment progress', e);
+      }
     }
   }, []);
+
+  useEffect(() => {
+    if (!result && answers.length > 0 && answers.length < ALL_QUESTIONS.length && !searchParams.get('id')) {
+      localStorage.setItem(PROGRESS_KEY, JSON.stringify({ answers }));
+    }
+  }, [answers, result]);
 
   useEffect(() => {
     // Wait until both the computed results and the saved result id are available —
@@ -159,6 +181,7 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
     if (!isInitialLoad) {
       // Only send the results email for a live test completion, not saved-result loads
       shouldSendEmailRef.current = true;
+      localStorage.removeItem(PROGRESS_KEY);
 
       // Attach the registration details so the server stores identity with the result
       let registration: any = null;
@@ -173,7 +196,7 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
       }
 
       // Attach the verified payment order so the server can mark this result as paid
-      const orderId = sessionStorage.getItem('career_order_id');
+      const orderId = localStorage.getItem('career_order_id');
 
       // Save encrypted answers to DB and update URL with UUID
       apiClient.post<any>('/api/save-answers', {
@@ -184,8 +207,10 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
         .then(data => {
           if (data.id) {
             // The order is single-use — it is now linked to this result server-side
-            sessionStorage.removeItem('career_order_id');
+            localStorage.removeItem('career_order_id');
+            localStorage.removeItem('career_paid');
             setSavedResultId(data.id);
+            setFreeSessionAvailable(!!data.freeSessionAvailable);
             setSearchParams({ id: data.id }, { replace: true });
           }
         })
@@ -471,10 +496,14 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
                   {type === 'career' ? (
                     <>
                       <p className="text-intel-dark/60 mb-8 max-w-md mx-auto font-medium">
-                        Your report is ready. As part of your premium assessment, you are eligible for a <strong>FREE 1-on-1 expert counselling session</strong> (usually ₹1600+).
+                        {freeSessionAvailable ? (
+                          <>Your report is ready. As part of your premium assessment, you are eligible for a <strong>FREE 1-on-1 expert counselling session</strong> (usually ₹1600+).</>
+                        ) : (
+                          <>Your report is ready.</>
+                        )}
                       </p>
                       <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                        <button 
+                        {freeSessionAvailable && <button 
                           onClick={() => {
                             const currentId = searchParams.get('id') || '';
                             const assessmentUrl = window.location.origin + '/assessments/career?id=' + currentId;
@@ -483,7 +512,7 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
                           className="px-8 py-5 bg-serene-green text-white rounded-2xl font-black uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all text-xs"
                         >
                           Schedule Free Session
-                        </button>
+                        </button>}
                         <button 
                           onClick={() => {
                             setSearchParams({}, { replace: true });

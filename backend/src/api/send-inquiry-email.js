@@ -22,6 +22,14 @@ export default async function handler(req, res) {
   try {
     const { name, email, service, message } = req.body;
 
+    if (
+      typeof name !== 'string' || !name.trim() ||
+      typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
+      typeof message !== 'string' || !message.trim() || message.length > 5000
+    ) {
+      return res.status(400).json({ error: 'Please provide your name, a valid email and a message.' });
+    }
+
     const apiKey = process.env.BREVO_API_KEY;
     if (!apiKey) {
       return res.status(500).json({ error: 'BREVO_API_KEY is not set' });

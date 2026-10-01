@@ -4,7 +4,6 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ClickSpark from './components/ClickSpark';
 import InteractiveBackground from './components/InteractiveBackground';
-import AuthModal from './components/AuthModal';
 
 // ── Stale-deploy recovery ─────────────────────────────────────
 // Lazy routes fetch content-hashed chunks. After a new deploy those
@@ -71,7 +70,6 @@ const ScrollToTop = () => {
 
 const AppContent: React.FC = () => {
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
-  const [showAuthModal, setShowAuthModal] = useState(false);
   const location = useLocation();
   const navigate = useNavigate(); // Added useNavigate
 
@@ -118,13 +116,6 @@ const AppContent: React.FC = () => {
           <Route path="/booking" element={<BookingPage />} />
         </Routes>
       </Suspense>
-
-      {showAuthModal && (
-        <AuthModal 
-          onClose={() => setShowAuthModal(false)}
-          onSuccess={() => setShowAuthModal(false)}
-        />
-      )}
 
       <section className="relative z-40 bg-[#1F1E1B]">
         <Footer />

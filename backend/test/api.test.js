@@ -155,7 +155,9 @@ test('order lifecycle gates the career pipeline', async () => {
     registration: { name: 'Tester', email: EMAIL, age: 21 },
   });
   assert.equal(paid.status, 200);
-  const { id: resultId } = await paid.json();
+  const { id: resultId, freeSessionAvailable } = await paid.json();
+  assert.equal(freeSessionAvailable, true, 'plus package offers the free session');
+  assert.equal((await (await get(`/load-answers?id=${resultId}`)).json()).freeSessionAvailable, true);
 
   // Same order can't back a second result
   const reuse = await post('/save-answers', { answers: '3'.repeat(200), orderId });
@@ -215,12 +217,10 @@ test('career purchase entitlement unlocks re-view, retake and re-send', async ()
   const reEmail = await post('/send-career-results', { resultId: retakeId }, { Authorization: `Bearer ${token}` });
   assert.equal(reEmail.status, 500);
 
-  // The retake allowance requires owning the result — someone else's result
-  // stays gated at 402 even for an entitled user.
-  const anonRetake = await post('/save-answers', { answers: '2'.repeat(200), registration: { name: 'Anon', email: 'anon@example.com' } });
-  const { id: anonRetakeId } = await anonRetake.json();
-  const gatedAnon = await post('/send-career-results', { resultId: anonRetakeId }, { Authorization: `Bearer ${token}` });
-  assert.equal(gatedAnon.status, 402);
+  // The paywall is enforced at storage: an anonymous, unpaid career result is
+  // refused outright, so there is nothing to re-view or email for free.
+  const anon = await post('/save-answers', { answers: '2'.repeat(200), registration: { name: 'Anon', email: 'anon@example.com' } });
+  assert.equal(anon.status, 402);
 });
 
 test('booking emails require payment proof', async () => {
@@ -228,6 +228,99 @@ test('booking emails require payment proof', async () => {
   assert.equal(noOrder.status, 402);
   const freeNoRef = await post('/send-booking-email', { toName: 'T', customerEmail: EMAIL, isFree: true });
   assert.equal(freeNoRef.status, 402);
+});
+
+test('a consumed order can never be flipped back to PAID', async () => {
+  const orderId = 'ORDER_' + crypto.randomBytes(8).toString('hex');
+  await db.createOrder(orderId, 'session_online', 1600);
+  assert.equal(await db.markOrderPaid(orderId), true);
+  assert.equal(await db.markOrderUsed(orderId), true);
+  // Re-running verify-payment / the webhook after booking must not re-arm it
+  assert.equal(await db.markOrderPaid(orderId), false);
+  assert.equal((await db.getOrder(orderId)).status, 'USED');
+});
+
+test('booking claims the order once and releases it when sending fails', async () => {
+  const orderId = 'ORDER_' + crypto.randomBytes(8).toString('hex');
+  await db.createOrder(orderId, 'session_online', 1600);
+  await db.markOrderPaid(orderId);
+  const body = { toName: 'T', customerEmail: EMAIL, orderId };
+
+  // Stub only Brevo; the test client's own requests still hit the server
+  const realFetch = globalThis.fetch;
+  let brevoOk = false;
+  globalThis.fetch = (url, opts) =>
+    String(url).includes('api.brevo.com')
+      ? Promise.resolve(new Response('{}', { status: brevoOk ? 201 : 500, headers: { 'Content-Type': 'application/json' } }))
+      : realFetch(url, opts);
+  process.env.BREVO_API_KEY = 'test';
+  try {
+    assert.equal((await post('/send-booking-email', body)).status, 500);
+    assert.equal((await db.getOrder(orderId)).status, 'PAID', 'failed send releases the order for a retry');
+
+    brevoOk = true;
+    const [a, b] = await Promise.all([post('/send-booking-email', body), post('/send-booking-email', body)]);
+    assert.deepEqual([a.status, b.status].sort(), [200, 402], 'concurrent requests book exactly once');
+    assert.equal((await db.getOrder(orderId)).status, 'USED');
+  } finally {
+    globalThis.fetch = realFetch;
+    delete process.env.BREVO_API_KEY;
+  }
+});
+
+test('inquiry email validates input; load-answers rejects array ids', async () => {
+  assert.equal((await post('/send-inquiry-email', { name: 'A', email: 'nope', message: 'hi' })).status, 400);
+  assert.equal((await get('/load-answers?id=a&id=b')).status, 400);
+});
+
+test('webhook rejects stale timestamps (replay window)', async () => {
+  const orderId = 'ORDER_' + crypto.randomBytes(8).toString('hex');
+  await db.createOrder(orderId, 'session_online', 1500);
+  const payload = JSON.stringify({
+    type: 'PAYMENT_SUCCESS_WEBHOOK',
+    data: { order: { order_id: orderId, order_amount: 1500 }, payment: { payment_status: 'SUCCESS' } },
+  });
+  const ts = String(Date.now() - 10 * 60 * 1000);
+  const sig = crypto.createHmac('sha256', process.env.CASHFREE_SECRET_KEY).update(ts + payload).digest('base64');
+  const res = await fetch(`${base}/api/cashfree-webhook`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-webhook-timestamp': ts, 'x-webhook-signature': sig },
+    body: payload,
+  });
+  assert.equal(res.status, 401);
+  assert.equal((await db.getOrder(orderId)).status, 'CREATED');
+});
+
+test('OTP attempts are spent atomically (parallel guesses cannot exceed the budget)', async () => {
+  const email = 'otp-race@example.com';
+  await post('/register', { name: 'Race', email, password: 'S0me-Str0ng-Pass!' });
+  const claims = await Promise.all(Array.from({ length: 12 }, () => db.claimOtpAttempt(email, 5)));
+  assert.equal(claims.filter(Boolean).length, 5);
+});
+
+test('paid booking records a booking row', async () => {
+  const orderId = 'ORDER_' + crypto.randomBytes(8).toString('hex');
+  await db.createOrder(orderId, 'session_inperson', 2000);
+  await db.markOrderPaid(orderId);
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = (url, opts) =>
+    String(url).includes('api.brevo.com')
+      ? Promise.resolve(new Response('{}', { status: 201, headers: { 'Content-Type': 'application/json' } }))
+      : realFetch(url, opts);
+  process.env.BREVO_API_KEY = 'test';
+  try {
+    const res = await post('/send-booking-email', {
+      toName: 'Booked Person', customerEmail: EMAIL, orderId,
+      sessionMode: 'In-Person', appointmentDate: '2026-12-01', appointmentTime: '10:00 AM',
+    });
+    assert.equal(res.status, 200);
+    const rows = await db.getBookingsByOrder(orderId);
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].appointment_date, '2026-12-01');
+  } finally {
+    globalThis.fetch = realFetch;
+    delete process.env.BREVO_API_KEY;
+  }
 });
 
 test('verify-payment validates order id format', async () => {

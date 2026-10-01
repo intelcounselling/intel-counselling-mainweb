@@ -5,6 +5,7 @@ import ClinicalAssessment from '../components/ClinicalAssessment';
 import AssessmentRegistration from '../components/AssessmentRegistration';
 import CareerPaymentGate from '../components/CareerPaymentGate';
 import { CLINICAL_CONFIGS } from '../components/ClinicalQuestions';
+import { apiClient } from '../utils/api';
 
 const AssessmentTestPage: React.FC = () => {
   const { testId } = useParams<{ testId: string }>();
@@ -26,10 +27,20 @@ const AssessmentTestPage: React.FC = () => {
         console.error('Failed to parse registration details', e);
       }
     }
-    // Check if career test was already paid this session
-    const paid = sessionStorage.getItem('career_paid');
-    if (paid === 'true' || isRetake) setIsPaid(true);
-    setLoading(false);
+    // Check if career test was already paid on this device. localStorage (not
+    // sessionStorage) so a closed tab doesn't make a paying user pay again.
+    if (localStorage.getItem('career_paid') === 'true') {
+      setIsPaid(true);
+      setLoading(false);
+    } else if (isRetake) {
+      // ?retake=1 is just a URL — confirm the purchase before skipping the gate
+      apiClient.get<{ entitled: boolean }>('/api/career-access')
+        .then((r) => setIsPaid(!!r.entitled))
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    } else {
+      setLoading(false);
+    }
   }, [isRetake]);
 
   if (loading) {
@@ -61,7 +72,7 @@ const AssessmentTestPage: React.FC = () => {
       <CareerPaymentGate
         registration={registration}
         onSuccess={() => {
-          sessionStorage.setItem('career_paid', 'true');
+          localStorage.setItem('career_paid', 'true');
           setIsPaid(true);
         }}
         onClose={() => navigate('/assessments')}
@@ -97,7 +108,8 @@ const AssessmentTestPage: React.FC = () => {
           onClick={() => {
             if (window.confirm("Changing details will restart your current assessment. Would you like to continue?")) {
               localStorage.removeItem('assessment_registration');
-              sessionStorage.removeItem('career_paid');
+              localStorage.removeItem('career_paid');
+              localStorage.removeItem('career_progress');
               setRegistration(null);
               setIsPaid(false);
             }

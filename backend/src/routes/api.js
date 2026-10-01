@@ -5,7 +5,6 @@ import loadAnswersHandler from '../api/load-answers.js';
 import createCashfreeSessionHandler from '../api/create-cashfree-session.js';
 import verifyPaymentHandler from '../api/verify-payment.js';
 import cashfreeWebhookHandler from '../api/cashfree-webhook.js';
-import createMeetLinkHandler from '../api/create-meet-link.js';
 import sendBookingEmailHandler from '../api/send-booking-email.js';
 import sendCareerResultsHandler from '../api/send-career-results.js';
 import sendInquiryEmailHandler from '../api/send-inquiry-email.js';
@@ -20,7 +19,7 @@ import userResultsHandler from '../api/user-results.js';
 import careerAccessHandler from '../api/career-access.js';
 import forgotPasswordHandler from '../api/forgot-password.js';
 import verifyOtpHandler from '../api/verify-otp.js';
-import { getUserByEmail, countUsers } from '../db.js';
+import { countUsers } from '../db.js';
 import { isDemoMode, getPrices } from '../pricing.js';
 
 const router = express.Router();
@@ -65,53 +64,21 @@ router.get('/config', (req, res) => {
   });
 });
 
-// Temporary diagnostic: tests DB connectivity and returns exact error on failure.
-// Remove once production SQLite/disk issue is confirmed resolved.
+// Public deploy/DB health check (see run.md). Deliberately exposes no file
+// paths, raw DB errors or stack traces — those go to the server log only.
 router.get('/db-status', async (req, res) => {
+  let userCount = null;
   try {
-    const { fileURLToPath } = await import('url');
-    const { dirname, join } = await import('path');
-    const fs = await import('fs');
-    const __filename = fileURLToPath(import.meta.url);
-    const __dirname = dirname(__filename);
-    const dbPath = process.env.SQLITE_PATH || join(__dirname, '..', '..', 'database.sqlite');
-    const dbExists = fs.existsSync(dbPath);
-    const dbDir = dirname(dbPath);
-    const dirExists = fs.existsSync(dbDir);
-    let writable = false;
-    try {
-      fs.accessSync(dbDir, fs.constants.W_OK);
-      writable = true;
-    } catch (_) {}
-    // Try a real DB query
-    let queryResult = null;
-    let queryError = null;
-    let userCount = null;
-    try {
-      await getUserByEmail('__db_test__@status.check');
-      queryResult = 'ok';
-    } catch (err) {
-      queryError = err.message;
-    }
-    try {
-      userCount = await countUsers();
-    } catch (_) {}
-    res.json({
-      dbPath,
-      dbExists,
-      dbDir,
-      dirExists,
-      dirWritable: writable,
-      sqliteQuery: queryResult || 'failed',
-      sqliteError: queryError,
-      userCount,
-      nodeEnv: process.env.NODE_ENV || 'not set',
-      encryptionKeySet: !!process.env.ENCRYPTION_KEY,
-      authSecretSet: !!process.env.AUTH_TOKEN_SECRET,
-    });
+    userCount = await countUsers();
   } catch (err) {
-    res.status(500).json({ error: err.message, stack: err.stack });
+    console.error('db-status query failed:', err);
   }
+  res.status(userCount === null ? 503 : 200).json({
+    db: userCount === null ? 'failed' : 'ok',
+    userCount,
+    encryptionKeySet: !!process.env.ENCRYPTION_KEY,
+    authSecretSet: !!process.env.AUTH_TOKEN_SECRET,
+  });
 });
 router.post('/register', authLimiter, registerHandler);
 router.post('/login', authLimiter, loginHandler);
@@ -126,7 +93,6 @@ router.get('/career-access', careerAccessHandler);
 router.post('/create-cashfree-session', createCashfreeSessionHandler);
 router.post('/verify-payment', verifyPaymentHandler);
 router.post('/cashfree-webhook', cashfreeWebhookHandler);
-router.post('/create-meet-link', createMeetLinkHandler);
 router.post('/send-booking-email', emailLimiter, sendBookingEmailHandler);
 router.post('/send-career-results', emailLimiter, sendCareerResultsHandler);
 router.post('/send-inquiry-email', emailLimiter, sendInquiryEmailHandler);
