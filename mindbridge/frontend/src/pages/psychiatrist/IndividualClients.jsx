@@ -21,7 +21,7 @@ export default function IndividualClients() {
 
   return (
     <div className="space-y-6 max-w-6xl animate-slide-up">
-      <PageHeader title="Individual clients" description="People who registered directly and paid for Module A or B. Open a client to see their results, profile and sessions." />
+      <PageHeader title="Individual clients" description="People who registered directly (one payment unlocks Module A + B). Open a client to see their results, profile and sessions." />
 
       <div className="relative max-w-sm">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
@@ -34,7 +34,7 @@ export default function IndividualClients() {
         ) : (
           <div className="overflow-x-auto">
             <table className="data-table">
-              <thead><tr><th>Client</th><th>Modules</th><th>Tests done</th><th>Last active</th><th>Alerts</th><th>Next session</th></tr></thead>
+              <thead><tr><th>Client</th><th>Access</th><th>Tests done</th><th>Last active</th><th>Alerts</th><th>Next session</th></tr></thead>
               <tbody>
                 {clients.map((c) => (
                   <tr key={c.id}>
@@ -42,7 +42,7 @@ export default function IndividualClients() {
                       <Link to={`/psychiatrist/students/${c.id}`} className="font-medium text-primary-700 hover:underline">{c.firstName} {c.lastName}</Link>
                       <p className="text-xs text-surface-400">{c.email}</p>
                     </td>
-                    <td>{c.modules.length ? c.modules.map((m) => <span key={m} className="mr-1 text-xs font-semibold bg-primary-50 text-primary-800 border border-primary-100 rounded px-1.5 py-0.5">Module {m}</span>) : <span className="text-surface-400">Not purchased</span>}</td>
+                    <td>{c.paid ? <span className="text-xs font-semibold bg-green-50 text-green-700 border border-green-200 rounded-full px-2 py-0.5">Paid · A + B</span> : <span className="text-xs text-surface-400">Not paid</span>}</td>
                     <td>{c.testsCompleted}</td>
                     <td className="text-surface-500">{c.lastActive ? formatDate(c.lastActive) : '-'}</td>
                     <td>{c.unreadAlerts ? <span className="text-xs font-semibold bg-red-50 text-red-700 border border-red-200 rounded-full px-2 py-0.5">{c.unreadAlerts} unread</span> : <span className="text-surface-400">-</span>}</td>

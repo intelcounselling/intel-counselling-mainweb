@@ -54,7 +54,7 @@ export default function StudentProfile() {
 
   if (isLoading) return <div className="flex justify-center pt-20"><Spinner size="xl" /></div>;
 
-  const { student, results = [], alerts = [], appointments = [], profile, modules = [] } = data || {};
+  const { student, results = [], alerts = [], appointments = [], profile, paid } = data || {};
   const isIndividual = student?.role === 'INDIVIDUAL';
   // Individual clients: attach their latest result in each test to the session so it's all at hand
   const latestIds = isIndividual
@@ -64,7 +64,7 @@ export default function StudentProfile() {
   const infoItems = isIndividual
     ? [
         { label: 'Client type', value: 'Individual' },
-        { label: 'Modules', value: modules.length ? modules.map((m) => 'Module ' + m).join(', ') : 'None purchased' },
+        { label: 'Access', value: paid ? 'Paid (Module A + B)' : 'Not paid yet' },
         { label: 'Phone', value: student?.phone || '—' },
         { label: 'Email', value: student?.email },
       ]

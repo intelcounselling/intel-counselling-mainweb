@@ -154,7 +154,7 @@ async function getSchoolStudents(req, res) {
 }
 
 // ── Individual clients ────────────────────────────────────────
-// Self-registered clients (not tied to a school) who pay for Module A / B.
+// Self-registered clients (not tied to a school); one payment unlocks Module A + B.
 
 async function getIndividuals(req, res) {
   try {
@@ -175,7 +175,7 @@ async function getIndividuals(req, res) {
     res.json({
       clients: clients.map(({ testResults, individualOrders, alerts, appointments, ...c }) => ({
         ...c,
-        modules: [...new Set(individualOrders.map((o) => o.module))].sort(),
+        paid: individualOrders.length > 0, // one payment unlocks both modules
         testsCompleted: new Set(testResults.map((r) => r.test.category)).size,
         lastActive: testResults[0]?.takenAt || null,
         unreadAlerts: alerts.length,
@@ -403,19 +403,18 @@ async function getStudentProfile(req, res) {
 
     if (!student) return res.status(404).json({ error: 'Student not found' });
 
-    // Individual clients also get the integrated profile and the modules they've paid for,
+    // Individual clients also get the integrated profile and whether they have paid,
     // so the counsellor has the whole picture in the session.
     let profile = null;
-    let modules = [];
+    let paid = false;
     if (student.role === 'INDIVIDUAL') {
-      const orders = await prisma.individualOrder.findMany({ where: { userId: id, status: 'PAID' }, select: { module: true } });
-      modules = [...new Set(orders.map((o) => o.module))].sort();
+      paid = (await prisma.individualOrder.count({ where: { userId: id, status: 'PAID' } })) > 0;
       profile = buildProfile(results, 'B');
     }
 
     // never send credentials, even to the counsellor
     const { passwordHash, otpCode, otpExpiresAt, ...safeStudent } = student;
-    res.json({ student: safeStudent, results, alerts, appointments, profile, modules });
+    res.json({ student: safeStudent, results, alerts, appointments, profile, paid });
   } catch (err) {
     handleError(res, err);
   }

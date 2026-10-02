@@ -201,16 +201,15 @@ success returned without emailing) and of the "database is reseeded" reports.
 
 ## Individual portal (Mindbridge, self-registered clients)
 
-People who don't come through a school sign up at `<portal>/register`, pay for **Module A** (5 Intell assessments)
-or **Module B** (7-test battery with integrated profile), and a counsellor sees their results in the session.
+People who don't come through a school sign up at `<portal>/register`, pay once to unlock **Module A** (5 Intell assessments)
+and **Module B** (7-test battery with integrated profile), and a counsellor sees their results in the session.
 
 After pulling this change run `npm run db:push --workspace backend` (adds the `INDIVIDUAL` role and the `IndividualOrder` table).
 
 Backend environment variables:
 
 ```env
-INDIVIDUAL_PRICE_A=999        # INR, Module A  (placeholder default - set the real price)
-INDIVIDUAL_PRICE_B=2499       # INR, Module B  (placeholder default - set the real price)
+INDIVIDUAL_PRICE=2499         # INR, one-time price that unlocks Module A + Module B (placeholder default - set the real price)
 CASHFREE_APP_ID / CASHFREE_SECRET_KEY   # same Cashfree account as the main site
 FRONTEND_URL=https://student.intelcounselling.com   # used as the payment return URL
 DEMO_MODE=true                # optional: every payment becomes INR 1

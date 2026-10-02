@@ -4,7 +4,7 @@ const prisma = require('../prisma');
 const authService = require('../services/auth.service');
 const { buildProfile } = require('../services/individualProfile');
 const { generateDetailedStudentReport } = require('../services/pdf.service');
-const { MODULES, priceOf, allowedCategories } = require('../utils/individualModules');
+const { MODULES, ALL_CATEGORIES, accessPrice } = require('../utils/individualModules');
 const { handleError } = require('../utils/errorHandler');
 const logger = require('../utils/logger');
 
@@ -21,15 +21,11 @@ const cashfreeHeaders = () => ({
 
 const fail = (status, message) => Object.assign(new Error(message), { status });
 
-// ── Access helpers ────────────────────────────────────────────
+// ── Access ────────────────────────────────────────────────────
+// One payment unlocks everything (both modules). Any PAID order counts —
+// including orders from before the single price existed.
 
-async function paidKeys(userId) {
-  const orders = await prisma.individualOrder.findMany({ where: { userId, status: 'PAID' }, select: { module: true } });
-  return [...new Set(orders.map((o) => o.module))];
-}
-
-// Module B contains every Module A test, so owning B also unlocks A.
-const owns = (paid, key) => paid.includes(key) || (key === 'A' && paid.includes('B'));
+const hasAccess = async (userId) => (await prisma.individualOrder.count({ where: { userId, status: 'PAID' } })) > 0;
 
 // Ask Cashfree whether an order was paid and, if the amount matches what we
 // charged, unlock it. Status is never taken from the client.
@@ -56,14 +52,14 @@ async function settlePending(userId) {
   await Promise.all(pending.map((o) => settleOrder(o).catch((e) => logger.warn(`settle ${o.cashfreeOrderId}: ${e.message}`))));
 }
 
-// Gate for taking a test: its category must belong to a module the client has paid for.
+// Gate for taking a test: the client must have paid, and the test must be one of the portal's.
 async function requireAccess(req, res, next) {
   try {
     const test = await prisma.test.findUnique({ where: { id: req.params.testId }, select: { category: true } });
     if (!test) return res.status(404).json({ error: 'Test not found' });
-    const allowed = allowedCategories(await paidKeys(req.user.id));
-    if (!allowed.has(test.category)) {
-      return res.status(403).json({ error: 'Purchase a module to take this assessment.', code: 'PAYMENT_REQUIRED' });
+    if (!ALL_CATEGORIES.includes(test.category)) return res.status(404).json({ error: 'Test not found' });
+    if (!(await hasAccess(req.user.id))) {
+      return res.status(403).json({ error: 'Unlock the assessments to take this test.', code: 'PAYMENT_REQUIRED' });
     }
     next();
   } catch (err) {
@@ -114,8 +110,8 @@ async function getDashboard(req, res) {
     const userId = req.user.id;
     await settlePending(userId);
 
-    const [paid, tests, results, appointments] = await Promise.all([
-      paidKeys(userId),
+    const [unlocked, tests, results, appointments] = await Promise.all([
+      hasAccess(userId),
       prisma.test.findMany({ where: { isActive: true }, orderBy: { createdAt: 'asc' } }),
       prisma.testResult.findMany({
         where: { studentId: userId },
@@ -143,27 +139,30 @@ async function getDashboard(req, res) {
       }).filter(Boolean);
       return {
         key: m.key, name: m.name, tagline: m.tagline, description: m.description, deliverables: m.deliverables,
-        price: priceOf(m.key), owned: owns(paid, m.key), tests: items, completed: items.filter((i) => i.done).length,
+        tests: items, completed: items.filter((i) => i.done).length,
       };
     });
 
-    res.json({ modules, recentResults: results.slice(0, 5), upcomingAppointments: appointments });
+    res.json({
+      access: { unlocked, price: accessPrice() },
+      modules,
+      recentResults: results.slice(0, 5),
+      upcomingAppointments: appointments,
+    });
   } catch (err) {
     handleError(res, err, 'individual dashboard');
   }
 }
 
-// ── Payment ───────────────────────────────────────────────────
+// ── Payment (one-time, unlocks both modules) ──────────────────
 
 async function checkout(req, res) {
   try {
-    const key = req.body?.module;
-    if (!MODULES[key]) throw fail(400, 'Unknown module');
-    if (owns(await paidKeys(req.user.id), key)) throw fail(409, 'You already have access to this module.');
+    if (await hasAccess(req.user.id)) throw fail(409, 'You already have full access.');
     if (!process.env.CASHFREE_APP_ID || !process.env.CASHFREE_SECRET_KEY) throw fail(503, 'Payments are not available right now. Please try again later.');
 
     const user = await prisma.user.findUnique({ where: { id: req.user.id } });
-    const amount = priceOf(key);
+    const amount = accessPrice();
     const orderId = `IND_${crypto.randomBytes(8).toString('hex')}`;
     const phone = String(user.phone || '').replace(/\D/g, '').slice(-10);
     const baseUrl = (process.env.PORTAL_PUBLIC_URL || process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '');
@@ -182,7 +181,7 @@ async function checkout(req, res) {
           customer_phone: phone.length === 10 ? phone : '9999999999',
         },
         order_meta: { return_url: `${baseUrl}/individual?order_id={order_id}` },
-        order_note: `${MODULES[key].tagline}: ${MODULES[key].name}`,
+        order_note: 'Intell assessments: Module A + Module B',
       }),
     });
     const data = await r.json().catch(() => ({}));
@@ -191,7 +190,7 @@ async function checkout(req, res) {
       throw fail(502, 'Could not start the payment. Please try again.');
     }
 
-    await prisma.individualOrder.create({ data: { userId: user.id, module: key, amount, cashfreeOrderId: orderId } });
+    await prisma.individualOrder.create({ data: { userId: user.id, module: 'ALL', amount, cashfreeOrderId: orderId } });
     res.status(201).json({ paymentSessionId: data.payment_session_id, orderId, mode: process.env.CASHFREE_ENV === 'sandbox' ? 'sandbox' : 'production' });
   } catch (err) {
     handleError(res, err, 'individual checkout');
@@ -204,8 +203,7 @@ async function verifyPayment(req, res) {
       where: { cashfreeOrderId: String(req.body?.orderId || ''), userId: req.user.id },
     });
     if (!order) throw fail(404, 'Order not found');
-    const paid = await settleOrder(order);
-    res.json({ paid, module: order.module });
+    res.json({ paid: await settleOrder(order) });
   } catch (err) {
     handleError(res, err, 'individual verifyPayment');
   }
@@ -215,8 +213,8 @@ async function verifyPayment(req, res) {
 
 async function getTests(req, res) {
   try {
-    const allowed = [...allowedCategories(await paidKeys(req.user.id))];
-    const tests = await prisma.test.findMany({ where: { isActive: true, category: { in: allowed } } });
+    if (!(await hasAccess(req.user.id))) return res.json({ tests: [] });
+    const tests = await prisma.test.findMany({ where: { isActive: true, category: { in: ALL_CATEGORIES } } });
     res.json({ tests });
   } catch (err) {
     handleError(res, err, 'individual getTests');
@@ -235,10 +233,8 @@ async function loadResults(userId) {
 
 async function getProfile(req, res) {
   try {
-    const paid = await paidKeys(req.user.id);
-    if (!paid.length) throw fail(403, 'Purchase a module to see your profile.');
-    const moduleKey = paid.includes('B') ? 'B' : 'A';
-    res.json({ profile: buildProfile(await loadResults(req.user.id), moduleKey) });
+    if (!(await hasAccess(req.user.id))) throw fail(403, 'Unlock the assessments to see your profile.');
+    res.json({ profile: buildProfile(await loadResults(req.user.id), 'B') });
   } catch (err) {
     handleError(res, err, 'individual getProfile');
   }
@@ -246,15 +242,12 @@ async function getProfile(req, res) {
 
 async function downloadReport(req, res) {
   try {
-    const paid = await paidKeys(req.user.id);
-    if (!paid.length) throw fail(403, 'Purchase a module to download a report.');
+    if (!(await hasAccess(req.user.id))) throw fail(403, 'Unlock the assessments to download a report.');
     const [student, results] = await Promise.all([
       prisma.user.findUnique({ where: { id: req.user.id } }),
       loadResults(req.user.id),
     ]);
-    // The integrated profile is the Module B deliverable; Module A gets the results report.
-    const profile = paid.includes('B') ? buildProfile(results, 'B') : null;
-    await generateDetailedStudentReport(res, { student, results, profile });
+    await generateDetailedStudentReport(res, { student, results, profile: buildProfile(results, 'B') });
   } catch (err) {
     handleError(res, err, 'individual downloadReport');
   }
@@ -280,8 +273,7 @@ async function getAppointments(req, res) {
 // The counsellor confirms it (and adds the meeting link) from the existing appointment tools.
 async function requestSession(req, res) {
   try {
-    const paid = await paidKeys(req.user.id);
-    if (!paid.length) throw fail(403, 'Purchase a module before requesting a session.');
+    if (!(await hasAccess(req.user.id))) throw fail(403, 'Unlock the assessments before requesting a session.');
 
     const slot = new Date(req.body?.slot);
     if (Number.isNaN(slot.getTime()) || slot.getTime() < Date.now() + 60 * 60 * 1000) {

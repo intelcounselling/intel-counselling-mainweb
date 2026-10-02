@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Download, ArrowRight } from 'lucide-react';
-import { Card, Button, Spinner, PageHeader, EmptyState } from '../../components/ui';
+import { Download, Brain, Lock, ClipboardCheck, ArrowRight } from 'lucide-react';
+import { Card, Button, Spinner, EmptyState } from '../../components/ui';
 import { useToast } from '../../components/ui/Toast';
 import IndividualProfileView from '../../components/IndividualProfileView';
 import api from '../../lib/axios';
@@ -33,46 +33,51 @@ export default function IndividualProfile() {
 
   if (isError || !data) {
     return (
-      <div className="max-w-3xl">
-        <PageHeader title="Your profile" />
-        <Card className="mt-6">
-          <EmptyState
-            icon="○"
-            title="Unlock a module to see your profile"
-            description="Your results summary appears here after you take the assessments."
-            action={<Link to="/individual"><Button>Go to my assessments</Button></Link>}
-          />
-        </Card>
-      </div>
+      <Card className="max-w-2xl">
+        <EmptyState
+          icon={<Lock className="w-6 h-6 text-surface-500" />}
+          title="Your profile is waiting for you"
+          description="Unlock the assessments and take a few, and your strengths and focus areas will appear here."
+          action={<Link to="/individual"><Button icon={<ArrowRight className="w-4 h-4" />}>Go to my assessments</Button></Link>}
+        />
+      </Card>
     );
   }
 
-  const isB = data.module === 'B';
-
   return (
-    <div className="space-y-6 max-w-4xl animate-slide-up">
-      <PageHeader
-        title={isB ? 'Integrated psychological profile' : 'Your results summary'}
-        description={isB ? 'Built from your latest result in each of the 7 assessments.' : 'Built from your latest result in each of the 5 assessments.'}
-        actions={data.completed > 0 && <Button variant="outline" icon={<Download className="w-4 h-4" />} loading={downloading} onClick={download}>Download report (PDF)</Button>}
-      />
+    <div className="space-y-6 max-w-5xl animate-slide-up">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-800 to-primary-900 p-6 sm:p-8 text-white">
+        <div className="absolute -right-12 -top-12 w-48 h-48 rounded-full bg-accent-600/20 blur-2xl" aria-hidden="true" />
+        <div className="relative flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <span className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center"><Brain className="w-7 h-7 text-accent-300" /></span>
+            <div>
+              <h1 className="font-serif text-2xl sm:text-3xl">Your psychological profile</h1>
+              <p className="text-white/70 text-sm mt-1">{data.completed} of {data.total} assessments · built from your latest result in each</p>
+            </div>
+          </div>
+          {data.completed > 0 && (
+            <Button variant="outline" className="!bg-white/10 !border-white/20 !text-white hover:!bg-white/20" icon={<Download className="w-4 h-4" />} loading={downloading} onClick={download}>
+              Download PDF
+            </Button>
+          )}
+        </div>
+        <div className="relative mt-5 h-2 rounded-full bg-white/15 overflow-hidden">
+          <div className="h-full rounded-full bg-accent-600 transition-all duration-700" style={{ width: `${data.total ? (data.completed / data.total) * 100 : 0}%` }} />
+        </div>
+      </div>
 
       {!data.completed ? (
         <Card>
-          <EmptyState icon="○" title="No assessments taken yet" description="Take your first assessment and your profile will appear here."
-            action={<Link to="/individual"><Button>Start an assessment</Button></Link>} />
+          <EmptyState
+            icon={<ClipboardCheck className="w-6 h-6 text-surface-500" />}
+            title="No assessments yet"
+            description="Take your first assessment and your profile starts filling in."
+            action={<Link to="/individual"><Button icon={<ArrowRight className="w-4 h-4" />}>Start an assessment</Button></Link>}
+          />
         </Card>
       ) : (
-        <IndividualProfileView profile={data} showRecommendation={isB} bookHref="/individual/sessions" />
-      )}
-
-      {data.module === 'A' && (
-        <Card className="bg-primary-50 border-primary-100">
-          <p className="text-sm text-primary-900">
-            Want the full picture? <strong>Module B</strong> adds the PHQ-9 and GAD-7 screenings and gives you an integrated profile with risk identification and counselling recommendations.
-          </p>
-          <Link to="/individual" className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-primary-800">See Module B <ArrowRight className="w-4 h-4" /></Link>
-        </Card>
+        <IndividualProfileView profile={data} bookHref="/individual/sessions" />
       )}
     </div>
   );
