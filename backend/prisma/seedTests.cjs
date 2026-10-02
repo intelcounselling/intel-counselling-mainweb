@@ -3,8 +3,7 @@
 // Scale: 1 = Strongly Disagree, 2 = Disagree, 3 = Neutral, 4 = Agree, 5 = Strongly Agree
 // Reverse Scoring: reversed = (maxVal + 1) - value  → 1→5, 2→4, 3→3, 4→2, 5→1
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+let prisma; // created in main() so requiring this file (the tests do) needs no generated client
 
 const SCALE = [
   { label: 'Strongly Disagree', value: 1 },
@@ -166,6 +165,7 @@ const tests = [
 ];
 
 async function main() {
+  prisma = new (require('@prisma/client').PrismaClient)();
   console.log('Seeding INTELL Student Success Assessment tests...');
 
   for (const testData of tests) {
@@ -206,5 +206,5 @@ module.exports = { tests };
 if (require.main === module) {
   main()
     .catch((e) => { console.error(e); process.exit(1); })
-    .finally(async () => { await prisma.$disconnect(); });
+    .finally(async () => { await prisma?.$disconnect(); });
 }
