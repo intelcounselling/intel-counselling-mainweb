@@ -58,7 +58,7 @@ async function createAlertAndNotify({ studentId, resultId, severity, testName, s
         score,
         maxScore,
         severity,
-        schoolName: student.school?.name || (student.role === 'INDIVIDUAL' ? 'Individual client' : 'Unknown School'),
+        schoolName: student.school?.name || 'Unknown School',
       });
     } catch (err) {
       logger.error(`Failed to email super admin ${admin.email}:`, err);
@@ -92,7 +92,7 @@ async function createAlertAndNotify({ studentId, resultId, severity, testName, s
       score,
       maxScore,
       severity,
-      schoolName: student.school?.name || (student.role === 'INDIVIDUAL' ? 'Individual client' : 'Unknown School'),
+      schoolName: student.school?.name || 'Unknown School',
     });
   } catch (err) {
     logger.error('Failed to email admin intelconselling@gmail.com:', err);

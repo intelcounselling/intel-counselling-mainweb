@@ -430,3 +430,57 @@ test('career scoring is sane', () => {
   assert.throws(() => scoreCareerAnswers('123'));
   assert.throws(() => scoreCareerAnswers('5'.repeat(200)));
 });
+
+test('intell assessments: one account-linked payment unlocks all 7 tests, the profile and the report', async () => {
+  const login = await (await post('/login', { email: EMAIL, password: PASSWORD })).json();
+  const auth = { Authorization: `Bearer ${login.token}` };
+  const me = (await db.getUserByEmail(EMAIL)).id;
+
+  const defs = await (await get('/intell/tests')).json();
+  assert.equal(defs.tests.length, 7);
+  assert.equal(defs.tests.find((t) => t.id === 'intell_lp').questions.length, 12);
+  assert.ok(!('reverse' in defs.tests.find((t) => t.id === 'intell_sb').questions[0]), 'scoring keys stay server-side');
+
+  // Not bought: nothing unlocks
+  let st = await (await get('/intell/status', auth)).json();
+  assert.equal(st.entitled, false);
+  assert.equal(st.profile, null);
+  assert.equal((await post('/save-answers', { answers: '4'.repeat(12), testId: 'intell_sb' }, auth)).status, 402);
+  assert.equal((await get('/intell/report', auth)).status, 402);
+  assert.equal((await post('/create-cashfree-session', { serviceId: 'intell_assessment' })).status, 401, 'buying needs an account');
+
+  // The order belongs to the buyer; only a verified payment unlocks it
+  const orderId = 'ORDER_' + crypto.randomBytes(8).toString('hex');
+  await db.createOrder(orderId, 'intell_assessment', 2499, me);
+  assert.equal((await (await get('/intell/status', auth)).json()).entitled, false);
+  await db.markOrderPaid(orderId);
+  assert.equal((await (await get('/intell/status', auth)).json()).entitled, true);
+  assert.equal((await post('/create-cashfree-session', { serviceId: 'intell_assessment' }, auth)).status, 409, 'no second charge');
+
+  // Every question must be answered with an allowed value
+  assert.equal((await post('/save-answers', { answers: '4'.repeat(11), testId: 'intell_sb' }, auth)).status, 400);
+  assert.equal((await post('/save-answers', { answers: '0'.repeat(12), testId: 'intell_sb' }, auth)).status, 400);
+
+  for (const id of ['intell_lp', 'intell_sb', 'intell_ew', 'intell_iu', 'intell_pd']) {
+    assert.equal((await post('/save-answers', { answers: '4'.repeat(12), testId: id }, auth)).status, 200, id);
+  }
+  assert.equal((await post('/save-answers', { answers: '0'.repeat(9), testId: 'phq9' }, auth)).status, 200);
+  assert.equal((await post('/save-answers', { answers: '0'.repeat(7), testId: 'gad7' }, auth)).status, 200);
+
+  st = await (await get('/intell/status', auth)).json();
+  assert.ok(st.tests.every((t) => t.done));
+  assert.equal(st.profile.complete, true);
+  assert.equal(st.profile.tests.length, 7);
+
+  const pdf = await get('/intell/report', auth);
+  assert.equal(pdf.status, 200);
+  assert.equal(Buffer.from(await pdf.arrayBuffer()).subarray(0, 4).toString(), '%PDF');
+});
+
+test('intell report buffer (booking attachment) is a real PDF', async () => {
+  const { reportBuffer, scoreResult } = await import('../src/intell.js');
+  const r = scoreResult('phq9', '000000000', new Date(), 'x');
+  const buf = await reportBuffer({ name: 'Test Client', email: 'c@example.com' }, [{ testId: 'phq9', ...r }]);
+  assert.equal(buf.subarray(0, 4).toString(), '%PDF');
+  assert.ok(buf.length > 10000);
+});

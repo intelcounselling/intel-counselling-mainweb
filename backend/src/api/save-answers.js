@@ -3,6 +3,9 @@ import { encrypt } from '../encryption.js';
 import { insertResult, getOrder, linkOrderToResult, saveResultRegistration, getPaidCareerResultCount } from '../db.js';
 import { authenticateRequest } from '../token.js';
 import { registrationFor } from '../profile.js';
+import { getAccountById } from '../db.js';
+import { INTELL_TEST_IDS, isIntellOnlyTest, validAnswers, hasIntellAccess, scoreResult, isHighRisk } from '../intell.js';
+import { notifyHighRisk } from './intell.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -26,7 +29,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid answers payload' });
     }
 
-    const KNOWN_TESTS = ['career', 'phq9', 'gad7', 'sleep', 'pss10', 'sas'];
+    const KNOWN_TESTS = ['career', 'phq9', 'gad7', 'sleep', 'pss10', 'sas', ...INTELL_TEST_IDS.filter(isIntellOnlyTest)];
     if (testId != null && !KNOWN_TESTS.includes(testId)) {
       return res.status(400).json({ error: 'Unknown test id' });
     }
@@ -87,6 +90,14 @@ export default async function handler(req, res) {
       }
     }
 
+    // Intell assessments are paid (one purchase per account) and fully validated:
+    // a missing or out-of-range answer would silently skew the score.
+    const intellBuyer = userId ? await hasIntellAccess(userId) : false;
+    if (isIntellOnlyTest(resolvedTestId)) {
+      if (!intellBuyer) return res.status(402).json({ error: 'Payment required for the Intell assessments' });
+      if (!validAnswers(resolvedTestId, answers)) return res.status(400).json({ error: 'Please answer every question' });
+    }
+
     const { encrypted, iv } = encrypt(answers);
     const id = crypto.randomUUID();
 
@@ -102,6 +113,15 @@ export default async function handler(req, res) {
       const linked = await linkOrderToResult(orderId, id);
       if (!linked) {
         return res.status(409).json({ error: 'Order already used or not eligible' });
+      }
+    }
+
+    // Buyers' PHQ-9 / GAD-7 / Intell results feed their profile; one that on its own
+    // needs clinical review alerts the team (fire-and-forget: never blocks the save).
+    if (intellBuyer && INTELL_TEST_IDS.includes(resolvedTestId) && validAnswers(resolvedTestId, answers)) {
+      const scored = scoreResult(resolvedTestId, answers, new Date(), id);
+      if (isHighRisk(scored)) {
+        getAccountById(userId).then((acct) => notifyHighRisk(acct, scored.test.name)).catch((e) => console.error('High-risk alert failed:', e));
       }
     }
 

@@ -8,7 +8,6 @@ const psych = [verifyToken, requireRole('SUPER_ADMIN')];
 router.get('/dashboard', ...psych, ctrl.getDashboard);
 router.get('/schools', ...psych, ctrl.getSchools);
 router.get('/schools/:id/students', ...psych, ctrl.getSchoolStudents);
-router.get('/individuals', ...psych, ctrl.getIndividuals);
 router.get('/alerts', ...psych, ctrl.getAlerts);
 router.put('/alerts/:id/status', ...psych, ctrl.updateAlertStatus);
 router.get('/appointments', ...psych, ctrl.getAppointments);

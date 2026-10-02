@@ -102,6 +102,8 @@ async function initPg() {
   // Intake profile (encrypted JSON) — added after launch, so ALTER for existing tables
   await pgPool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS profile TEXT');
   await pgPool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_iv TEXT');
+  // Buyer of account-level purchases (Intell assessments) — keep in sync with prisma/schema.prisma
+  await pgPool.query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS user_id TEXT');
   await pgPool.query('CREATE INDEX IF NOT EXISTS idx_results_user ON assessment_results(user_id)');
   await pgPool.query('CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at)');
   console.log('Connected to PostgreSQL database (persistent — survives redeploys)');
@@ -195,6 +197,7 @@ async function initSqlite() {
   await addColumn('assessment_results', 'emailed_at', 'DATETIME');
   await addColumn('users', 'profile', 'TEXT');
   await addColumn('users', 'profile_iv', 'TEXT');
+  await addColumn('orders', 'user_id', 'TEXT');
 }
 
 function ready() {
@@ -324,6 +327,24 @@ export async function getPaidCareerResultCount(userId) {
   return row ? Number(row.n) : 0;
 }
 
+// Account-level purchases (Intell assessments): paid orders this user bought.
+export async function countPaidOrders(userId, serviceId) {
+  const row = await get(
+    "SELECT COUNT(*) AS n FROM orders WHERE user_id = ? AND service_id = ? AND status IN ('PAID', 'USED')",
+    [userId, serviceId]
+  );
+  return row ? Number(row.n) : 0;
+}
+
+// A user's results for the given tests, newest first, with the encrypted answers.
+export async function getUserResultsByTests(userId, testIds) {
+  if (!testIds.length) return [];
+  return all(
+    `SELECT id, test_id, encrypted_answers, iv, created_at FROM assessment_results WHERE user_id = ? AND test_id IN (${testIds.map(() => '?').join(', ')}) ORDER BY created_at DESC`,
+    [userId, ...testIds]
+  );
+}
+
 // Total registered accounts — diagnostic for the ephemeral-disk wipe issue.
 export async function countUsers() {
   const row = await get('SELECT COUNT(*) AS n FROM users');
@@ -398,10 +419,10 @@ export async function insertResult(id, encryptedAnswers, iv, userId = null, test
 
 // --- Orders (payment status lives server-side, never trusted from the client) ---
 
-export async function createOrder(orderId, serviceId, amount) {
+export async function createOrder(orderId, serviceId, amount, userId = null) {
   await run(
-    'INSERT INTO orders (order_id, service_id, amount) VALUES (?, ?, ?)',
-    [orderId, serviceId, amount]
+    'INSERT INTO orders (order_id, service_id, amount, user_id) VALUES (?, ?, ?, ?)',
+    [orderId, serviceId, amount, userId]
   );
   return orderId;
 }

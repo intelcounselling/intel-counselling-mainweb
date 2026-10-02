@@ -4,7 +4,7 @@ import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
 const { buildProfile } = require('../src/mindbridge/services/individualProfile.js');
-const { ALL_CATEGORIES, MODULES, accessPrice } = require('../src/mindbridge/utils/individualModules.js');
+const { ALL_CATEGORIES, MODULES } = require('../src/mindbridge/utils/individualModules.js');
 
 const phqQuestions = [{ id: 1, text: 'Little interest' }, { id: 9, text: 'Thoughts that you would be better off dead or of hurting yourself in some way' }];
 const r = (category, score, extra = {}) => ({
@@ -22,7 +22,6 @@ test('one access covers both modules: A is the 5 Intell tests, B adds PHQ-9 and 
   assert.equal(MODULES.B.categories.length, 7);
   assert.ok(MODULES.A.categories.every((c) => ALL_CATEGORIES.includes(c)));
   assert.ok(ALL_CATEGORIES.includes('Depression') && ALL_CATEGORIES.includes('Anxiety'));
-  assert.ok(accessPrice() > 0);
 });
 
 test('healthy battery → no concerns, complete, learning strength shown', () => {

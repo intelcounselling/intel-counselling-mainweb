@@ -16,6 +16,8 @@ const BASE_PRICES = {
   session_inperson: Number(process.env.SESSION_PRICE_INPERSON || 2000),
   career_assessment: Number(process.env.CAREER_PRICE_ASSESSMENT || 2999),
   career_assessment_plus: Number(process.env.CAREER_PRICE_PLUS || 4999),
+  // Intell Student Assessments: one payment unlocks Module A + Module B (placeholder default)
+  intell_assessment: Number(process.env.INTELL_PRICE || 2499),
 };
 
 export function isDemoMode() {

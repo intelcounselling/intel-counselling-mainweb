@@ -42,6 +42,7 @@ const Footer: React.FC = () => {
               <li><Link to="/#services" className={linkClass}>Therapy Services</Link></li>
               <li><Link to="/assessments" className={linkClass}>Self-Assessment</Link></li>
               <li><Link to="/career-assessment" className={linkClass}>Career Guidance</Link></li>
+              <li><Link to="/intell-assessment" className={linkClass}>Intell Student Assessments</Link></li>
             </ul>
           </nav>
 

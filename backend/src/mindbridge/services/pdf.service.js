@@ -242,7 +242,7 @@ function responsesSection(doc, result) {
   });
 }
 
-// ── Integrated profile (individual clients) ──────────────────────
+// ── Integrated profile (Intell assessments bought on the main site) ──────────────────────
 
 const LEVEL_HEX = { ok: '#16a34a', watch: '#ca8a04', concern: '#ea580c', high: '#dc2626' };
 const REC_HEX = { none: '#16a34a', monitor: '#ca8a04', counselling: '#ea580c', referral: '#dc2626' };
@@ -304,7 +304,7 @@ function profileSection(doc, profile) {
 /**
  * Generate a session report PDF and stream it to res.
  */
-async function generateSessionReport(res, { appointment, patient, psychiatrist, school, results, profile }) {
+async function generateSessionReport(res, { appointment, patient, psychiatrist, school, results }) {
   const doc = createDocument(res, {
     filename: `Intel_Counselling_Session_Report_${safe(patient.firstName)}_${safe(patient.lastName)}_${new Date().toISOString().split('T')[0]}.pdf`,
     title: `Session Report — ${safe(patient.firstName)} ${safe(patient.lastName)}`,
@@ -313,14 +313,8 @@ async function generateSessionReport(res, { appointment, patient, psychiatrist, 
 
   reportTitle(doc, 'Session Report', `Generated ${fmtDateTime(new Date())}`);
 
-  const individual = patient.role === 'INDIVIDUAL';
-  sectionTitle(doc, individual ? 'Client' : 'Student');
-  keyValueTable(doc, individual ? [
-    ['Name', `${patient.firstName} ${patient.lastName}`],
-    ['Email', patient.email],
-    ['Phone', patient.phone],
-    ['Client type', 'Individual (self-registered)'],
-  ] : [
+  sectionTitle(doc, 'Student');
+  keyValueTable(doc, [
     ['Name', `${patient.firstName} ${patient.lastName}`],
     ['Grade', patient.grade],
     ['Date of birth', patient.dateOfBirth ? fmtDate(patient.dateOfBirth) : 'N/A'],
@@ -339,8 +333,6 @@ async function generateSessionReport(res, { appointment, patient, psychiatrist, 
     sectionTitle(doc, 'Assessment results');
     results.forEach((r) => resultCard(doc, r));
   }
-
-  if (profile) profileSection(doc, profile);
 
   if (appointment.notes) {
     sectionTitle(doc, 'Session notes');
@@ -410,6 +402,7 @@ function answerRows(result) {
 }
 
 async function generateDetailedStudentReport(res, { student, results, profile }) {
+  // role 'INDIVIDUAL' = a main-site client (no school or grade), see backend/src/intell.js
   const individual = student.role === 'INDIVIDUAL';
   const doc = createDocument(res, {
     filename: `Intel_Counselling_Student_Report_${safe(student.firstName)}_${safe(student.lastName)}_${new Date().toISOString().split('T')[0]}.pdf`,

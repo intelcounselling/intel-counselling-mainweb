@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Sparkles, Brain, Activity, HeartPulse, Moon, ArrowRight, History, Smartphone } from 'lucide-react';
+import { ArrowLeft, Sparkles, Brain, Activity, HeartPulse, Moon, ArrowRight, History, Smartphone, Compass, Layers } from 'lucide-react';
 import SpotlightCard from './SpotlightCard';
 import FadeIn from './FadeIn';
 import { useAuthUser } from '../utils/auth';
@@ -107,6 +107,40 @@ const TestOptions: React.FC<TestOptionsProps> = ({ onBack, onSelectTest }) => {
           </div>
         </FadeIn>
 
+
+        {/* Premium assessments */}
+        <div className="mb-16 md:mb-24">
+          <FadeIn>
+            <div className="flex items-center gap-3 mb-10 border-b border-black/5 pb-4">
+              <h2 className="text-2xl md:text-4xl font-black serif text-intel-dark">Premium Assessments</h2>
+              <span className="bg-terracotta text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">One-time payment</span>
+            </div>
+          </FadeIn>
+          <div className="grid md:grid-cols-2 gap-6 md:gap-10 lg:gap-12">
+            {[
+              { path: '/career-assessment', icon: <Compass size={28} />, color: 'bg-intel-dark border border-white/10', tag: 'Career mapping', title: 'Career Guidance Assessment', desc: 'Multiple intelligences, vocational interests and career personality, with a detailed PDF report.', cta: 'Explore Career Test' },
+              { path: '/intell-assessment', icon: <Layers size={28} />, color: 'bg-terracotta', tag: 'Module A + Module B', title: 'Intell Student Assessments', desc: 'How you learn, study habits, feelings, screen time and personality, plus PHQ-9 and GAD-7, in one integrated profile.', cta: 'Explore Intell Assessments' },
+            ].map((t, idx) => (
+              <FadeIn key={t.path} delay={idx * 150}>
+                <div onClick={() => navigate(t.path)} className="group cursor-pointer h-full">
+                  <SpotlightCard className="bg-[#1C1F22] border-2 border-terracotta/20 h-full p-8 md:p-12 rounded-[40px] md:rounded-[60px] shadow-2xl transition-all duration-700 hover:scale-[1.02] flex flex-col items-start text-left">
+                    <div className={`w-14 h-14 md:w-20 md:h-20 ${t.color} text-white rounded-[2rem] flex items-center justify-center mb-8 shadow-xl transition-all duration-700 group-hover:rotate-12 group-hover:scale-110`}>
+                      {t.icon}
+                    </div>
+                    <div className="flex-grow">
+                      <span className="text-[10px] md:text-xs font-black text-terracotta uppercase tracking-[0.3em] mb-3 block font-inter">{t.tag}</span>
+                      <h3 className="text-2xl md:text-4xl font-black text-white serif mb-4 group-hover:text-terracotta transition-colors">{t.title}</h3>
+                      <p className="text-white/60 font-light leading-relaxed text-sm md:text-lg mb-10 group-hover:text-white/80 transition-colors">{t.desc}</p>
+                    </div>
+                    <div className="flex items-center gap-3 text-white font-black text-xs md:text-sm uppercase tracking-widest mt-auto border-b-2 border-transparent group-hover:border-terracotta transition-all">
+                      {t.cta} <ArrowRight size={16} />
+                    </div>
+                  </SpotlightCard>
+                </div>
+              </FadeIn>
+            ))}
+          </div>
+        </div>
 
         {/* Free Assessments Section */}
         <div>

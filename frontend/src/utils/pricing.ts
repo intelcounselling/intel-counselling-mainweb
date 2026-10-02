@@ -10,6 +10,7 @@ export const DEFAULT_PRICES = {
   session_inperson: 2000,
   career_assessment: 2999,
   career_assessment_plus: 4999,
+  intell_assessment: 2499,
 };
 
 export interface PricingConfig {

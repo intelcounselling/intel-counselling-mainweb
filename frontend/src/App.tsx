@@ -38,6 +38,7 @@ const AssessmentsPage = staleSafeLazy(() => import('./pages/AssessmentsPage'));
 const AssessmentTestPage = staleSafeLazy(() => import('./pages/AssessmentTestPage'));
 const BookingPage = staleSafeLazy(() => import('./pages/BookingPage'));
 const CareerGuidancePage = staleSafeLazy(() => import('./pages/CareerGuidancePage'));
+const IntellAssessmentPage = staleSafeLazy(() => import('./pages/IntellAssessmentPage'));
 const MyResultsPage = staleSafeLazy(() => import('./pages/MyResultsPage'));
 const SignInPage = staleSafeLazy(() => import('./pages/SignInPage'));
 const CrisisSupportPage = staleSafeLazy(() => import('./pages/InfoPages').then((m) => ({ default: m.CrisisSupportPage })));
@@ -121,6 +122,7 @@ const AppContent: React.FC = () => {
           <Route path="/assessments" element={<AssessmentsPage />} />
           <Route path="/assessments/:testId" element={<AssessmentTestPage />} />
           <Route path="/career-assessment" element={<CareerGuidancePage />} />
+          <Route path="/intell-assessment" element={<IntellAssessmentPage />} />
           <Route path="/my-results" element={<MyResultsPage />} />
           <Route path="/login" element={<SignInPage />} />
           <Route path="/crisis-support" element={<CrisisSupportPage />} />

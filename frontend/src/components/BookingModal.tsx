@@ -180,10 +180,16 @@ const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
   });
 
   const [careerResult, setCareerResult] = useState<any | null>(null);
+  // Intell Student Assessments buyer with at least one result: offer to share the report
+  const [intellReady, setIntellReady] = useState(false);
+  const [shareIntell, setShareIntell] = useState(true);
 
   // Signed in: pre-fill from the saved intake so details aren't typed twice
   useEffect(() => {
     if (!user) return;
+    apiClient.get<any>('/api/intell/status')
+      .then((s) => setIntellReady(!!s.entitled && (s.tests || []).some((t: any) => t.done)))
+      .catch(() => {});
     apiClient.get<any>('/api/profile')
       .then((d) => {
         const p = d.profile || {};
@@ -393,6 +399,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
       shareAssessmentResult: details.shareAssessmentResult && (!!careerResult || !!clinicalResult),
       careerResult: careerResult,
       clinicalResult: clinicalResult,
+      shareIntellReport: intellReady && shareIntell,
       orderId: orderId || null,
       isFree: isFreeBooking,
       freeResultId: isFreeBooking ? extractFreeResultId() : undefined
@@ -642,6 +649,12 @@ const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
                   <label className="flex items-center gap-3 cursor-pointer p-4 bg-serene-green/5 rounded-xl border border-serene-green/20 mt-4">
                     <input type="checkbox" checked={details.shareAssessmentResult} onChange={e => setDetails({ ...details, shareAssessmentResult: e.target.checked })} className="w-6 h-6 rounded border-white/20 text-serene-green focus:ring-serene-green flex-shrink-0" />
                     <span className="text-sm font-bold text-white">Share my {clinicalResult.title} report PDF with the counselor.</span>
+                  </label>
+                )}
+                {intellReady && (
+                  <label className="flex items-center gap-3 cursor-pointer p-4 bg-serene-green/5 rounded-xl border border-serene-green/20 mt-4">
+                    <input type="checkbox" checked={shareIntell} onChange={e => setShareIntell(e.target.checked)} className="w-6 h-6 rounded border-white/20 text-serene-green focus:ring-serene-green flex-shrink-0" />
+                    <span className="text-sm font-bold text-white">Share my Intell Student Assessment report (all tests, profile and answers) with the counsellor.</span>
                   </label>
                 )}
               </div>

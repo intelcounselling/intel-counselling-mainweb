@@ -5,7 +5,6 @@ import { ChevronDown, ChevronUp, LineChart, Activity, FileCheck, ArrowRight } fr
 import { Card, Spinner, EmptyState, Button } from '../../components/ui';
 import SeverityBadge from '../../components/charts/SeverityBadge';
 import ResultInsights from '../../components/charts/ResultInsights';
-import usePortalBase from '../../utils/portalBase';
 import ScoreHistoryChart from '../../components/charts/ScoreHistoryChart';
 import RadarChart from '../../components/charts/RadarChart';
 import api from '../../lib/axios';
@@ -119,12 +118,11 @@ function ExpandableRow({ result, isOpen, toggle }) {
 
 export default function ResultDetail() {
   const { id } = useParams();
-  const base = usePortalBase();
   const [openRowId, setOpenRowId] = useState(id || null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['student-results'],
-    queryFn: () => api.get(`${base}/results`, { params: { limit: 100 } }).then(r => r.data),
+    queryFn: () => api.get('/student/results', { params: { limit: 100 } }).then(r => r.data),
   });
 
   if (isLoading) return <div className="flex justify-center pt-20"><Spinner size="xl" /></div>;
@@ -154,7 +152,7 @@ export default function ResultDetail() {
             <p className="text-[#b3aaa0] mb-8 max-w-md">
               You haven't completed any assessments. Take your first test to start tracking your mental wellness journey.
             </p>
-            <Link to={base === '/individual' ? '/individual' : '/student/tests'} className="bg-[#e5ddd0] text-[#786c5c] hover:bg-[#d9d0c2] hover:text-[#111111] px-8 py-4 rounded-xl font-bold shadow-lg transition-colors">
+            <Link to="/student/tests" className="bg-[#e5ddd0] text-[#786c5c] hover:bg-[#d9d0c2] hover:text-[#111111] px-8 py-4 rounded-xl font-bold shadow-lg transition-colors">
               Take an Assessment
             </Link>
           </div>

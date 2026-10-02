@@ -10,7 +10,6 @@ import useAuthStore from './store/authStore';
 import Login from './pages/auth/Login';
 import ResetPassword from './pages/auth/ResetPassword';
 import ForgotPassword from './pages/auth/ForgotPassword';
-import IndividualRegister from './pages/individual/IndividualRegister';
 
 // ── Helper ────────────────────────────────────────────────────
 const Loadable = (Component) => (props) => (
@@ -87,12 +86,6 @@ const TakeTest = Loadable(staleSafeLazy(() => import('./pages/student/TakeTest')
 const ResultDetail = Loadable(staleSafeLazy(() => import('./pages/student/ResultDetail')));
 const ConcernForm = Loadable(staleSafeLazy(() => import('./pages/student/ConcernForm')));
 
-// ── Individual (self-registered, paid modules) ────────────────
-const IndividualDashboard = Loadable(staleSafeLazy(() => import('./pages/individual/IndividualDashboard')));
-const IndividualProfile = Loadable(staleSafeLazy(() => import('./pages/individual/IndividualProfile')));
-const IndividualSessions = Loadable(staleSafeLazy(() => import('./pages/individual/IndividualSessions')));
-const IndividualClients = Loadable(staleSafeLazy(() => import('./pages/psychiatrist/IndividualClients')));
-
 // ── Shared Settings ───────────────────────────────────────────
 const Settings = Loadable(staleSafeLazy(() => import('./pages/Settings')));
 
@@ -130,7 +123,6 @@ const router = createBrowserRouter([
   { path: '/', element: <AuthRedirect /> },
   { path: '/login', element: <Login /> },
   { path: '/forgot-password', element: <ForgotPassword /> },
-  { path: '/register', element: <IndividualRegister /> },
   {
     path: '/reset-password',
     element: <ProtectedRoute><ResetPassword /></ProtectedRoute>,
@@ -172,7 +164,6 @@ const router = createBrowserRouter([
       { index: true, element: <PsychiatristDashboard /> },
       { path: 'schools', element: <SchoolOverview /> },
       { path: 'schools/:id', element: <SchoolOverview /> },
-      { path: 'individuals', element: <IndividualClients /> },
       { path: 'alerts', element: <AlertsFeed /> },
       { path: 'students/:id', element: <StudentProfile /> },
       { path: 'appointments', element: <AppointmentManager /> },
@@ -214,25 +205,6 @@ const router = createBrowserRouter([
       { path: 'results', element: <ResultDetail /> },
       { path: 'results/:id', element: <ResultDetail /> },
       { path: 'concerns', element: <ConcernForm /> },
-      { path: 'settings', element: <Settings /> },
-    ],
-  },
-
-  // ── Individual ─────────────────────────────────────────────
-  {
-    path: '/individual',
-    element: (
-      <ProtectedRoute roles={['INDIVIDUAL']}>
-        <AppShell />
-      </ProtectedRoute>
-    ),
-    children: [
-      { index: true, element: <IndividualDashboard /> },
-      { path: 'profile', element: <IndividualProfile /> },
-      { path: 'sessions', element: <IndividualSessions /> },
-      { path: 'tests/:testId', element: <TakeTest /> },
-      { path: 'results', element: <ResultDetail /> },
-      { path: 'results/:id', element: <ResultDetail /> },
       { path: 'settings', element: <Settings /> },
     ],
   },

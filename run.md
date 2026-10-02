@@ -199,19 +199,20 @@ success returned without emailing) and of the "database is reseeded" reports.
 
 ---
 
-## Individual portal (Mindbridge, self-registered clients)
+## Intell Student Assessments (main website)
 
-People who don't come through a school sign up at `<portal>/register`, pay once to unlock **Module A** (5 Intell assessments)
-and **Module B** (7-test battery with integrated profile), and a counsellor sees their results in the session.
-
-After pulling this change run `npm run db:push --workspace backend` (adds the `INDIVIDUAL` role and the `IndividualOrder` table).
-
-Backend environment variables:
+Sold next to Career Guidance on the tests page (`/intell-assessment`). One payment, linked to the
+signed-in account, unlocks **Module A** (5 Intell assessments) and **Module B** (those + PHQ-9 and
+GAD-7, combined into an integrated profile). Results, the profile and the PDF are on that page and on
+My Results. When the client books a session and ticks "share my Intell report", the full PDF is
+attached to the booking email. A result that on its own needs clinical review (PHQ-9 or GAD-7 of 15+,
+or the PHQ-9 self-harm item) emails `ADMIN_EMAIL`.
 
 ```env
-INDIVIDUAL_PRICE=2499         # INR, one-time price that unlocks Module A + Module B (placeholder default - set the real price)
-CASHFREE_APP_ID / CASHFREE_SECRET_KEY   # same Cashfree account as the main site
-FRONTEND_URL=https://student.intelcounselling.com   # used as the payment return URL
-DEMO_MODE=true                # optional: every payment becomes INR 1
-# CASHFREE_ENV=sandbox and CASHFREE_API_BASE=https://sandbox.cashfree.com/pg  -> test against the Cashfree sandbox
+INTELL_PRICE=2499   # INR, one-time (placeholder default - set the real price)
+DEMO_MODE=true      # optional: every payment becomes INR 1 (all products)
 ```
+
+Database: `orders.user_id` is added automatically on startup (db.js). The Prisma schema also declares
+`users.profile`, `users.profile_iv` and the `bookings` table, so `prisma db push` no longer tries to
+drop them.

@@ -25,8 +25,9 @@ enum Role {
   PSYCHIATRIST
   PARENT
   STUDENT
-  // Self-registered client who came to us directly, not through a school.
-  // Pays separately for Module A / B (see IndividualOrder).
+  // DEPRECATED: briefly used by a Mindbridge individual portal that moved to the
+  // main site (Intell assessments). Kept so prisma db push never needs
+  // --accept-data-loss; nothing creates users with this role any more.
   INDIVIDUAL
 }
 
@@ -137,6 +138,7 @@ model User {
   individualOrders         IndividualOrder[]
 }
 
+// DEPRECATED (see Role.INDIVIDUAL) — unused, kept to avoid a destructive push.
 // Paid access to an individual-portal module. Module "A" = the five Intell
 // student development assessments; "B" = the 7-test psychological battery.
 model IndividualOrder {
@@ -277,6 +279,8 @@ model CareerUser {
   otpAttempts   Int?      @default(0) @map("otp_attempts")
   tokenVersion  Int?      @default(0) @map("token_version")
   emailVerified Int?      @map("email_verified")
+  profile       String?   @db.Text // encrypted intake (ALTER TABLE in db.js)
+  profileIv     String?   @map("profile_iv") @db.Text
 
   @@map("users")
 }
@@ -303,9 +307,26 @@ model CareerOrder {
   amount    Float
   status    String    @default("CREATED") @db.Text
   resultId  String?   @map("result_id") @db.Text
+  userId    String?   @map("user_id") @db.Text // buyer, for account-level purchases (Intell assessments)
   createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime? @map("updated_at") @db.Timestamptz(6)
 
   @@index([createdAt], map: "idx_orders_created")
   @@map("orders")
+}
+
+model CareerBooking {
+  id              String    @id @db.Text
+  orderId         String?   @map("order_id") @db.Text
+  name            String    @db.Text
+  email           String    @db.Text
+  serviceName     String?   @map("service_name") @db.Text
+  sessionMode     String?   @map("session_mode") @db.Text
+  appointmentDate String?   @map("appointment_date") @db.Text
+  appointmentTime String?   @map("appointment_time") @db.Text
+  meetLink        String?   @map("meet_link") @db.Text
+  isFree          Int?      @default(0) @map("is_free")
+  createdAt       DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("bookings")
 }

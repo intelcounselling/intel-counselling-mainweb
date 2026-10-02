@@ -3,6 +3,9 @@ import { escapeHtml, plainText } from '../escape.js';
 import crypto from 'crypto';
 import { getOrder, markOrderUsed, releaseOrder, getResultFull, createBooking } from '../db.js';
 import { createMeetLink } from '../meet.js';
+import { authenticateRequest } from '../token.js';
+import { getAccountById } from '../db.js';
+import { hasIntellAccess, loadIntellResults, reportBuffer } from '../intell.js';
 
 function createCareerPdfBufferBase64(registration, appointment, result) {
   return new Promise((resolve, reject) => {
@@ -523,6 +526,23 @@ export default async function handler(req, res) {
         }
       }
 
+      // Intell Student Assessments: a signed-in buyer who shares their results gets
+      // the full report (all tests, profile, answers) attached for the counsellor.
+      let intellPdfBase64 = null;
+      if (req.body?.shareIntellReport === true) {
+        try {
+          const bookerId = await authenticateRequest(req);
+          if (bookerId && (await hasIntellAccess(bookerId))) {
+            const intellResults = await loadIntellResults(bookerId);
+            if (intellResults.length) {
+              intellPdfBase64 = (await reportBuffer(await getAccountById(bookerId), intellResults)).toString('base64');
+            }
+          }
+        } catch (intellErr) {
+          console.error('Failed to generate Intell assessment PDF:', intellErr);
+        }
+      }
+
       const adminPayload = {
         to: [{ email: process.env.ADMIN_EMAIL || 'intelcounselling@gmail.com', name: 'Intel Counselling Admin' }],
         sender: { email: process.env.SENDER_EMAIL || 'intelcounselling@gmail.com', name: 'Intel Counselling Bookings' },
@@ -552,6 +572,13 @@ export default async function handler(req, res) {
         adminPayload.attachment.push({
           content: clinicalPdfBase64,
           name: `${safeName}_${String(clinicalResult?.title || 'Clinical').replace(/[^a-zA-Z0-9]/g, '_')}_Report.pdf`
+        });
+      }
+
+      if (intellPdfBase64) {
+        adminPayload.attachment.push({
+          content: intellPdfBase64,
+          name: `${safeName}_Intell_Assessment_Report.pdf`
         });
       }
 

@@ -254,11 +254,6 @@ export default function Login() {
             </Button>
           </div>
 
-          <p className="mt-8 text-center text-sm text-surface-500">
-            Not part of a school programme?{' '}
-            <Link to="/register" className="font-medium text-primary-700 hover:text-primary-800">Create an individual account</Link>
-          </p>
-
         </div>
       </div>
     </div>

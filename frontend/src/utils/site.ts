@@ -12,5 +12,3 @@ export const CLINIC = {
 // Separate, school-issued Mindbridge portal (not the site account)
 export const SCHOOL_PORTAL_URL = 'https://student.intelcounselling.com/login';
 
-// Same Mindbridge app, individual sign-up: for people who don't come through a school
-export const INDIVIDUAL_PORTAL_URL = 'https://student.intelcounselling.com/register';

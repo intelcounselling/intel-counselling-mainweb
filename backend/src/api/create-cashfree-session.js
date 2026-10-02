@@ -1,6 +1,8 @@
 import crypto from 'crypto';
 import { createOrder } from '../db.js';
 import { getPrices } from '../pricing.js';
+import { authenticateRequest } from '../token.js';
+import { INTELL_SERVICE_ID, hasIntellAccess } from '../intell.js';
 
 export default async function handler(req, res) {
   // Handle CORS preflight requests for local development (Vercel doesn't strictly need this but good practice)
@@ -8,7 +10,7 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader(
     'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
   );
 
   if (req.method === 'OPTIONS') {
@@ -31,6 +33,15 @@ export default async function handler(req, res) {
     const orderAmount = PRICES[serviceId];
     if (!Number.isFinite(orderAmount) || orderAmount <= 0) {
       return res.status(400).json({ error: 'Unknown service' });
+    }
+
+    // The Intell assessments are bought by an account (access is tied to it, not to
+    // one result), so that order records the signed-in buyer.
+    let buyerId = null;
+    if (serviceId === INTELL_SERVICE_ID) {
+      buyerId = await authenticateRequest(req);
+      if (!buyerId) return res.status(401).json({ error: 'Please sign in to buy the assessments' });
+      if (await hasIntellAccess(buyerId)) return res.status(409).json({ error: 'You already have access to the Intell assessments' });
     }
 
     // Prefer a configured base URL over the spoofable Host header for the post-payment redirect
@@ -69,7 +80,7 @@ export default async function handler(req, res) {
 
     if (response.ok) {
         // Persist the order server-side so payment status is never trusted from the client
-        await createOrder(orderId, serviceId, orderAmount);
+        await createOrder(orderId, serviceId, orderAmount, buyerId);
         res.status(200).json({ paymentSessionId: data.payment_session_id, orderId: data.order_id });
     } else {
         res.status(400).json({ error: data.message || 'Failed to create Cashfree order' });

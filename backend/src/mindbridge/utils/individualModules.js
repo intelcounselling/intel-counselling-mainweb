@@ -1,4 +1,5 @@
-// The individual (non-school) portal: ONE payment unlocks both modules.
+// Intell Student Assessments (sold on the main site, one payment for both modules —
+// see backend/src/intell.js; the price is intell_assessment in src/pricing.js).
 //   A: the five Intell student development assessments
 //   B: Intell Student Psychological Assessment Battery: the same five plus PHQ-9 and GAD-7
 const INTELL = ['LearningPattern', 'StudyBehaviour', 'EmotionalWellness', 'InternetUsage', 'PersonalityDimensions'];
@@ -32,16 +33,4 @@ const MODULES = {
 // Every category the one-time access unlocks (B is a superset of A)
 const ALL_CATEGORIES = MODULES.B.categories;
 
-// Same switch the main site uses: DEMO_MODE=true makes every payment INR 1.
-const isDemoMode = () => ['true', '1', 'yes'].includes(String(process.env.DEMO_MODE || '').trim().toLowerCase());
-
-const DEFAULT_PRICE = 2499; // placeholder: set INDIVIDUAL_PRICE
-
-// Price lives on the server only; the client never sends an amount.
-function accessPrice() {
-  if (isDemoMode()) return 1;
-  const v = Number(process.env.INDIVIDUAL_PRICE);
-  return Number.isFinite(v) && v > 0 ? v : DEFAULT_PRICE;
-}
-
-module.exports = { MODULES, INTELL, CLINICAL, ALL_CATEGORIES, accessPrice, isDemoMode };
+module.exports = { MODULES, INTELL, CLINICAL, ALL_CATEGORIES };

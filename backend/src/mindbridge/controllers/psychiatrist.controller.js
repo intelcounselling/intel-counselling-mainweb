@@ -1,5 +1,4 @@
 const prisma = require('../prisma');
-const { buildProfile } = require('../services/individualProfile');
 const { sendAppointmentEmail } = require('../services/email.service');
 const { parsePagination, buildPaginationMeta } = require('../utils/pagination');
 const { handleError } = require('../utils/errorHandler');
@@ -148,40 +147,6 @@ async function getSchoolStudents(req, res) {
     ]);
 
     res.json({ students, pagination: buildPaginationMeta(total, page, limit) });
-  } catch (err) {
-    handleError(res, err);
-  }
-}
-
-// ── Individual clients ────────────────────────────────────────
-// Self-registered clients (not tied to a school); one payment unlocks Module A + B.
-
-async function getIndividuals(req, res) {
-  try {
-    const clients = await prisma.user.findMany({
-      where: { role: 'INDIVIDUAL', isActive: true },
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true, firstName: true, lastName: true, email: true, phone: true, createdAt: true,
-        individualOrders: { where: { status: 'PAID' }, select: { module: true } },
-        testResults: { orderBy: { takenAt: 'desc' }, select: { takenAt: true, test: { select: { category: true } } } },
-        alerts: { where: { status: 'UNREAD' }, select: { id: true } },
-        appointments: {
-          where: { slot: { gte: new Date() }, status: { in: ['PENDING', 'CONFIRMED'] } },
-          orderBy: { slot: 'asc' }, take: 1, select: { id: true, slot: true },
-        },
-      },
-    });
-    res.json({
-      clients: clients.map(({ testResults, individualOrders, alerts, appointments, ...c }) => ({
-        ...c,
-        paid: individualOrders.length > 0, // one payment unlocks both modules
-        testsCompleted: new Set(testResults.map((r) => r.test.category)).size,
-        lastActive: testResults[0]?.takenAt || null,
-        unreadAlerts: alerts.length,
-        nextAppointment: appointments[0] || null,
-      })),
-    });
   } catch (err) {
     handleError(res, err);
   }
@@ -403,18 +368,9 @@ async function getStudentProfile(req, res) {
 
     if (!student) return res.status(404).json({ error: 'Student not found' });
 
-    // Individual clients also get the integrated profile and whether they have paid,
-    // so the counsellor has the whole picture in the session.
-    let profile = null;
-    let paid = false;
-    if (student.role === 'INDIVIDUAL') {
-      paid = (await prisma.individualOrder.count({ where: { userId: id, status: 'PAID' } })) > 0;
-      profile = buildProfile(results, 'B');
-    }
-
     // never send credentials, even to the counsellor
     const { passwordHash, otpCode, otpExpiresAt, ...safeStudent } = student;
-    res.json({ student: safeStudent, results, alerts, appointments, profile, paid });
+    res.json({ student: safeStudent, results, alerts, appointments });
   } catch (err) {
     handleError(res, err);
   }
@@ -542,7 +498,6 @@ async function getStudentProgress(req, res) {
 }
 
 module.exports = {
-  getIndividuals,
   getDashboard,
   getSchools,
   getSchoolStudents,

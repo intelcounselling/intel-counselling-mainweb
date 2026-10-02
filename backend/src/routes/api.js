@@ -21,6 +21,7 @@ import forgotPasswordHandler from '../api/forgot-password.js';
 import googleLoginHandler from '../api/google-login.js';
 import profileHandler from '../api/profile.js';
 import verifyOtpHandler from '../api/verify-otp.js';
+import { testsHandler as intellTestsHandler, statusHandler as intellStatusHandler, reportHandler as intellReportHandler } from '../api/intell.js';
 import { countUsers } from '../db.js';
 import { isDemoMode, getPrices } from '../pricing.js';
 
@@ -95,6 +96,10 @@ router.post('/verify-otp', authLimiter, verifyOtpHandler);
 router.post('/link-result', linkResultHandler);
 router.get('/user-results', userResultsHandler);
 router.get('/career-access', careerAccessHandler);
+// Intell Student Assessments (one payment: Module A + Module B)
+router.get('/intell/tests', intellTestsHandler);
+router.get('/intell/status', intellStatusHandler);
+router.get('/intell/report', intellReportHandler);
 router.post('/create-cashfree-session', createCashfreeSessionHandler);
 router.post('/verify-payment', verifyPaymentHandler);
 router.post('/cashfree-webhook', cashfreeWebhookHandler);

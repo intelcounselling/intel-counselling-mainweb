@@ -4,6 +4,8 @@ import Assessment from '../components/Assessment';
 import ClinicalAssessment from '../components/ClinicalAssessment';
 import AssessmentRegistration from '../components/AssessmentRegistration';
 import CareerPaymentGate from '../components/CareerPaymentGate';
+import IntellAssessment from '../components/IntellAssessment';
+import { isIntellTest, INTELL_HUB } from '../utils/intellMeta';
 import { CLINICAL_CONFIGS } from '../components/ClinicalQuestions';
 import { apiClient } from '../utils/api';
 import { useAuthUser } from '../utils/auth';
@@ -23,6 +25,19 @@ const AssessmentTestPage: React.FC = () => {
   const [profileComplete, setProfileComplete] = useState<boolean | null>(null);
   const [isPaid, setIsPaid] = useState(false);
   const [paidChecked, setPaidChecked] = useState(false);
+  // Intell assessments: one purchase on the account unlocks all of them
+  const [intellAccess, setIntellAccess] = useState<boolean | null>(null);
+  const isIntell = isIntellTest(testId);
+  const fromIntell = searchParams.get('from') === 'intell';
+
+  useEffect(() => {
+    if (!isIntell || !user) return;
+    let alive = true;
+    apiClient.get<{ entitled: boolean }>('/api/intell/status')
+      .then((s) => alive && setIntellAccess(!!s.entitled))
+      .catch(() => alive && setIntellAccess(false));
+    return () => { alive = false; };
+  }, [isIntell, user?.id]);
 
   // Intake status for the signed-in account
   useEffect(() => {
@@ -53,17 +68,17 @@ const AssessmentTestPage: React.FC = () => {
     }
   }, [isRetake, user?.id]);
 
-  if (!testId || (testId !== 'career' && !CLINICAL_CONFIGS[testId])) {
+  if (!testId || (testId !== 'career' && !CLINICAL_CONFIGS[testId] && !isIntell)) {
     return <Navigate to="/assessments" replace />;
   }
 
   // Leaving a test: signed-in users go back to their dashboard
-  const exit = () => navigate(user ? '/my-results' : '/assessments');
+  const exit = () => navigate(isIntell || fromIntell ? INTELL_HUB : user ? '/my-results' : '/assessments');
   const isCareer = testId === 'career';
-  const testTitle = isCareer ? 'Career Guidance Assessment' : CLINICAL_CONFIGS[testId].title;
+  const testTitle = isCareer ? 'Career Guidance Assessment' : isIntell ? 'Intell Student Assessments' : CLINICAL_CONFIGS[testId].title;
 
   // Step 1: account — required for the paid career test
-  if (isCareer && !user) {
+  if ((isCareer || isIntell) && !user) {
     return <Navigate to={`/login?next=${encodeURIComponent(location.pathname + location.search)}`} replace />;
   }
 
@@ -73,7 +88,10 @@ const AssessmentTestPage: React.FC = () => {
     </div>
   );
 
-  if (user && (profileComplete === null || (isCareer && !paidChecked))) return spinner;
+  if (user && (profileComplete === null || (isCareer && !paidChecked) || (isIntell && intellAccess === null))) return spinner;
+
+  // Not bought yet: the Intell hub explains the assessments and takes the payment
+  if (isIntell && !intellAccess) return <Navigate to={INTELL_HUB} replace />;
 
   // Step 2: intake, once per account (not needed to view a saved result)
   if (user && !profileComplete && !resultId) {
@@ -113,6 +131,8 @@ const AssessmentTestPage: React.FC = () => {
 
       {isCareer ? (
         <Assessment type="career" onClose={exit} />
+      ) : isIntell ? (
+        <IntellAssessment key={testId} testId={testId!} onClose={exit} />
       ) : (
         <ClinicalAssessment config={CLINICAL_CONFIGS[testId]} onClose={exit} />
       )}

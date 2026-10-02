@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Home, Info, Users, Calendar, Heart, Layers, LogIn, LogOut, Menu, X, Image as ImageIcon, Sparkles, UserRound } from 'lucide-react';
 import { clearAuthSession, authHeaders, useAuthUser } from '../utils/auth';
-import { SCHOOL_PORTAL_URL, INDIVIDUAL_PORTAL_URL } from '../utils/site';
+import { SCHOOL_PORTAL_URL } from '../utils/site';
 
 interface NavbarProps {
   onBookClick: () => void;
@@ -167,7 +167,7 @@ const Navbar: React.FC<NavbarProps> = ({ onBookClick, onAssessmentClick, onLogin
             </button>
           )}
           <a
-            href={INDIVIDUAL_PORTAL_URL}
+            href="/intell-assessment"
             className="hidden xl:block text-white/50 hover:text-white text-[9px] font-black uppercase tracking-widest whitespace-nowrap px-1"
           >
             Student Assessments
@@ -273,10 +273,10 @@ const Navbar: React.FC<NavbarProps> = ({ onBookClick, onAssessmentClick, onLogin
               </button>
             )}
             <a
-              href={INDIVIDUAL_PORTAL_URL}
+              href="/intell-assessment"
               className="w-full py-3 text-white/50 text-[10px] font-black uppercase tracking-[0.2em] text-center"
             >
-              Student Assessments (Individuals)
+              Intell Student Assessments
             </a>
             <a
               href={SCHOOL_PORTAL_URL}

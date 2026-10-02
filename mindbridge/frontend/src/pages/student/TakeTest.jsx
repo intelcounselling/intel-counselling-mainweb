@@ -7,12 +7,10 @@ import SeverityBadge from '../../components/charts/SeverityBadge';
 import ResultInsights from '../../components/charts/ResultInsights';
 import { getIntellTone } from '../../utils/formatters';
 import api from '../../lib/axios';
-import usePortalBase from '../../utils/portalBase';
 
 export default function TakeTest() {
   const { testId } = useParams();
   const navigate = useNavigate();
-  const base = usePortalBase(); // '/student' or '/individual'
 
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState({});
@@ -20,11 +18,11 @@ export default function TakeTest() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['test', testId],
-    queryFn: () => api.get(`${base}/tests`).then(r => r.data.tests?.find(t => t.id === testId)),
+    queryFn: () => api.get('/student/tests').then(r => r.data.tests?.find(t => t.id === testId)),
   });
 
   const mutation = useMutation({
-    mutationFn: () => api.post(`${base}/tests/${testId}/submit`, {
+    mutationFn: () => api.post(`/student/tests/${testId}/submit`, {
       answers: Object.entries(answers).map(([questionId, value]) => ({ questionId, value })),
     }),
     onSuccess: ({ data }) => setResult(data),
@@ -119,10 +117,10 @@ export default function TakeTest() {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4">
-              <button onClick={() => navigate(`${base}/results`)} className="flex-1 px-6 py-4 bg-white/10 text-white border border-white/20 rounded-full font-bold hover:bg-white/20 transition-all">
+              <button onClick={() => navigate('/student/results')} className="flex-1 px-6 py-4 bg-white/10 text-white border border-white/20 rounded-full font-bold hover:bg-white/20 transition-all">
                 View All Results
               </button>
-              <button onClick={() => navigate(base)} className="flex-1 px-6 py-4 bg-white text-indigo-900 rounded-full font-bold hover:scale-105 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)]">
+              <button onClick={() => navigate('/student')} className="flex-1 px-6 py-4 bg-white text-indigo-900 rounded-full font-bold hover:scale-105 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)]">
                 Back to Dashboard
               </button>
             </div>

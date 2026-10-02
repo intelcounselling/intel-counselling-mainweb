@@ -4,6 +4,7 @@ import { FileText, RotateCcw, ArrowRight, Loader2, Sparkles, ShieldCheck, BadgeC
 import FadeIn from '../components/FadeIn';
 import AssessmentRegistration from '../components/AssessmentRegistration';
 import { CLINICAL_CONFIGS } from '../components/ClinicalQuestions';
+import { INTELL_META, INTELL_HUB, isIntellTest, intellTestPath, IntellIcon } from '../utils/intellMeta';
 import { apiClient } from '../utils/api';
 import { useAuthUser } from '../utils/auth';
 
@@ -15,7 +16,9 @@ interface ResultRow {
 }
 
 const testTitle = (testId: string) =>
-  testId === 'career' ? 'Career Guidance Assessment' : CLINICAL_CONFIGS[testId]?.title || 'Assessment';
+  testId === 'career' ? 'Career Guidance Assessment'
+    : isIntellTest(testId) ? `Intell: ${INTELL_META[testId]?.label || 'Assessment'}`
+    : CLINICAL_CONFIGS[testId]?.title || 'Assessment';
 
 const formatDate = (value: string) => {
   try {
@@ -40,6 +43,7 @@ const MyResultsPage: React.FC = () => {
   const [profile, setProfile] = useState<any>(null);
   const [profileComplete, setProfileComplete] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [intell, setIntell] = useState<any>(null);
 
   const load = () => {
     setLoading(true);
@@ -48,8 +52,10 @@ const MyResultsPage: React.FC = () => {
       apiClient.get<any>('/api/user-results'),
       apiClient.get<any>('/api/career-access'),
       apiClient.get<any>('/api/profile'),
+      apiClient.get<any>('/api/intell/status').catch(() => null),
     ])
-      .then(([r, a, p]) => {
+      .then(([r, a, p, i]) => {
+        setIntell(i);
         setResults(r.results || []);
         setEntitled(!!a.entitled);
         setProfile(p.profile);
@@ -84,10 +90,11 @@ const MyResultsPage: React.FC = () => {
   }
 
   const retakePath = (testId: string) =>
-    testId === 'career' ? (entitled ? '/assessments/career?retake=1' : '/assessments/career') : `/assessments/${testId}`;
+    isIntellTest(testId) ? intellTestPath(testId) : testId === 'career' ? (entitled ? '/assessments/career?retake=1' : '/assessments/career') : `/assessments/${testId}`;
 
   const startable = [
     { id: 'career', title: testTitle('career'), note: entitled ? 'Purchased — retake free' : 'Premium' },
+    { id: 'intell', title: 'Intell Student Assessments', note: intell?.entitled ? 'Purchased — Module A + B' : 'Premium' },
     ...Object.keys(CLINICAL_CONFIGS).map((id) => ({ id, title: CLINICAL_CONFIGS[id].title, note: 'Free' })),
   ];
 
@@ -138,6 +145,22 @@ const MyResultsPage: React.FC = () => {
           </section>
         </FadeIn>
 
+        {/* Intell Student Assessments: progress + profile live on their own hub */}
+        {intell?.entitled && (
+          <FadeIn>
+            <button onClick={() => navigate(INTELL_HUB)} className="w-full text-left bg-intel-dark text-white p-6 md:p-7 rounded-[28px] shadow-lg mb-10 flex flex-col md:flex-row md:items-center gap-5 hover:scale-[1.01] transition-transform">
+              <div className="flex -space-x-2 shrink-0">
+                {['intell_lp', 'intell_ew', 'phq9'].map((id) => <IntellIcon key={id} id={id} size="sm" />)}
+              </div>
+              <div className="flex-1">
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-terracotta">Intell Student Assessments</p>
+                <p className="font-black serif text-lg">{intell.tests.filter((t: any) => t.done).length} of 7 done{intell.profile?.complete ? ' — your integrated profile is ready' : ''}</p>
+              </div>
+              <span className="shrink-0 inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">Open profile & tests <ArrowRight size={12} /></span>
+            </button>
+          </FadeIn>
+        )}
+
         {/* Results */}
         <h2 className="text-xl font-black serif text-intel-dark mb-4">My Results</h2>
         {results.length === 0 ? (
@@ -167,7 +190,7 @@ const MyResultsPage: React.FC = () => {
                   </div>
                   <div className="flex gap-2 shrink-0">
                     <button
-                      onClick={() => navigate(`/assessments/${testId}?id=${encodeURIComponent(r.id)}`)}
+                      onClick={() => navigate(isIntellTest(testId) ? INTELL_HUB : `/assessments/${testId}?id=${encodeURIComponent(r.id)}`)}
                       className="flex-1 md:flex-none px-5 py-3 bg-intel-dark text-white rounded-xl font-black uppercase tracking-widest text-[10px] hover:opacity-90 flex items-center justify-center gap-2"
                     >
                       View <ArrowRight size={12} />
@@ -191,7 +214,7 @@ const MyResultsPage: React.FC = () => {
           {startable.map((t) => (
             <button
               key={t.id}
-              onClick={() => navigate(retakePath(t.id))}
+              onClick={() => navigate(t.id === 'intell' ? INTELL_HUB : retakePath(t.id))}
               className="text-left bg-white p-5 rounded-[20px] border border-black/5 hover:border-terracotta/40 hover:shadow-md transition-all"
             >
               <span className="text-[9px] font-black uppercase tracking-widest text-terracotta">{t.note}</span>
