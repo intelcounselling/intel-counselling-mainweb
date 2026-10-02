@@ -33,7 +33,7 @@ export default function PsychiatristDashboard() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatCard label="Assigned Schools"     value={stats?.totalSchools}     icon={School}        tone="primary" />
+        <StatCard label="Schools"     value={stats?.totalSchools}     icon={School}        tone="primary" />
         <StatCard label="Total Students"       value={stats?.totalStudents}    icon={Users}         tone="primary" />
         <StatCard label="Unread Alerts (Week)" value={stats?.unreadAlerts}     icon={AlertTriangle} tone="danger" />
         <StatCard label="Appointments (Week)"  value={stats?.weekAppointments} icon={Calendar}      tone="success" />

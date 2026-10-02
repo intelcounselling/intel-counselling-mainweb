@@ -16,9 +16,11 @@ dotenv.config({ path: join(__dirname, '.env') });
 // Fail fast in production when required secrets are missing. Without this, the
 // server boots fine but every auth endpoint (login/register) returns an opaque
 // 500 "Internal Server Error" at request time when signToken() throws.
-if (process.env.NODE_ENV === 'production' && !process.env.AUTH_TOKEN_SECRET) {
+// The Mindbridge portal signs its JWTs with the two JWT_* secrets.
+const missingSecrets = ['AUTH_TOKEN_SECRET', 'JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET'].filter((k) => !process.env[k]);
+if (process.env.NODE_ENV === 'production' && missingSecrets.length) {
   console.error(
-    'FATAL: AUTH_TOKEN_SECRET environment variable must be set in production. ' +
+    `FATAL: ${missingSecrets.join(', ')} must be set in production. ` +
     'Generate one with: node -e "console.log(require(\'crypto\').randomBytes(48).toString(\'hex\'))"'
   );
   process.exit(1);

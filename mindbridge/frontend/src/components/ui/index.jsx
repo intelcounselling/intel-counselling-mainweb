@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { clsx } from 'clsx';
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
@@ -298,6 +299,14 @@ export function LoadingPage() {
 // ── Modal ──────────────────────────────────────────────────────
 
 export function Modal({ isOpen, onClose, title, children, size = 'md', footer }) {
+  // Escape closes the dialog, like the overlay click and the × button
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const sizes = {
@@ -310,7 +319,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', footer })
 
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className={clsx('modal-panel w-full', sizes[size])}>
+      <div className={clsx('modal-panel w-full', sizes[size])} role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : undefined}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-surface-100">
           <h2 className="text-lg font-semibold text-surface-900">{title}</h2>
           <button

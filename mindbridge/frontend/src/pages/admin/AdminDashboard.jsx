@@ -155,8 +155,8 @@ export default function AdminDashboard() {
                 <Activity className="w-4 h-4 text-primary-600" />
                 Recent Alerts
               </h3>
-              <Link to="/admin/users" className="text-sm font-medium text-primary-600 hover:text-primary-700 flex items-center gap-1">
-                View all users <ArrowRight className="w-4 h-4" />
+              <Link to="/psychiatrist/alerts" className="text-sm font-medium text-primary-600 hover:text-primary-700 flex items-center gap-1">
+                View all alerts <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
             {!recentAlerts?.length ? (
@@ -168,12 +168,12 @@ export default function AdminDashboard() {
                     <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0">
                       <AlertTriangle className="w-5 h-5 text-red-500" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-surface-900 truncate">
+                    <Link to={`/psychiatrist/students/${alert.student.id}`} className="flex-1 min-w-0 group">
+                      <p className="text-sm font-semibold text-surface-900 truncate group-hover:text-primary-700 group-hover:underline">
                         {alert.student.firstName} {alert.student.lastName}
                       </p>
                       <p className="text-xs text-surface-500 truncate mt-0.5">{alert.student.school?.name}</p>
-                    </div>
+                    </Link>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <SeverityBadge severity={alert.severity} />
                       <button

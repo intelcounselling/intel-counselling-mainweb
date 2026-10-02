@@ -17,15 +17,19 @@ const NAV_BY_ROLE = {
   ],
   PARENT: [
     { to: '/parent', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-    { to: '/parent/children', label: 'My Children', icon: Users },
     { to: '/parent/appointments', label: 'Appointments', icon: Calendar },
     { to: '/parent/settings', label: 'Settings', icon: Settings },
   ],
+  // The super admin is also the counsellor, so the counselling tools
+  // (alerts, student profiles with session notes, session manager) live here.
   SUPER_ADMIN: [
     { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+    { to: '/psychiatrist/alerts', label: 'Alerts', icon: Bell, badge: 'alerts' },
     { to: '/admin/schools', label: 'Schools', icon: School },
+    { to: '/psychiatrist/schools', label: 'Student Profiles', icon: User },
     { to: '/admin/users', label: 'Users', icon: Users },
     { to: '/admin/appointments', label: 'Appointments', icon: Calendar },
+    { to: '/psychiatrist/appointments', label: 'Session Notes', icon: FileText },
     { to: '/admin/settings', label: 'Settings', icon: Settings },
   ],
   SCHOOL_ADMIN: [
@@ -44,7 +48,7 @@ const ROLE_LABELS = {
   SCHOOL_ADMIN: 'School Admin',
 };
 
-export default function Sidebar({ mobileOpen, onClose }) {
+export default function Sidebar({ mobileOpen, onClose, unreadAlerts = 0 }) {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
 
@@ -105,7 +109,12 @@ export default function Sidebar({ mobileOpen, onClose }) {
               }
             >
               <item.icon className="flex-shrink-0" size={18} />
-              <span>{item.label}</span>
+              <span className="flex-1">{item.label}</span>
+              {item.badge === 'alerts' && unreadAlerts > 0 && (
+                <span className="min-w-5 h-5 px-1.5 rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center" aria-label={`${unreadAlerts} unread alerts`}>
+                  {unreadAlerts > 99 ? '99+' : unreadAlerts}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>

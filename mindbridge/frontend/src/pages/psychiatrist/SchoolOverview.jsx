@@ -103,7 +103,7 @@ export default function SchoolOverview() {
   const schools = data?.schools || [];
   return (
     <div className="space-y-6 animate-slide-up">
-      <PageHeader title="My Schools" description={`${schools.length} assigned school${schools.length !== 1 ? 's' : ''}`} />
+      <PageHeader title="Student Profiles" description={`Choose a school to see its students — ${schools.length} school${schools.length !== 1 ? 's' : ''}`} />
       {!schools.length
         ? <EmptyState icon="🏫" title="No schools assigned" description="Contact your admin to assign schools." />
         : <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-5">

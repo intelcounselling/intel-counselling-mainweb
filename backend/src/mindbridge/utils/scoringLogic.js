@@ -12,6 +12,9 @@
  * Validity check: If ≥ 80% of answers are "5" → flag self-presentation bias.
  */
 
+const INTELL_DOMAINS = ['EmotionalWellness', 'InternetUsage', 'StudyBehaviour', 'PersonalityDimensions'];
+const SELF_HARM_ITEM = /better off dead|hurting yourself/i;
+
 const calculateScore = (answers, questions, thresholds, category) => {
   let score = 0;
   let isLow = false;
@@ -99,9 +102,22 @@ const calculateScore = (answers, questions, thresholds, category) => {
     if (score < 36 && (category === 'EmotionalWellness' || category === 'InternetUsage')) {
       requiresCounselling = true;
     }
-    // All non-LP domains below 36 → also flag isLow
-    if (score < 36) {
+    // The 4 non-LP INTELL domains (12 items × 1–5, higher = better) below 36 →
+    // also flag isLow. Clinical scales (PHQ-9/GAD-7/PSS-10) score the other
+    // way and max out at 21–40, so this rule must not touch them — their risk
+    // comes from the threshold ranges above.
+    if (score < 36 && INTELL_DOMAINS.includes(category)) {
       isLow = true;
+    }
+
+    // PHQ-9 item 9 (thoughts of self-harm): any answer above "not at all"
+    // must reach the counsellor regardless of the total score.
+    if (category === 'Depression' && Array.isArray(questions)) {
+      const selfHarm = questions.find(q => SELF_HARM_ITEM.test(q.text || ''));
+      if (selfHarm && getAnswer(selfHarm.id) > 0) {
+        isLow = true;
+        requiresCounselling = true;
+      }
     }
   }
 

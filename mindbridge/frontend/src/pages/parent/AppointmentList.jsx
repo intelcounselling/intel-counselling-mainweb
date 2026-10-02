@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { Download, Calendar } from 'lucide-react';
 import { Card, Button, Spinner, EmptyState, Badge, PageHeader, ListSkeleton } from '../../components/ui';
 import SeverityBadge from '../../components/charts/SeverityBadge';
 import api from '../../lib/axios';
+import { useToast } from '../../components/ui/Toast';
 import { formatDateTime, getStatusColor } from '../../utils/formatters';
 
 export default function AppointmentList() {
@@ -13,8 +15,24 @@ export default function AppointmentList() {
 
   const appointments = data?.appointments || [];
 
-  const handleDownloadReport = (apptId) => {
-    window.open(`${import.meta.env.VITE_API_URL || ''}/api/portal/api/appointments/${apptId}/report`, '_blank');
+  const toast = useToast();
+
+  // The report endpoint needs the Authorization header, which a plain
+  // window.open() tab never sends — fetch it through the API client instead.
+  const handleDownloadReport = async (apptId) => {
+    try {
+      const res = await api.get(`/appointments/${apptId}/report`, { responseType: 'blob' });
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `session-report-${apptId.slice(0, 8)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    } catch {
+      toast.error('Could not download the report. Please try again.');
+    }
   };
 
   if (isLoading) {
@@ -35,7 +53,12 @@ export default function AppointmentList() {
 
       {!appointments.length ? (
         <Card>
-          <EmptyState icon="📅" title="No appointments" description="Book your first appointment from the dashboard." />
+          <EmptyState
+            icon="📅"
+            title="No appointments"
+            description="You haven't booked a session yet."
+            action={<Link to="/parent?book=1" className="inline-flex items-center rounded-lg bg-primary-700 px-4 py-2 text-sm font-medium text-white hover:bg-primary-800">Book an appointment</Link>}
+          />
         </Card>
       ) : (
         <Card padding={false}>

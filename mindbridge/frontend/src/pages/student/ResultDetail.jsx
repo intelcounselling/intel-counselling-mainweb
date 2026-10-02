@@ -144,10 +144,8 @@ export default function ResultDetail() {
             <p className="text-[#b3aaa0] mb-8 max-w-md">
               You haven't completed any assessments. Take your first test to start tracking your mental wellness journey.
             </p>
-            <Link to="/student/tests">
-              <button className="bg-[#e5ddd0] text-[#786c5c] hover:bg-[#d9d0c2] hover:text-[#111111] px-8 py-4 rounded-xl font-bold shadow-lg transition-colors">
-                Take an Assessment
-              </button>
+            <Link to="/student/tests" className="bg-[#e5ddd0] text-[#786c5c] hover:bg-[#d9d0c2] hover:text-[#111111] px-8 py-4 rounded-xl font-bold shadow-lg transition-colors">
+              Take an Assessment
             </Link>
           </div>
         ) : (

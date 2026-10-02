@@ -12,7 +12,6 @@ export default function TakeTest() {
 
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState({});
-  const [shareWithTherapist, setShareWithTherapist] = useState(false);
   const [result, setResult] = useState(null);
 
   const { data, isLoading } = useQuery({
@@ -23,7 +22,6 @@ export default function TakeTest() {
   const mutation = useMutation({
     mutationFn: () => api.post(`/student/tests/${testId}/submit`, {
       answers: Object.entries(answers).map(([questionId, value]) => ({ questionId, value })),
-      shareWithTherapist,
     }),
     onSuccess: ({ data }) => setResult(data),
     onError: (err) => alert("Submission failed: " + (err.response?.data?.error || err.message)),
@@ -87,25 +85,18 @@ export default function TakeTest() {
                   Your score suggests you might benefit from talking to someone.
                   We've notified your school's mental health team, who will reach out soon.
                 </p>
+                <p className="text-sm text-amber-100/90 leading-relaxed mt-3">
+                  If you feel unsafe or need to talk right now, call{' '}
+                  <a href="tel:14416" className="font-bold underline">Tele-MANAS 14416</a> (free, 24×7) or{' '}
+                  <a href="tel:112" className="font-bold underline">112</a> in an emergency.
+                </p>
               </div>
             )}
 
-            {/* Share toggle */}
-            <div className="flex items-center justify-between p-6 bg-white/5 rounded-2xl mb-8 border border-white/10">
-              <div className="text-left">
-                <p className="text-base font-bold text-white mb-1">Share with therapist</p>
-                <p className="text-sm text-indigo-200">Allow your school's psychiatrist to view this result</p>
-              </div>
-              <button
-                onClick={() => setShareWithTherapist(v => !v)}
-                role="switch"
-                aria-checked={shareWithTherapist}
-                aria-label="Share result with therapist"
-                className={`relative w-14 h-7 rounded-full transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/70 ${shareWithTherapist ? 'bg-indigo-500' : 'bg-white/20'}`}
-              >
-                <span className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform ${shareWithTherapist ? 'translate-x-8' : 'translate-x-1'}`} />
-              </button>
-            </div>
+            {/* Who sees this — stated plainly instead of a toggle that did nothing */}
+            <p className="text-sm text-indigo-200 bg-white/5 rounded-2xl p-5 mb-8 border border-white/10 text-left">
+              Your result is private to you, your parent or guardian, and your school's counselling team, so they can support you.
+            </p>
 
             <div className="flex flex-col sm:flex-row gap-4">
               <button onClick={() => navigate('/student/results')} className="flex-1 px-6 py-4 bg-white/10 text-white border border-white/20 rounded-full font-bold hover:bg-white/20 transition-all">
