@@ -183,6 +183,28 @@ function resultCard(doc, result) {
   doc.y = y + need;
 }
 
+// Question-by-question answers for one result. Starts a new page only when
+// the heading plus the first item wouldn't fit.
+function responsesSection(doc, result) {
+  const rows = answerRows(result);
+  if (!rows.length) return;
+
+  ensureSpace(doc, 120);
+  sectionTitle(doc, `${safe(result.test?.name, 'Assessment')} — responses`);
+  doc.fillColor(BRAND.muted).font('Helvetica').fontSize(9).text(
+    `Taken ${fmtDateTime(result.takenAt)}  •  Score ${result.score}/${result.maxScore}  •  ${safe(result.severity, 'n/a')}`, MARGIN.left, doc.y);
+  doc.y += 8;
+
+  rows.forEach((row) => {
+    doc.font('Helvetica-Bold').fontSize(9.5);
+    const qH = doc.heightOfString(row.text, { width: CONTENT_W });
+    ensureSpace(doc, qH + 22);
+    doc.fillColor(BRAND.ink).text(row.text, MARGIN.left, doc.y, { width: CONTENT_W });
+    doc.fillColor(BRAND.green).font('Helvetica').fontSize(9).text(`Answer: ${row.answer}`, MARGIN.left + 14, doc.y + 2, { width: CONTENT_W - 14 });
+    doc.y += 8;
+  });
+}
+
 // ── Session report ───────────────────────────────────────────────
 
 /**
@@ -222,6 +244,9 @@ async function generateSessionReport(res, { appointment, patient, psychiatrist, 
     sectionTitle(doc, 'Session notes');
     doc.fillColor(BRAND.ink).font('Helvetica').fontSize(10).text(safe(appointment.notes), MARGIN.left, doc.y, { width: CONTENT_W, lineGap: 4 });
   }
+
+  // Full answers follow the summary + notes so the key points stay on page 1
+  (results || []).forEach((r) => responsesSection(doc, r));
 
   stampFooters(doc);
   doc.end();
@@ -310,25 +335,7 @@ async function generateDetailedStudentReport(res, { student, results }) {
 
     // Question-level detail — flows on after the summary; a new page starts
     // only when the heading + first item wouldn't fit, never unconditionally.
-    for (const result of results) {
-      const rows = answerRows(result);
-      if (!rows.length) continue;
-
-      ensureSpace(doc, 120);
-      sectionTitle(doc, `${safe(result.test?.name, 'Assessment')} — responses`);
-      doc.fillColor(BRAND.muted).font('Helvetica').fontSize(9).text(
-        `Taken ${fmtDateTime(result.takenAt)}  •  Score ${result.score}/${result.maxScore}  •  ${safe(result.severity, 'n/a')}`, MARGIN.left, doc.y);
-      doc.y += 8;
-
-      rows.forEach((row) => {
-        doc.font('Helvetica-Bold').fontSize(9.5);
-        const qH = doc.heightOfString(row.text, { width: CONTENT_W });
-        ensureSpace(doc, qH + 22);
-        doc.fillColor(BRAND.ink).text(row.text, MARGIN.left, doc.y, { width: CONTENT_W });
-        doc.fillColor(BRAND.green).font('Helvetica').fontSize(9).text(`Answer: ${row.answer}`, MARGIN.left + 14, doc.y + 2, { width: CONTENT_W - 14 });
-        doc.y += 8;
-      });
-    }
+    for (const result of results) responsesSection(doc, result);
   }
 
   stampFooters(doc);

@@ -12,7 +12,8 @@ async function getReport(req, res) {
         patient: { include: { school: true } },
         psychiatrist: { select: { firstName: true, lastName: true } },
         results: {
-          include: { test: { select: { name: true, category: true } } },
+          orderBy: { takenAt: 'asc' },
+          include: { test: { select: { name: true, category: true, questions: true } } },
         },
       },
     });

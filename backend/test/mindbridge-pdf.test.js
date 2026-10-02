@@ -44,12 +44,21 @@ const five = [
 ];
 const appt = { slot: new Date(2026, 9, 5, 15), status: 'SCHEDULED', meetingLink: null, notes: 'Discussed breathing exercises.' };
 
-test('session report fits one page (was 3 with blank pages)', async () => {
-  const { buf, pages } = await render(generateSessionReport, {
-    appointment: appt, patient: student, psychiatrist: { firstName: 'Intel', lastName: 'Counselling' }, school: student.school, results: five.slice(0, 3),
-  });
-  assert.equal(pages, 1);
-  assert.ok(buf.subarray(0, 4).toString() === '%PDF');
+test('session report: summary on page 1, answers follow, no blank pages', async () => {
+  const base = { appointment: appt, patient: student, psychiatrist: { firstName: 'Intel', lastName: 'Counselling' }, school: student.school };
+
+  // No assessments → one page (was 3 with blank pages)
+  const none = await render(generateSessionReport, { ...base, results: [] });
+  assert.equal(none.pages, 1);
+
+  // 3 assessments (28 answered questions) → summary + answers, a few pages at most
+  const withAnswers = await render(generateSessionReport, { ...base, results: five.slice(0, 3) });
+  assert.ok(withAnswers.buf.subarray(0, 4).toString() === '%PDF');
+  assert.ok(withAnswers.pages >= 2 && withAnswers.pages <= 3, `expected 2–3 pages, got ${withAnswers.pages}`);
+
+  // answers add pages; without them the same results fit on one
+  const noAnswers = await render(generateSessionReport, { ...base, results: five.slice(0, 3).map((r) => ({ ...r, answers: {} })) });
+  assert.equal(noAnswers.pages, 1);
 });
 
 test('detailed report has no blank pages (was 24 pages for 5 assessments)', async () => {
