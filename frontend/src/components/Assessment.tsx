@@ -335,7 +335,7 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
             <div className="h-1.5 w-32 md:w-48 bg-black/5 rounded-full overflow-hidden">
                <div className="h-full bg-terracotta transition-all duration-300" style={{ width: `${(sectionProg.current / sectionProg.total) * 100}%` }}></div>
             </div>
-            <span className="text-[10px] font-bold text-black/40 uppercase tracking-widest">{sectionProg.current} / {sectionProg.total}</span>
+            <span className="text-[10px] font-bold text-black/40 uppercase tracking-widest whitespace-nowrap">{sectionProg.current} / {sectionProg.total}</span>
             <button 
               onClick={goToNext}
               disabled={step >= answers.length || step === ALL_QUESTIONS.length - 1}

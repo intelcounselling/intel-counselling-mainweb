@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { CheckCircle2, ChevronRight, ArrowLeft, Video, ShieldCheck, MapPin, Monitor, Loader2 } from 'lucide-react';
+import { CheckCircle2, ChevronRight, ArrowLeft, Video, ShieldCheck, MapPin, Monitor, Loader2, X } from 'lucide-react';
 import { MI_QUESTIONS, INTEREST_QUESTIONS, PERSONALITY_QUESTIONS } from './TestQuestions';
 import { CLINICAL_CONFIGS } from './ClinicalQuestions';
 import { apiClient } from '../utils/api';
@@ -471,10 +471,22 @@ const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
 
   return (
     <div className="w-full max-w-2xl bg-[#1F1E1B] rounded-3xl md:rounded-[40px] shadow-2xl overflow-hidden border border-white/20 animate-in fade-in slide-in-from-bottom-8 duration-500 max-h-[90vh] flex flex-col">
-      <div className="p-6 md:p-12 overflow-y-auto overflow-x-hidden flex-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="relative p-6 md:p-12 overflow-y-auto overflow-x-hidden flex-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {step < 10 && (
+          <button
+            type="button"
+            onClick={() => {
+              if (step === 1 || window.confirm('Leave the booking form? Your answers will not be saved.')) onClose();
+            }}
+            aria-label="Close booking form"
+            className="absolute right-4 top-4 md:right-6 md:top-6 w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 text-white/60 hover:text-white flex items-center justify-center transition-colors"
+          >
+            <X size={18} />
+          </button>
+        )}
 
         {step === 1 && (
-          <div className="text-center mb-8">
+          <div className="text-center mb-8 px-10">
             <h3 className="text-3xl font-bold mb-2 serif text-white">Booking Request</h3>
             <p className="text-white/60 font-light">This confidential form helps us understand your concern.<br />Takes 3–5 minutes.</p>
           </div>
@@ -780,8 +792,20 @@ const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
             <h3 className="text-4xl font-bold mb-4 serif text-white">Thank You.</h3>
             <p className="text-white/60 mb-10 max-w-sm mx-auto font-light leading-relaxed">
               We have received your form securely and your session is confirmed.
-              {details.sessionMode === 'online' ? ' The counselor will send the meeting link to your email prior to the session.' : ' We will contact you shortly.'}
+              {details.sessionMode === 'online'
+                ? (meetLink ? ' Your Google Meet link is below and in your confirmation email.' : ' The counselor will send the meeting link to your email prior to the session.')
+                : ' We will contact you shortly.'}
             </p>
+            {meetLink && (
+              <a
+                href={meetLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full mb-4 bg-serene-green text-white py-5 rounded-2xl font-bold shadow-xl break-all px-4"
+              >
+                Open Google Meet link
+              </a>
+            )}
             {!meetLink && details.sessionMode === 'inperson' && (
               <div className="bg-white/5 p-6 rounded-3xl border border-black/5 mb-10 text-left space-y-4 shadow-sm">
                 <div className="flex items-start gap-4">

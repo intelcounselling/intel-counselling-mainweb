@@ -1,23 +1,25 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Calendar, CalendarPlus } from 'lucide-react';
+import { ArrowLeft, Calendar, CalendarPlus, Download } from 'lucide-react';
 import { Card, Button, Input, Spinner, EmptyState, Badge, PageHeader } from '../../components/ui';
 import { useToast } from '../../components/ui/Toast';
 import ScoreHistoryChart from '../../components/charts/ScoreHistoryChart';
 import SeverityBadge from '../../components/charts/SeverityBadge';
 import CounsellingPanel from '../../components/CounsellingPanel';
+import IndividualProfileView from '../../components/IndividualProfileView';
+import { downloadPdf } from '../../utils/download';
 import api from '../../lib/axios';
 import { formatDate, formatDateTime, formatRelative, getStatusColor } from '../../utils/formatters';
 
-function BookAppointmentInline({ patientId, onSuccess }) {
+function BookAppointmentInline({ patientId, resultIds, onSuccess }) {
   const { success, error: toastError } = useToast();
   const [slot, setSlot] = useState('');
   const [notes, setNotes] = useState('');
   const [meetingLink, setMeetingLink] = useState('');
 
   const mutation = useMutation({
-    mutationFn: () => api.post('/psychiatrist/appointments', { patientId, slot, notes, meetingLink }),
+    mutationFn: () => api.post('/psychiatrist/appointments', { patientId, slot, notes, meetingLink, ...(resultIds?.length && { resultIds }) }),
     onSuccess: () => { success('Appointment booked!'); onSuccess?.(); },
     onError: (e) => toastError(e.response?.data?.error || 'Failed to book'),
   });
@@ -52,31 +54,50 @@ export default function StudentProfile() {
 
   if (isLoading) return <div className="flex justify-center pt-20"><Spinner size="xl" /></div>;
 
-  const { student, results = [], alerts = [], appointments = [] } = data || {};
+  const { student, results = [], alerts = [], appointments = [], profile, modules = [] } = data || {};
+  const isIndividual = student?.role === 'INDIVIDUAL';
+  // Individual clients: attach their latest result in each test to the session so it's all at hand
+  const latestIds = isIndividual
+    ? Object.values(results.reduce((acc, r) => (acc[r.test?.category] ? acc : { ...acc, [r.test?.category]: r.id }), {}))
+    : [];
+  const downloadReport = () => downloadPdf(`/admin/students/${id}/pdf-report`, `Client_Report_${student.firstName}_${student.lastName}.pdf`);
+  const infoItems = isIndividual
+    ? [
+        { label: 'Client type', value: 'Individual' },
+        { label: 'Modules', value: modules.length ? modules.map((m) => 'Module ' + m).join(', ') : 'None purchased' },
+        { label: 'Phone', value: student?.phone || '—' },
+        { label: 'Email', value: student?.email },
+      ]
+    : [
+        { label: 'Date of Birth', value: student?.dateOfBirth ? formatDate(student.dateOfBirth) : '—' },
+        { label: 'Grade',         value: student?.grade || '—' },
+        { label: 'School',        value: student?.school?.name || '—' },
+        { label: 'Email',         value: student?.email },
+      ];
 
   return (
     <div className="space-y-6 max-w-5xl animate-slide-up">
       <PageHeader
-        backTo="/psychiatrist/schools"
+        backTo={isIndividual ? '/psychiatrist/individuals' : '/psychiatrist/schools'}
         title={`${student?.firstName || ''} ${student?.lastName || ''}`.trim() || 'Student Profile'}
-        description={`Grade ${student?.grade || '—'} · ${student?.school?.name || ''}`}
+        description={isIndividual ? 'Individual client' : `Grade ${student?.grade || '—'} · ${student?.school?.name || ''}`}
         actions={(
-          <Button variant="primary" icon={<CalendarPlus className="w-4 h-4" />}
-            onClick={() => setShowBook(v => !v)}>
-            {showBook ? 'Cancel' : 'Book Appointment'}
-          </Button>
+          <>
+            {isIndividual && (
+              <Button variant="outline" icon={<Download className="w-4 h-4" />} onClick={downloadReport}>Download report</Button>
+            )}
+            <Button variant="primary" icon={<CalendarPlus className="w-4 h-4" />}
+              onClick={() => setShowBook(v => !v)}>
+              {showBook ? 'Cancel' : 'Book Appointment'}
+            </Button>
+          </>
         )}
       />
 
       {/* Patient info */}
       <Card>
         <div className="grid sm:grid-cols-4 gap-4">
-          {[
-            { label: 'Date of Birth', value: student?.dateOfBirth ? formatDate(student.dateOfBirth) : '—' },
-            { label: 'Grade',         value: student?.grade || '—' },
-            { label: 'School',        value: student?.school?.name || '—' },
-            { label: 'Email',         value: student?.email },
-          ].map(i => (
+          {infoItems.map(i => (
             <div key={i.label}>
               <p className="text-xs text-surface-400 uppercase tracking-wide">{i.label}</p>
               <p className="font-semibold text-surface-800 mt-0.5 text-sm">{i.value}</p>
@@ -89,8 +110,17 @@ export default function StudentProfile() {
       {showBook && (
         <BookAppointmentInline
           patientId={id}
+          resultIds={latestIds}
           onSuccess={() => { setShowBook(false); qc.invalidateQueries({ queryKey: ['psych-student', id] }); }}
         />
+      )}
+
+      {/* Individual clients: integrated psychological profile */}
+      {isIndividual && profile && (
+        <div>
+          <h3 className="text-base font-semibold text-surface-900 mb-3">Integrated profile</h3>
+          <IndividualProfileView profile={profile} />
+        </div>
       )}
 
       {/* Score History Chart */}

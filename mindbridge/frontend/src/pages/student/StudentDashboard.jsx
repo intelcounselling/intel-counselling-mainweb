@@ -180,10 +180,8 @@ export default function StudentDashboard() {
                   </p>
                 </div>
                 <div className="w-full md:w-auto">
-                  <Link to="/student/concerns">
-                    <button className="w-full bg-[#1c1a3b] text-white px-8 py-4 rounded-xl font-bold hover:bg-[#2c2957] transition-colors shadow-lg active:scale-95 flex items-center justify-center gap-3">
-                      Write a Concern <ArrowRight className="w-4 h-4" />
-                    </button>
+                  <Link to="/student/concerns" className="w-full bg-[#1c1a3b] text-white px-8 py-4 rounded-xl font-bold hover:bg-[#2c2957] transition-colors shadow-lg active:scale-95 flex items-center justify-center gap-3">
+                    Write a Concern <ArrowRight className="w-4 h-4" />
                   </Link>
                 </div>
               </div>
@@ -208,16 +206,16 @@ export default function StudentDashboard() {
                       <div className="flex items-center gap-4">
                         <img src={appt.psychiatrist?.avatarUrl || `https://ui-avatars.com/api/?name=${appt.psychiatrist?.firstName}+${appt.psychiatrist?.lastName}&background=random`} className="w-12 h-12 rounded-full border border-[#f0eee9]" alt="Counsellor" />
                         <div>
-                          <p className="font-bold text-[#111111] text-sm">Dr. {appt.psychiatrist?.lastName}</p>
+                          <p className="font-bold text-[#111111] text-sm">{[appt.psychiatrist?.firstName, appt.psychiatrist?.lastName].filter(Boolean).join(' ') || 'Your counsellor'}</p>
                           <div className="flex items-center gap-1.5 text-xs text-[#8c8270] font-bold mt-1 bg-[#f5f2eb] px-2 py-0.5 rounded-md inline-flex">
                             <Clock className="w-3 h-3" />
-                            <span>{new Date(appt.slot).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            <span>{new Date(appt.slot).toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
                           </div>
                         </div>
                       </div>
                       {appt.meetingLink ? (
-                        <a href={appt.meetingLink} target="_blank" rel="noopener noreferrer">
-                          <button className="bg-[#1c1a3b] text-white px-4 py-2 text-sm rounded-lg font-bold shadow-md hover:bg-[#2c2957] transition-colors">Join</button>
+                        <a href={appt.meetingLink} target="_blank" rel="noopener noreferrer" className="bg-[#1c1a3b] text-white px-4 py-2 text-sm rounded-lg font-bold shadow-md hover:bg-[#2c2957] transition-colors">
+                          Join
                         </a>
                       ) : (
                         <div className="bg-[#f0eee9] text-[#786c5c] px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-widest">In Person</div>

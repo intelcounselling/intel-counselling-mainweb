@@ -5,7 +5,6 @@ import { Button } from '../../components/ui';
 import { useToast } from '../../components/ui/Toast';
 import useAuthStore from '../../store/authStore';
 import api from '../../lib/axios';
-import { ROLE_DASHBOARDS } from '../../utils/roleGuard';
 
 const requirements = [
   { label: 'At least 8 characters', test: (p) => p.length >= 8 },
@@ -16,7 +15,7 @@ const requirements = [
 export default function ResetPassword() {
   const navigate = useNavigate();
   const { success, error: toastError } = useToast();
-  const { user, updateUser } = useAuthStore();
+  const { user, updateUser, logout } = useAuthStore();
 
   const [newPassword, setNewPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -39,7 +38,8 @@ export default function ResetPassword() {
       await api.post('/auth/reset-password', { newPassword });
       updateUser({ mustResetPassword: false });
       success('Password updated! Redirecting to your dashboard...');
-      setTimeout(() => navigate(ROLE_DASHBOARDS[user.role] || '/'), 1200);
+      // '/' routes each role (incl. school admins) to their own dashboard
+      setTimeout(() => navigate('/'), 1200);
     } catch (err) {
       const apiErr = err.response?.data?.error;
       if (apiErr && typeof apiErr === 'object') {
@@ -93,7 +93,7 @@ export default function ResetPassword() {
                   required
                   autoFocus
                 />
-                <button type="button" onClick={() => setShowNew(v => !v)}
+                <button type="button" onClick={() => setShowNew(v => !v)} aria-label={showNew ? 'Hide password' : 'Show password'}
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600">
                   {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -131,7 +131,7 @@ export default function ResetPassword() {
                   placeholder="Repeat your password"
                   required
                 />
-                <button type="button" onClick={() => setShowConfirm(v => !v)}
+                <button type="button" onClick={() => setShowConfirm(v => !v)} aria-label={showConfirm ? 'Hide password' : 'Show password'}
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600">
                   {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -146,6 +146,12 @@ export default function ResetPassword() {
               Set Password & Continue
             </Button>
           </form>
+          <p className="text-center text-xs text-surface-500 mt-5">
+            Not you?{' '}
+            <button type="button" onClick={() => { logout(); navigate('/login'); }} className="font-semibold text-primary-700 hover:underline">
+              Sign out
+            </button>
+          </p>
         </div>
       </div>
     </div>

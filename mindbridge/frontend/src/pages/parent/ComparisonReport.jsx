@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, CalendarPlus } from 'lucide-react';
+import { ArrowLeft, CalendarPlus, PencilLine } from 'lucide-react';
 import { Card, Button, Spinner, EmptyState, PageHeader } from '../../components/ui';
 import RadarChart from '../../components/charts/RadarChart';
 import api from '../../lib/axios';
@@ -159,8 +159,13 @@ export default function ComparisonReport() {
     if (c.parentScore) parentRadar[CAT_META[c.category]?.label || c.category] = c.parentScore.pct;
   });
 
-  const overallGap = comparison.filter(c => c.percentageDiff !== null).reduce((sum, c) => sum + c.percentageDiff, 0);
-  const avgGap = comparison.length ? Math.round(overallGap / comparison.filter(c => c.percentageDiff !== null).length) : null;
+  // Only dimensions where BOTH sides answered can be compared — with none,
+  // there is no gap to report (previously 0/0 → "NaN%" + "Significant").
+  const compared = comparison.filter(c => c.percentageDiff !== null && c.percentageDiff !== undefined);
+  const avgGap = compared.length
+    ? Math.round(compared.reduce((sum, c) => sum + c.percentageDiff, 0) / compared.length)
+    : null;
+  const needsPerspective = comparison.some(c => !c.parentScore);
   const overallIndex = avgGap === null ? null : avgGap <= 5 ? 'STRONG' : avgGap <= 15 ? 'MODERATE' : 'SIGNIFICANT';
 
   return (
@@ -176,11 +181,28 @@ export default function ComparisonReport() {
         title="Parent–Child Comparison Report"
         description="Understanding your child's world vs. your perspective"
         actions={(
-          <Link to="/parent/appointments">
-            <Button variant="primary" icon={<CalendarPlus className="w-4 h-4" />} size="sm">Book Counselling</Button>
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link to={`/parent/children/${childId}/perspective`} className="btn btn-secondary btn-sm inline-flex items-center gap-1.5 rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm font-medium text-surface-700 hover:bg-surface-50">
+              <PencilLine className="w-4 h-4" /> Add your perspective
+            </Link>
+            <Link to="/parent?book=1" className="inline-flex items-center gap-1.5 rounded-lg bg-primary-700 px-3 py-2 text-sm font-medium text-white hover:bg-primary-800">
+              <CalendarPlus className="w-4 h-4" /> Book Counselling
+            </Link>
+          </div>
         )}
       />
+
+      {needsPerspective && comparison.length > 0 && (
+        <Card className="border-accent-200 bg-accent-50/60">
+          <p className="text-sm text-surface-700">
+            The report compares your child's answers with yours.{' '}
+            <Link to={`/parent/children/${childId}/perspective`} className="font-semibold text-primary-700 underline">
+              Answer the same questions about your child
+            </Link>{' '}
+            to see where your views match and differ.
+          </p>
+        </Card>
+      )}
 
       {/* Overall Understanding Score */}
       {overallIndex && (

@@ -2,6 +2,7 @@ const prisma = require('../prisma');
 const { sendAppointmentEmail } = require('../services/email.service');
 const { parsePagination, buildPaginationMeta } = require('../utils/pagination');
 const { handleError } = require('../utils/errorHandler');
+const { calculateScore } = require('../utils/scoringLogic');
 
 // ── Dashboard ─────────────────────────────────────────────────
 
@@ -254,10 +255,16 @@ async function submitParentPerspective(req, res) {
     if (!Array.isArray(questions)) questions = [];
     if (!Array.isArray(thresholds)) thresholds = [];
 
-    // Calculate score
-    let score = 0;
+    // Score exactly like the child's own result (incl. reverse-scored items),
+    // otherwise the comparison report compares two different scales.
     const answerArr = Array.isArray(answers) ? answers : Object.values(answers);
-    score = answerArr.reduce((sum, a) => sum + (parseInt(a.value ?? a) || 0), 0);
+    const answersMap = {};
+    for (const a of answerArr) {
+      const id = a?.questionId ?? a?.id;
+      const val = Number(a?.value ?? a);
+      if (id !== undefined && Number.isFinite(val)) answersMap[id] = val;
+    }
+    const { score } = calculateScore(answersMap, questions, thresholds, test.category);
     const maxScore = questions.reduce((sum, q) => {
       const maxVal = Math.max(...(q.options || []).map(o => o.value || 0));
       return sum + maxVal;
@@ -296,6 +303,37 @@ async function submitParentPerspective(req, res) {
     res.status(201).json({ result });
   } catch (err) {
     handleError(res, err, 'submitParentPerspective');
+  }
+}
+
+// Tests the child has taken — the parent answers the same questions about
+// their child so the comparison report has a "parent perspective" side.
+async function getPerspectiveTests(req, res) {
+  try {
+    const parentId = req.user.id;
+    const { childId } = req.params;
+
+    const parent = await prisma.user.findUnique({
+      where: { id: parentId },
+      include: { familyAsParent: { include: { students: { select: { id: true } } } } },
+    });
+    const childIds = parent?.familyAsParent?.students.map(s => s.id) || [];
+    if (!childIds.includes(childId)) return res.status(403).json({ error: 'Access denied' });
+
+    const taken = await prisma.testResult.findMany({
+      where: { studentId: childId, isParentPerspective: false },
+      select: { testId: true },
+      distinct: ['testId'],
+    });
+    const tests = await prisma.test.findMany({
+      where: { id: { in: taken.map(t => t.testId) } },
+      select: { id: true, name: true, category: true, questions: true },
+      orderBy: { name: 'asc' },
+    });
+    const parse = (v) => { while (typeof v === 'string') { try { v = JSON.parse(v); } catch { return []; } } return Array.isArray(v) ? v : []; };
+    res.json({ tests: tests.map(t => ({ ...t, questions: parse(t.questions) })) });
+  } catch (err) {
+    handleError(res, err, 'getPerspectiveTests');
   }
 }
 
@@ -376,5 +414,5 @@ async function getComparisonReport(req, res) {
   }
 }
 
-module.exports = { getDashboard, getChildren, getChildResults, getChildResult, bookAppointment, getAppointments, submitParentPerspective, getComparisonReport };
+module.exports = { getDashboard, getChildren, getChildResults, getChildResult, bookAppointment, getAppointments, submitParentPerspective, getPerspectiveTests, getComparisonReport };
 

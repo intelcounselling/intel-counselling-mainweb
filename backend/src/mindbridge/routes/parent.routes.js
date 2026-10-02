@@ -14,6 +14,7 @@ router.get('/appointments', ...parent, ctrl.getAppointments);
 
 // Package 2: Parent Perspective & Comparison Report
 router.post('/perspective', ...parent, ctrl.submitParentPerspective);
+router.get('/children/:childId/perspective-tests', ...parent, ctrl.getPerspectiveTests);
 router.get('/children/:childId/comparison', ...parent, ctrl.getComparisonReport);
 
 module.exports = router;

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { AlertTriangle, CalendarPlus, X, Clock } from 'lucide-react';
 import { Card, Button, Modal, Input, Spinner, EmptyState, Badge, PageHeader, StatRowSkeleton } from '../../components/ui';
 import ScoreHistoryChart from '../../components/charts/ScoreHistoryChart';
@@ -76,6 +76,7 @@ export default function ParentDashboard() {
   const qc = useQueryClient();
   const [selectedChild, setSelectedChild] = useState(null);
   const [showBook, setShowBook] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const { data, isLoading } = useQuery({
     queryKey: ['parent-dashboard'],
@@ -91,6 +92,14 @@ export default function ParentDashboard() {
 
   const children = data?.children || [];
   const currentChild = selectedChild || children[0];
+
+  // /parent?book=1 (from "Book Counselling" elsewhere) opens the booking form
+  useEffect(() => {
+    if (searchParams.get('book') === '1' && currentChild) {
+      setShowBook(true);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, currentChild]);
 
   const { data: resultsData } = useQuery({
     queryKey: ['parent-child-results', currentChild?.id],

@@ -1,473 +1,456 @@
 const PDFDocument = require('pdfkit');
 const path = require('path');
-const fs = require('fs');
-const logger = require('../utils/logger');
+const { INTELL_DOMAINS, bandColorFor, hasValidityWarning, VALIDITY_MESSAGE } = require('../utils/scoringLogic');
 
-/**
- * Generate a session report PDF and stream it to res.
- * @param {Object} res - Express response object
- * @param {Object} data - Report data
- */
-async function generateSessionReport(res, { appointment, patient, psychiatrist, school, results }) {
-  const doc = new PDFDocument({ margin: 50, size: 'A4' });
+// ── Brand ────────────────────────────────────────────────────────
+const BRAND = {
+  name: 'Intel Counselling',
+  tagline: 'Student Mental Health Platform',
+  green: '#1C3F39',
+  brass: '#C19B6C',
+  ink: '#1F2937',
+  muted: '#6B7280',
+  line: '#E5E7EB',
+  band: '#F7F3EC',
+};
+const LOGO_MARK = path.join(__dirname, '..', 'assets', 'logo-mark.png');
 
-  res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader(
-    'Content-Disposition',
-    `attachment; filename="Intel Counselling_Report_${patient.firstName}_${patient.lastName}_${new Date().toISOString().split('T')[0]}.pdf"`
-  );
+// ── Page geometry (A4 = 595.28 × 841.89 pt) ──────────────────────
+const MARGIN = { top: 104, bottom: 64, left: 50, right: 50 };
+const CONTENT_W = 595.28 - MARGIN.left - MARGIN.right; // ≈ 495
 
-  doc.pipe(res);
+// Helvetica only covers Latin-1 + a few typographic marks. Anything else
+// (emoji, Indic scripts…) would print as garbage, so drop it.
+const safe = (v, fallback = '') =>
+  String(v ?? fallback).replace(/[^\x09\x0A\x0D\x20-\x7E\xA0-\xFF–—‘’“”•…]/g, '');
 
-  // ── Header ──────────────────────────────────────────────────
-  // Intel Counselling branding
-  doc
-    .fillColor('#4F46E5')
-    .fontSize(24)
-    .font('Helvetica-Bold')
-    .text('Intel Counselling', 50, 50);
+const IST = { timeZone: 'Asia/Kolkata' };
+const fmtDate = (d) => new Date(d).toLocaleDateString('en-IN', { ...IST, day: 'numeric', month: 'short', year: 'numeric' });
+const fmtDateTime = (d) =>
+  new Date(d).toLocaleString('en-IN', { ...IST, day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 
-  doc
-    .fillColor('#0EA5E9')
-    .fontSize(12)
-    .font('Helvetica')
-    .text('Student Mental Health Platform', 50, 78);
+const pct = (score, max) => (max > 0 ? Math.max(0, Math.min(1, score / max)) : 0);
 
-  // School info
-  if (school) {
-    doc
-      .fillColor('#374151')
-      .fontSize(10)
-      .text(`${school.name}`, 380, 50, { align: 'right', width: 170 })
-      .text(`${school.address || ''}`, 380, 64, { align: 'right', width: 170 });
-  }
-
-  // Divider
-  doc
-    .moveTo(50, 100)
-    .lineTo(545, 100)
-    .strokeColor('#E5E7EB')
-    .lineWidth(1)
-    .stroke();
-
-  doc.moveDown(2);
-
-  // ── Report Title ─────────────────────────────────────────────
-  doc
-    .fillColor('#111827')
-    .fontSize(18)
-    .font('Helvetica-Bold')
-    .text('Session Report', 50, 120);
-
-  doc
-    .fillColor('#6B7280')
-    .fontSize(10)
-    .font('Helvetica')
-    .text(`Generated: ${new Date().toLocaleString()}`, 50, 142);
-
-  doc.moveDown(1.5);
-
-  // ── Patient Info ─────────────────────────────────────────────
-  doc
-    .fillColor('#4F46E5')
-    .fontSize(13)
-    .font('Helvetica-Bold')
-    .text('Patient Information', 50, 170);
-
-  const patientInfo = [
-    ['Name', `${patient.firstName} ${patient.lastName}`],
-    ['Grade', patient.grade || 'N/A'],
-    ['Date of Birth', patient.dateOfBirth ? new Date(patient.dateOfBirth).toLocaleDateString() : 'N/A'],
-    ['School', school?.name || 'N/A'],
-  ];
-
-  drawTable(doc, 50, 190, patientInfo);
-
-  // ── Appointment Info ──────────────────────────────────────────
-  doc
-    .fillColor('#4F46E5')
-    .fontSize(13)
-    .font('Helvetica-Bold')
-    .text('Appointment Details', 50, 300);
-
-  const apptInfo = [
-    ['Date & Time', new Date(appointment.slot).toLocaleString()],
-    ['Psychiatrist', `Dr. ${psychiatrist.firstName} ${psychiatrist.lastName}`],
-    ['Status', appointment.status],
-    ['Meeting Link', appointment.meetingLink || 'In-person'],
-  ];
-
-  drawTable(doc, 50, 320, apptInfo);
-
-  // ── Test Results ─────────────────────────────────────────────
-  if (results && results.length > 0) {
-    doc
-      .fillColor('#4F46E5')
-      .fontSize(13)
-      .font('Helvetica-Bold')
-      .text('Assessment Results', 50, 430);
-
-    let y = 450;
-    for (const result of results) {
-      const testName = result.test?.name || 'Unknown Test';
-      const severityColor = getSeverityColor(result.severity);
-
-      doc
-        .fillColor('#111827')
-        .fontSize(11)
-        .font('Helvetica-Bold')
-        .text(`${testName}`, 50, y);
-
-      doc
-        .fillColor('#6B7280')
-        .fontSize(10)
-        .font('Helvetica')
-        .text(`Score: ${result.score}/${result.maxScore}  |  Severity: `, 50, y + 16)
-        .fillColor(severityColor)
-        .text(result.severity.toUpperCase(), { continued: false });
-
-      doc
-        .fillColor('#6B7280')
-        .text(`Date: ${new Date(result.takenAt).toLocaleDateString()}`, 50, y + 30);
-
-      // Severity bar
-      const barWidth = Math.round((result.score / result.maxScore) * 300);
-      doc
-        .roundedRect(50, y + 44, 300, 8, 4)
-        .fillColor('#F3F4F6')
-        .fill();
-      doc
-        .roundedRect(50, y + 44, barWidth, 8, 4)
-        .fillColor(severityColor)
-        .fill();
-
-      y += 70;
-
-      if (y > 700) {
-        doc.addPage();
-        y = 50;
-      }
-    }
-  }
-
-  // ── Notes Section ─────────────────────────────────────────────
-  if (appointment.notes) {
-    const notesY = doc.y + 20;
-    doc
-      .fillColor('#4F46E5')
-      .fontSize(13)
-      .font('Helvetica-Bold')
-      .text('Session Notes', 50, notesY);
-
-    doc
-      .fillColor('#374151')
-      .fontSize(10)
-      .font('Helvetica')
-      .text(appointment.notes, 50, notesY + 20, { width: 495, lineGap: 4 });
-  }
-
-  // ── Footer ────────────────────────────────────────────────────
-  const pageHeight = doc.page.height;
-  doc
-    .fillColor('#9CA3AF')
-    .fontSize(9)
-    .text('This report is confidential and intended for mental health professionals only.', 50, pageHeight - 60, { align: 'center', width: 495 })
-    .text('Intel Counselling — Student Mental Health Platform', 50, pageHeight - 46, { align: 'center', width: 495 });
-
-  doc.end();
+function getSeverityColor(severity) {
+  const s = String(severity || '').toLowerCase();
+  if (/severe|high|dominant risk/.test(s)) return '#dc2626';
+  if (/moderate/.test(s)) return '#ea580c';
+  if (/mild/.test(s)) return '#ca8a04';
+  if (/minimal|low|stable/.test(s)) return '#16a34a';
+  return BRAND.muted;
 }
 
-function drawTable(doc, x, y, rows) {
+const TONE_HEX = { Green: '#16a34a', Yellow: '#ca8a04', Orange: '#ea580c', Red: '#dc2626' };
+const isLearning = (r) => r.test?.category === 'LearningPattern';
+
+// INTELL domains use the Green / Yellow / Orange / Red bands (by score);
+// clinical screenings use their severity wording.
+function resultColor(result) {
+  if (INTELL_DOMAINS.includes(result.test?.category) && typeof result.score === 'number') {
+    return TONE_HEX[bandColorFor(result.score)];
+  }
+  return getSeverityColor(result.severity);
+}
+
+// Visual / Auditory / Kinesthetic scores (each 4–20) — the 12-item total isn't meaningful
+function learningLine(result) {
+  const s = result.subScores || {};
+  return `Visual ${s.Visual ?? '-'}  •  Auditory ${s.Auditory ?? '-'}  •  Kinesthetic ${s.Kinesthetic ?? '-'}`;
+}
+
+const cleanSeverity = (sev) => String(sev ?? '').replace(/^\[Validity Warning\]\s*/i, '');
+
+function validityFlagged(result) {
+  if (/^\[Validity Warning\]/i.test(result.severity || '')) return true;
+  const raw = result.answers || {};
+  const map = Array.isArray(raw)
+    ? Object.fromEntries(raw.map((a) => [a.questionId ?? a.id, Number(a.value ?? a)]))
+    : Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, Number(v)]));
+  return hasValidityWarning(map, result.test?.category);
+}
+
+// ── Document setup ───────────────────────────────────────────────
+
+function createDocument(res, { filename, title, footerNote }) {
+  const doc = new PDFDocument({
+    size: 'A4',
+    margins: { ...MARGIN },
+    bufferPages: true, // lets us stamp "Page X of Y" once the length is known
+    info: { Title: title, Author: BRAND.name, Creator: BRAND.name, Producer: BRAND.name },
+  });
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  doc.pipe(res);
+
+  // Watermark + header are painted when a page is created, so they sit
+  // UNDER the content that follows. (The first page is created by the
+  // constructor and emits no event, hence the explicit call.)
+  const decorate = () => {
+    drawWatermark(doc);
+    drawHeader(doc);
+    doc.x = MARGIN.left;
+    doc.y = MARGIN.top;
+  };
+  doc.on('pageAdded', decorate);
+  decorate();
+
+  doc._footerNote = footerNote;
+  return doc;
+}
+
+function drawWatermark(doc) {
+  const { width, height } = doc.page;
+  doc.save();
+
+  // Large faint brand mark, centred
+  const size = 300;
+  try {
+    doc.opacity(0.06).image(LOGO_MARK, (width - size) / 2, (height - size) / 2 - 20, { width: size });
+  } catch (_) {
+    // A missing logo must never break report generation
+  }
+
+  // Diagonal wordmark across the page, centred on the page centre
+  doc.translate(width / 2, height / 2).rotate(-38);
+  doc.opacity(0.07).fillColor(BRAND.green);
+  doc.font('Helvetica-Bold').fontSize(46).text('INTEL COUNSELLING', -300, -34, { width: 600, align: 'center', lineBreak: false, characterSpacing: 2 });
+  doc.font('Helvetica-Bold').fontSize(18).text('CONFIDENTIAL', -300, 24, { width: 600, align: 'center', lineBreak: false, characterSpacing: 8 });
+  doc.restore();
+}
+
+function drawHeader(doc) {
+  const { width } = doc.page;
+  doc.save();
+  try {
+    doc.image(LOGO_MARK, MARGIN.left, 34, { height: 44 });
+  } catch (_) { /* logo optional */ }
+
+  doc.fillColor(BRAND.green).font('Helvetica-Bold').fontSize(18).text(BRAND.name, MARGIN.left + 54, 40, { lineBreak: false });
+  doc.fillColor(BRAND.brass).font('Helvetica').fontSize(9.5).text(BRAND.tagline.toUpperCase(), MARGIN.left + 54, 62, { lineBreak: false, characterSpacing: 1.2 });
+
+  doc.moveTo(MARGIN.left, 88).lineTo(width - MARGIN.right, 88).lineWidth(1.5).strokeColor(BRAND.brass).stroke();
+  doc.restore();
+}
+
+// Footer + page numbers on every page. Written with the bottom margin
+// removed: pdfkit starts a NEW page for any text whose y is below
+// (page height − bottom margin), which is what produced the blank pages.
+function stampFooters(doc) {
+  const range = doc.bufferedPageRange();
+  for (let i = 0; i < range.count; i++) {
+    doc.switchToPage(range.start + i);
+    const { width, height } = doc.page;
+    const savedBottom = doc.page.margins.bottom;
+    doc.page.margins.bottom = 0;
+
+    doc.save();
+    doc.moveTo(MARGIN.left, height - 52).lineTo(width - MARGIN.right, height - 52).lineWidth(0.5).strokeColor(BRAND.line).stroke();
+    doc.fillColor('#9CA3AF').font('Helvetica').fontSize(8);
+    doc.text(doc._footerNote, MARGIN.left, height - 44, { width: CONTENT_W, align: 'center', lineBreak: false });
+    doc.text(`${BRAND.name}  •  Page ${i + 1} of ${range.count}`, MARGIN.left, height - 31, { width: CONTENT_W, align: 'center', lineBreak: false });
+    doc.restore();
+
+    doc.page.margins.bottom = savedBottom;
+  }
+}
+
+// ── Layout helpers ───────────────────────────────────────────────
+
+const bottomLimit = (doc) => doc.page.height - MARGIN.bottom;
+
+// Start a new page only when `needed` points don't fit on this one.
+function ensureSpace(doc, needed) {
+  if (doc.y + needed > bottomLimit(doc)) doc.addPage();
+}
+
+function sectionTitle(doc, text) {
+  ensureSpace(doc, 40);
+  doc.moveDown(0.6);
+  doc.fillColor(BRAND.green).font('Helvetica-Bold').fontSize(12.5).text(safe(text).toUpperCase(), MARGIN.left, doc.y, { characterSpacing: 0.8 });
+  doc.moveTo(MARGIN.left, doc.y + 3).lineTo(MARGIN.left + 36, doc.y + 3).lineWidth(2).strokeColor(BRAND.brass).stroke();
+  doc.y += 12;
+}
+
+function reportTitle(doc, title, subtitle) {
+  doc.fillColor(BRAND.ink).font('Helvetica-Bold').fontSize(20).text(safe(title), MARGIN.left, doc.y);
+  doc.fillColor(BRAND.muted).font('Helvetica').fontSize(9.5).text(safe(subtitle), MARGIN.left, doc.y + 2);
+  doc.y += 10;
+}
+
+// Label / value rows that flow with the document (no absolute positions).
+function keyValueTable(doc, rows) {
+  const rowH = 22;
   rows.forEach(([label, value], i) => {
-    const rowY = y + i * 22;
-    if (i % 2 === 0) {
-      doc.rect(x, rowY, 495, 22).fillColor('#F9FAFB').fill();
-    }
-    doc
-      .fillColor('#6B7280')
-      .fontSize(10)
-      .font('Helvetica')
-      .text(label, x + 8, rowY + 6);
-    doc
-      .fillColor('#111827')
-      .font('Helvetica-Bold')
-      .text(value?.toString() || 'N/A', x + 150, rowY + 6);
+    ensureSpace(doc, rowH);
+    const y = doc.y;
+    if (i % 2 === 0) doc.rect(MARGIN.left, y, CONTENT_W, rowH).fillColor(BRAND.band).fill();
+    doc.fillColor(BRAND.muted).font('Helvetica').fontSize(9.5).text(safe(label), MARGIN.left + 10, y + 7, { width: 120, lineBreak: false });
+    doc.fillColor(BRAND.ink).font('Helvetica-Bold').fontSize(9.5).text(safe(value, 'N/A') || 'N/A', MARGIN.left + 140, y + 7, { width: CONTENT_W - 150, lineBreak: false, ellipsis: true });
+    doc.y = y + rowH;
+  });
+  doc.y += 6;
+}
+
+function severityBar(doc, x, y, w, ratio, color) {
+  doc.roundedRect(x, y, w, 7, 3.5).fillColor('#EEF0F3').fill();
+  if (ratio > 0) doc.roundedRect(x, y, Math.max(7, w * ratio), 7, 3.5).fillColor(color).fill();
+}
+
+// One assessment result: title, score line, bar. Keeps itself on one page.
+function resultCard(doc, result) {
+  const learning = isLearning(result);
+  const flagged = validityFlagged(result);
+  const need = (learning ? 40 : 66) + (flagged ? 16 : 0);
+  ensureSpace(doc, need);
+  const y = doc.y;
+  const color = learning ? BRAND.green : resultColor(result);
+  const label = safe(cleanSeverity(result.severity), 'n/a');
+
+  doc.fillColor(BRAND.ink).font('Helvetica-Bold').fontSize(11).text(safe(result.test?.name, 'Assessment'), MARGIN.left, y, { width: 220, lineBreak: false, ellipsis: true });
+  doc.fillColor(color).font('Helvetica-Bold').fontSize(9.5).text(label.toUpperCase(), MARGIN.left + 220, y + 1, { width: CONTENT_W - 220, align: 'right', lineBreak: false, ellipsis: true });
+  doc.fillColor(BRAND.muted).font('Helvetica').fontSize(9.5).text(
+    `${learning ? learningLine(result) : `Score ${result.score}/${result.maxScore}`}   •   ${fmtDate(result.takenAt)}`, MARGIN.left, y + 17, { lineBreak: false });
+  if (!learning) severityBar(doc, MARGIN.left, y + 36, CONTENT_W, pct(result.score, result.maxScore), color);
+
+  if (flagged) {
+    doc.fillColor('#B45309').font('Helvetica-Oblique').fontSize(8.5).text(
+      `Possible self-presentation bias — ${VALIDITY_MESSAGE}`, MARGIN.left, y + (learning ? 32 : 50), { width: CONTENT_W, lineBreak: false, ellipsis: true });
+  }
+  doc.y = y + need;
+}
+
+// Question-by-question answers for one result. Starts a new page only when
+// the heading plus the first item wouldn't fit.
+function responsesSection(doc, result) {
+  const rows = answerRows(result);
+  if (!rows.length) return;
+
+  ensureSpace(doc, 120);
+  sectionTitle(doc, `${safe(result.test?.name, 'Assessment')} — responses`);
+  doc.fillColor(BRAND.muted).font('Helvetica').fontSize(9).text(
+    `Taken ${fmtDateTime(result.takenAt)}  •  ${isLearning(result) ? learningLine(result) : `Score ${result.score}/${result.maxScore}`}  •  ${safe(cleanSeverity(result.severity), 'n/a')}`, MARGIN.left, doc.y);
+  doc.y += 8;
+
+  rows.forEach((row) => {
+    doc.font('Helvetica-Bold').fontSize(9.5);
+    const qH = doc.heightOfString(row.text, { width: CONTENT_W });
+    ensureSpace(doc, qH + 22);
+    doc.fillColor(BRAND.ink).text(row.text, MARGIN.left, doc.y, { width: CONTENT_W });
+    doc.fillColor(BRAND.green).font('Helvetica').fontSize(9).text(`Answer: ${row.answer}`, MARGIN.left + 14, doc.y + 2, { width: CONTENT_W - 14 });
+    doc.y += 8;
   });
 }
 
-function getSeverityColor(severity) {
-  const map = {
-    minimal: '#16a34a',
-    mild: '#ca8a04',
-    moderate: '#ea580c',
-    'moderately severe': '#dc2626',
-    severe: '#dc2626',
-    low: '#16a34a',
-    high: '#dc2626',
-  };
-  return map[severity?.toLowerCase()] || '#6B7280';
+// ── Integrated profile (individual clients) ──────────────────────
+
+const LEVEL_HEX = { ok: '#16a34a', watch: '#ca8a04', concern: '#ea580c', high: '#dc2626' };
+const REC_HEX = { none: '#16a34a', monitor: '#ca8a04', counselling: '#ea580c', referral: '#dc2626' };
+
+function paragraph(doc, text, { x = MARGIN.left, width = CONTENT_W, size = 10, color = BRAND.ink, font = 'Helvetica', gap = 4 } = {}) {
+  const t = safe(text);
+  doc.font(font).fontSize(size);
+  ensureSpace(doc, doc.heightOfString(t, { width, lineGap: 3 }) + gap);
+  doc.fillColor(color).text(t, x, doc.y, { width, lineGap: 3 });
+  doc.y += gap;
 }
 
-async function generateDetailedStudentReport(res, { student, results }) {
-  const doc = new PDFDocument({ margin: 50, size: 'A4', bufferPages: true });
+const bullet = (doc, text, opts) => paragraph(doc, '•  ' + text, { x: MARGIN.left + 6, width: CONTENT_W - 6, size: 9.5, ...opts });
 
-  res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader(
-    'Content-Disposition',
-    `attachment; filename="MindBridge_Student_Report_${student.firstName}_${student.lastName}_${new Date().toISOString().split('T')[0]}.pdf"`
-  );
+function profileSection(doc, profile) {
+  sectionTitle(doc, 'Integrated psychological profile');
+  paragraph(doc, profile.summary, { color: BRAND.muted, size: 9.5 });
+  if (!profile.complete && profile.completed) {
+    paragraph(doc, 'Incomplete battery — not yet taken: ' + profile.missingNames.join(', ') + '.', { font: 'Helvetica-Oblique', color: '#B45309', size: 9 });
+  }
+  if (!profile.completed) return;
 
-  doc.pipe(res);
+  const rec = profile.recommendation;
+  ensureSpace(doc, 50);
+  doc.fillColor(REC_HEX[rec.level]).font('Helvetica-Bold').fontSize(12).text(safe(rec.headline), MARGIN.left, doc.y);
+  doc.y += 3;
+  rec.actions.forEach((a) => bullet(doc, a));
 
-  // 1. Branding Header
-  doc
-    .fillColor('#4F46E5')
-    .fontSize(24)
-    .font('Helvetica-Bold')
-    .text('MindBridge Platform', 50, 50);
+  if (profile.concerns.length) {
+    sectionTitle(doc, 'Risks and concerns');
+    profile.concerns.forEach((c) => bullet(doc, c.area + ' — ' + c.detail, { color: LEVEL_HEX[c.level] }));
+  }
+  if (profile.interventions.length) {
+    sectionTitle(doc, 'Areas requiring intervention');
+    profile.interventions.forEach((i) => bullet(doc, i));
+  }
+  if (profile.strengths.length) {
+    sectionTitle(doc, 'Strengths');
+    profile.strengths.forEach((s) => bullet(doc, s));
+  }
 
-  doc
-    .fillColor('#0EA5E9')
-    .fontSize(12)
-    .font('Helvetica')
-    .text('Detailed Student Assessment Report', 50, 78);
+  sectionTitle(doc, 'Test-wise interpretation');
+  profile.tests.forEach((t) => {
+    ensureSpace(doc, 62);
+    const y = doc.y;
+    const detail = t.subScores && t.category === 'LearningPattern'
+      ? 'Visual ' + t.subScores.Visual + '  •  Auditory ' + t.subScores.Auditory + '  •  Kinesthetic ' + t.subScores.Kinesthetic
+      : 'Score ' + t.score + '/' + t.maxScore;
+    doc.fillColor(BRAND.ink).font('Helvetica-Bold').fontSize(10.5).text(safe(t.name), MARGIN.left, y, { width: 240, lineBreak: false, ellipsis: true });
+    doc.fillColor(LEVEL_HEX[t.level]).font('Helvetica-Bold').fontSize(9).text(safe(cleanSeverity(t.severity)).toUpperCase(), MARGIN.left + 240, y + 1, { width: CONTENT_W - 240, align: 'right', lineBreak: false, ellipsis: true });
+    doc.fillColor(BRAND.muted).font('Helvetica').fontSize(9).text(detail + '   •   ' + fmtDate(t.takenAt), MARGIN.left, y + 15, { lineBreak: false });
+    doc.y = y + 29;
+    paragraph(doc, t.note, { size: 9.5, gap: 8 });
+  });
+}
 
-  doc
-    .moveTo(50, 100)
-    .lineTo(545, 100)
-    .strokeColor('#E5E7EB')
-    .lineWidth(1)
-    .stroke();
+// ── Session report ───────────────────────────────────────────────
 
-  doc.moveDown(2);
+/**
+ * Generate a session report PDF and stream it to res.
+ */
+async function generateSessionReport(res, { appointment, patient, psychiatrist, school, results, profile }) {
+  const doc = createDocument(res, {
+    filename: `Intel_Counselling_Session_Report_${safe(patient.firstName)}_${safe(patient.lastName)}_${new Date().toISOString().split('T')[0]}.pdf`,
+    title: `Session Report — ${safe(patient.firstName)} ${safe(patient.lastName)}`,
+    footerNote: 'Confidential — intended for authorised mental health professionals only.',
+  });
 
-  // Title
-  doc
-    .fillColor('#111827')
-    .fontSize(18)
-    .font('Helvetica-Bold')
-    .text('Student Personal Report', 50, 120);
+  reportTitle(doc, 'Session Report', `Generated ${fmtDateTime(new Date())}`);
 
-  doc
-    .fillColor('#6B7280')
-    .fontSize(10)
-    .font('Helvetica')
-    .text(`Generated: ${new Date().toLocaleString()}`, 50, 142);
+  const individual = patient.role === 'INDIVIDUAL';
+  sectionTitle(doc, individual ? 'Client' : 'Student');
+  keyValueTable(doc, individual ? [
+    ['Name', `${patient.firstName} ${patient.lastName}`],
+    ['Email', patient.email],
+    ['Phone', patient.phone],
+    ['Client type', 'Individual (self-registered)'],
+  ] : [
+    ['Name', `${patient.firstName} ${patient.lastName}`],
+    ['Grade', patient.grade],
+    ['Date of birth', patient.dateOfBirth ? fmtDate(patient.dateOfBirth) : 'N/A'],
+    ['School', school?.name],
+  ]);
 
-  // Student Bio Table
-  doc
-    .fillColor('#4F46E5')
-    .fontSize(13)
-    .font('Helvetica-Bold')
-    .text('Student Details', 50, 170);
+  sectionTitle(doc, 'Appointment');
+  keyValueTable(doc, [
+    ['Date & time', fmtDateTime(appointment.slot)],
+    ['Counsellor', psychiatrist ? `${psychiatrist.firstName} ${psychiatrist.lastName}` : 'N/A'],
+    ['Status', appointment.status],
+    ['Meeting', appointment.meetingLink || 'In person'],
+  ]);
 
-  const studentInfo = [
+  if (results?.length) {
+    sectionTitle(doc, 'Assessment results');
+    results.forEach((r) => resultCard(doc, r));
+  }
+
+  if (profile) profileSection(doc, profile);
+
+  if (appointment.notes) {
+    sectionTitle(doc, 'Session notes');
+    doc.fillColor(BRAND.ink).font('Helvetica').fontSize(10).text(safe(appointment.notes), MARGIN.left, doc.y, { width: CONTENT_W, lineGap: 4 });
+  }
+
+  // Full answers follow the summary + notes so the key points stay on page 1
+  (results || []).forEach((r) => responsesSection(doc, r));
+
+  stampFooters(doc);
+  doc.end();
+}
+
+// ── Detailed student report ──────────────────────────────────────
+
+function trendChart(doc, results) {
+  const chartH = 110;
+  ensureSpace(doc, chartH + 50);
+  const x0 = MARGIN.left + 24;
+  const w = CONTENT_W - 48;
+  const top = doc.y + 14;
+
+  // grid
+  doc.lineWidth(0.5).strokeColor(BRAND.line);
+  [0, 0.5, 1].forEach((f) => doc.moveTo(x0, top + chartH * f).lineTo(x0 + w, top + chartH * f).stroke());
+  doc.fillColor('#9CA3AF').font('Helvetica').fontSize(7);
+  doc.text('100%', MARGIN.left - 2, top - 3, { width: 24, lineBreak: false });
+  doc.text('0%', MARGIN.left + 8, top + chartH - 3, { width: 14, lineBreak: false });
+
+  // the learning pattern has no single score, so it isn't plotted
+  const sorted = results.filter((r) => !isLearning(r)).sort((a, b) => new Date(a.takenAt) - new Date(b.takenAt));
+  const point = (r, i) => ({
+    x: sorted.length > 1 ? x0 + (i * w) / (sorted.length - 1) : x0 + w / 2,
+    y: top + chartH - pct(r.score, r.maxScore) * chartH,
+  });
+
+  if (sorted.length > 1) {
+    doc.lineWidth(2).strokeColor(BRAND.green);
+    sorted.forEach((r, i) => { const p = point(r, i); if (i === 0) doc.moveTo(p.x, p.y); else doc.lineTo(p.x, p.y); });
+    doc.stroke();
+  }
+  sorted.forEach((r, i) => {
+    const p = point(r, i);
+    doc.circle(p.x, p.y, 4).fillColor(BRAND.green).fill();
+    doc.fillColor(BRAND.ink).font('Helvetica-Bold').fontSize(7.5).text(`${r.score}/${r.maxScore}`, p.x - 20, p.y - 15, { width: 40, align: 'center', lineBreak: false });
+    doc.fillColor(BRAND.muted).font('Helvetica').fontSize(7.5).text(
+      new Date(r.takenAt).toLocaleDateString('en-IN', { ...IST, day: 'numeric', month: 'short' }), p.x - 25, top + chartH + 7, { width: 50, align: 'center', lineBreak: false });
+  });
+  doc.y = top + chartH + 26;
+}
+
+function answerRows(result) {
+  const questions = result.test?.questions || [];
+  const answers = result.answers || {};
+  const list = Array.isArray(answers)
+    ? answers.map((a) => ({ qId: a.questionId ?? a.id, val: a.value ?? a }))
+    : Object.entries(answers).map(([qId, val]) => ({ qId, val }));
+
+  return list.map(({ qId, val }, idx) => {
+    const q = questions.find((x) => String(x.id) === String(qId));
+    const opt = q?.options?.find((o) => o.value === val);
+    return {
+      text: `${idx + 1}. ${safe(q?.text, `Question ${qId}`)}`,
+      answer: `${safe(opt?.label ?? val)}  (${val} ${val === 1 ? 'point' : 'points'})`,
+    };
+  });
+}
+
+async function generateDetailedStudentReport(res, { student, results, profile }) {
+  const individual = student.role === 'INDIVIDUAL';
+  const doc = createDocument(res, {
+    filename: `Intel_Counselling_Student_Report_${safe(student.firstName)}_${safe(student.lastName)}_${new Date().toISOString().split('T')[0]}.pdf`,
+    title: `Student Assessment Report — ${safe(student.firstName)} ${safe(student.lastName)}`,
+    footerNote: individual
+      ? 'Confidential — intended for the client and authorised counsellors only.'
+      : 'Confidential — intended for authorised school administrators and counsellors only.',
+  });
+
+  reportTitle(doc, profile ? 'Psychological Assessment Report' : 'Student Assessment Report', `Generated ${fmtDateTime(new Date())}`);
+
+  sectionTitle(doc, individual ? 'Client' : 'Student');
+  keyValueTable(doc, individual ? [
     ['Name', `${student.firstName} ${student.lastName}`],
     ['Email', student.email],
-    ['Grade', student.grade || 'N/A'],
-    ['School', student.school?.name || 'N/A'],
-  ];
+    ['Client type', 'Individual (self-registered)'],
+  ] : [
+    ['Name', `${student.firstName} ${student.lastName}`],
+    ['Email', student.email],
+    ['Grade', student.grade],
+    ['School', student.school?.name],
+  ]);
 
-  drawTable(doc, 50, 190, studentInfo);
+  if (profile) profileSection(doc, profile);
 
-  // Score History / Trend Chart (Vector Drawn!)
-  if (results && results.length > 0) {
-    doc
-      .fillColor('#4F46E5')
-      .fontSize(13)
-      .font('Helvetica-Bold')
-      .text('Assessment History & Trends', 50, 310);
+  if (!results?.length) {
+    sectionTitle(doc, 'Assessments');
+    doc.fillColor(BRAND.muted).font('Helvetica-Oblique').fontSize(10).text('No assessments have been completed yet.', MARGIN.left, doc.y);
+  } else {
+    sectionTitle(doc, 'Assessment history & trends');
+    if (results.some((r) => !isLearning(r))) trendChart(doc, results);
 
-    const chartX = 70;
-    const chartY = 340;
-    const chartWidth = 450;
-    const chartHeight = 110;
+    sectionTitle(doc, 'Summary');
+    results.forEach((r) => resultCard(doc, r));
 
-    // Draw chart axes
-    doc.lineWidth(1).strokeColor('#E5E7EB')
-      .moveTo(chartX, chartY)
-      .lineTo(chartX + chartWidth, chartY)
-      .moveTo(chartX, chartY + chartHeight)
-      .lineTo(chartX + chartWidth, chartY + chartHeight)
-      .stroke();
-
-    // Plot trend points (chronological order)
-    const sortedResults = [...results].sort((a, b) => new Date(a.takenAt) - new Date(b.takenAt));
-    if (sortedResults.length > 1) {
-      const stepX = chartWidth / (sortedResults.length - 1);
-      
-      // Plot lines
-      doc.lineWidth(2).strokeColor('#4F46E5');
-      sortedResults.forEach((res, index) => {
-        const pct = res.score / res.maxScore;
-        const ptX = chartX + index * stepX;
-        const ptY = chartY + chartHeight - (pct * chartHeight);
-        
-        if (index === 0) {
-          doc.moveTo(ptX, ptY);
-        } else {
-          doc.lineTo(ptX, ptY);
-        }
-      });
-      doc.stroke();
-
-      // Plot data labels and circles
-      sortedResults.forEach((res, index) => {
-        const pct = res.score / res.maxScore;
-        const ptX = chartX + index * stepX;
-        const ptY = chartY + chartHeight - (pct * chartHeight);
-
-        // Draw dot
-        doc.circle(ptX, ptY, 4).fillColor('#4F46E5').fill();
-        
-        // Draw score label
-        doc.fillColor('#374151').fontSize(8).font('Helvetica-Bold')
-          .text(`${res.score}/${res.maxScore}`, ptX - 12, ptY - 14, { width: 30, align: 'center' });
-
-        // Draw date label at bottom
-        const dtStr = new Date(res.takenAt).toLocaleDateString(undefined, {month: 'short', day: 'numeric'});
-        doc.fillColor('#6B7280').fontSize(8).font('Helvetica')
-          .text(dtStr, ptX - 25, chartY + chartHeight + 8, { width: 50, align: 'center' });
-      });
-    } else if (sortedResults.length === 1) {
-      const res = sortedResults[0];
-      const pct = res.score / res.maxScore;
-      const ptX = chartX + chartWidth / 2;
-      const ptY = chartY + chartHeight - (pct * chartHeight);
-      doc.circle(ptX, ptY, 5).fillColor('#4F46E5').fill();
-      doc.fillColor('#374151').fontSize(9).font('Helvetica-Bold')
-        .text(`${res.score}/${res.maxScore}`, ptX - 20, ptY - 16, { width: 40, align: 'center' });
-      const dtStr = new Date(res.takenAt).toLocaleDateString();
-      doc.fillColor('#6B7280').fontSize(8).font('Helvetica')
-        .text(dtStr, ptX - 25, chartY + chartHeight + 8, { width: 50, align: 'center' });
-    }
+    // Question-level detail — flows on after the summary; a new page starts
+    // only when the heading + first item wouldn't fit, never unconditionally.
+    for (const result of results) responsesSection(doc, result);
   }
 
-  // Detailed responses - page by page
-  if (results && results.length > 0) {
-    for (const result of results) {
-      doc.addPage();
-      
-      // Branding Header on new page
-      doc
-        .fillColor('#4F46E5')
-        .fontSize(14)
-        .font('Helvetica-Bold')
-        .text('MindBridge Detailed Responses', 50, 40);
-        
-      doc
-        .moveTo(50, 60)
-        .lineTo(545, 60)
-        .strokeColor('#E5E7EB')
-        .lineWidth(1)
-        .stroke();
-
-      doc.moveDown(1.5);
-
-      // Assessment Title
-      doc
-        .fillColor('#111827')
-        .fontSize(16)
-        .font('Helvetica-Bold')
-        .text(`${result.test?.name || 'Unknown Assessment'}`, 50, 80);
-
-      const severityColor = getSeverityColor(result.severity);
-      doc
-        .fillColor('#6B7280')
-        .fontSize(10)
-        .font('Helvetica')
-        .text(`Date Taken: ${new Date(result.takenAt).toLocaleString()}  |  Score: ${result.score}/${result.maxScore}  |  Severity: `, 50, 102)
-        .fillColor(severityColor)
-        .text(result.severity.toUpperCase(), { continued: false });
-
-      // Severity bar
-      const barWidth = Math.round((result.score / result.maxScore) * 300);
-      doc
-        .roundedRect(50, 118, 300, 8, 4)
-        .fillColor('#F3F4F6')
-        .fill();
-      doc
-        .roundedRect(50, 118, barWidth, 8, 4)
-        .fillColor(severityColor)
-        .fill();
-
-      doc.moveDown(3);
-
-      // Responses Title
-      doc
-        .fillColor('#4F46E5')
-        .fontSize(12)
-        .font('Helvetica-Bold')
-        .text('Question Breakdown & Answers', 50, 145);
-
-      // List questions and answers
-      const questions = result.test?.questions || [];
-      const answers = result.answers || {};
-      const answerList = Array.isArray(answers)
-        ? answers.map(a => ({ qId: a.questionId || a.id, val: a.value ?? a }))
-        : Object.entries(answers).map(([qId, val]) => ({ qId, val }));
-
-      let y = 175;
-
-      answerList.forEach(({ qId, val }, idx) => {
-        const q = questions.find(q => q.id === parseInt(qId) || q.id === qId);
-        
-        let answerLabel = val;
-        if (q && q.options) {
-          const opt = q.options.find(o => o.value === val);
-          if (opt) answerLabel = opt.label;
-        }
-
-        const qText = `${idx + 1}. ${q?.text || `Question ${qId}`}`;
-        
-        if (y > 700) {
-          doc.addPage();
-          doc
-            .fillColor('#4F46E5')
-            .fontSize(10)
-            .font('Helvetica-Bold')
-            .text(`${result.test?.name} — Responses Continued`, 50, 40);
-          doc
-            .moveTo(50, 52)
-            .lineTo(545, 52)
-            .strokeColor('#E5E7EB')
-            .lineWidth(1)
-            .stroke();
-          y = 70;
-        }
-
-        doc
-          .fillColor('#1F2937')
-          .fontSize(9.5)
-          .font('Helvetica-Bold')
-          .text(qText, 50, y, { width: 495 });
-
-        const textHeight = doc.heightOfString(qText, { width: 495 });
-        y += textHeight + 4;
-
-        doc
-          .fillColor('#4F46E5')
-          .fontSize(9)
-          .font('Helvetica')
-          .text(`Answer: ${answerLabel} (${val} points)`, 65, y);
-
-        y += 24;
-      });
-    }
-  }
-
-  // Footer on each page
-  const pages = doc.bufferedPageRange();
-  for (let i = 0; i < pages.count; i++) {
-    doc.switchToPage(i);
-    const pageHeight = doc.page.height;
-    doc
-      .fillColor('#9CA3AF')
-      .fontSize(8)
-      .text('This report is confidential and intended for authorized school administrators only.', 50, pageHeight - 40, { align: 'center', width: 495 })
-      .text(`Page ${i + 1} of ${pages.count}`, 50, pageHeight - 26, { align: 'center', width: 495 });
-  }
-
+  stampFooters(doc);
   doc.end();
 }
 

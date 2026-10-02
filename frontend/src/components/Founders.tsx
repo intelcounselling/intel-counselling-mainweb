@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Linkedin, Twitter, Mail, Target, Heart, ChevronRight, X, Star } from 'lucide-react';
+import { CLINIC } from '../utils/site';
+import { Mail, Target, Heart, ChevronRight, X, Star } from 'lucide-react';
 import { LazyImage } from './ui/LazyImage';
 import FadeIn from './FadeIn';
 
@@ -12,7 +13,7 @@ interface Founder {
   specialties: string[];
   philosophy: string;
   badge: string;
-  socials: { icon: React.ReactNode; label: string }[];
+  socials: { icon: React.ReactNode; label: string; href: string }[];
 }
 
 interface FoundersProps {
@@ -42,9 +43,7 @@ const Founders: React.FC<FoundersProps> = ({ onExpandChange }) => {
       specialties: ["Anxiety", "Depression", "Academic Stress", "Addiction"],
       philosophy: "To help people feel lighter, think clearer, and live fuller.",
       socials: [
-        { icon: <Linkedin size={16} />, label: "LinkedIn" },
-        { icon: <Twitter size={16} />, label: "Twitter" },
-        { icon: <Mail size={16} />, label: "Email" },
+        { icon: <Mail size={16} />, label: "Email Intel Counselling", href: CLINIC.emailHref },
       ],
     },
     {
@@ -57,9 +56,7 @@ const Founders: React.FC<FoundersProps> = ({ onExpandChange }) => {
       specialties: ["Oversees daily operations", "Managing administrative processes", "Strategic growth"],
       philosophy: "Her structured approach and commitment to efficiency help maintain a supportive, well-organized environment that enables the center to deliver quality counselling services.",
       socials: [
-        { icon: <Linkedin size={16} />, label: "LinkedIn" },
-        { icon: <Twitter size={16} />, label: "Twitter" },
-        { icon: <Mail size={16} />, label: "Email" },
+        { icon: <Mail size={16} />, label: "Email Intel Counselling", href: CLINIC.emailHref },
       ],
     },
   ];
@@ -197,8 +194,9 @@ const Founders: React.FC<FoundersProps> = ({ onExpandChange }) => {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
                         {f.socials.slice(0, isOpen ? 2 : 3).map((social, sIdx) => (
-                          <button
+                          <a
                             key={sIdx}
+                            href={social.href}
                             onClick={e => e.stopPropagation()}
                             aria-label={social.label}
                             className="w-7 h-7 bg-white/[0.05] text-white/40 rounded-lg flex items-center justify-center
@@ -206,7 +204,7 @@ const Founders: React.FC<FoundersProps> = ({ onExpandChange }) => {
                           >
                             {React.isValidElement(social.icon) &&
                               React.cloneElement(social.icon as React.ReactElement<any>, { size: 11 })}
-                          </button>
+                          </a>
                         ))}
                       </div>
 
@@ -318,12 +316,12 @@ const Founders: React.FC<FoundersProps> = ({ onExpandChange }) => {
                 {/* Socials */}
                 <div className="flex items-center gap-2">
                   {activeFounder.socials.map((social, sIdx) => (
-                    <button key={sIdx} aria-label={social.label}
+                    <a key={sIdx} href={social.href} aria-label={social.label}
                       className="w-9 h-9 bg-white/[0.05] text-white/50 rounded-xl flex items-center justify-center
                                  hover:bg-[#C19B6C] hover:text-white transition-all border border-white/[0.07]">
                       {React.isValidElement(social.icon) &&
                         React.cloneElement(social.icon as React.ReactElement<any>, { size: 14 })}
-                    </button>
+                    </a>
                   ))}
                 </div>
 

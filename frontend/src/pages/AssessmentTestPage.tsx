@@ -57,6 +57,8 @@ const AssessmentTestPage: React.FC = () => {
     return <Navigate to="/assessments" replace />;
   }
 
+  // Leaving a test: signed-in users go back to their dashboard
+  const exit = () => navigate(user ? '/my-results' : '/assessments');
   const isCareer = testId === 'career';
   const testTitle = isCareer ? 'Career Guidance Assessment' : CLINICAL_CONFIGS[testId].title;
 
@@ -79,7 +81,7 @@ const AssessmentTestPage: React.FC = () => {
       <AssessmentRegistration
         testTitle={testTitle}
         onComplete={() => setProfileComplete(true)}
-        onClose={() => navigate('/assessments')}
+        onClose={exit}
       />
     );
   }
@@ -93,7 +95,7 @@ const AssessmentTestPage: React.FC = () => {
           localStorage.setItem('career_paid', 'true');
           setIsPaid(true);
         }}
-        onClose={() => navigate('/assessments')}
+        onClose={exit}
       />
     );
   }
@@ -102,7 +104,7 @@ const AssessmentTestPage: React.FC = () => {
   return (
     <div className="relative min-h-screen">
       {user && (
-        <div className="fixed bottom-4 left-4 z-[999] flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-intel-dark/60 bg-white/95 backdrop-blur-md px-4 py-2.5 rounded-full border border-black/5 shadow-md print:hidden">
+        <div className="fixed bottom-4 left-4 z-[999] hidden md:flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-intel-dark/60 bg-white/95 backdrop-blur-md px-4 py-2.5 rounded-full border border-black/5 shadow-md print:hidden">
           <span>Signed in as <strong className="text-intel-dark">{user.name}</strong></span>
           <span className="opacity-40">|</span>
           <Link to="/my-results" className="text-terracotta hover:opacity-75 transition-opacity">My Results</Link>
@@ -110,9 +112,9 @@ const AssessmentTestPage: React.FC = () => {
       )}
 
       {isCareer ? (
-        <Assessment type="career" onClose={() => navigate('/assessments')} />
+        <Assessment type="career" onClose={exit} />
       ) : (
-        <ClinicalAssessment config={CLINICAL_CONFIGS[testId]} onClose={() => navigate('/assessments')} />
+        <ClinicalAssessment config={CLINICAL_CONFIGS[testId]} onClose={exit} />
       )}
     </div>
   );

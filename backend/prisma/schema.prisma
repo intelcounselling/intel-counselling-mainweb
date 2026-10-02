@@ -25,6 +25,9 @@ enum Role {
   PSYCHIATRIST
   PARENT
   STUDENT
+  // Self-registered client who came to us directly, not through a school.
+  // Pays separately for Module A / B (see IndividualOrder).
+  INDIVIDUAL
 }
 
 enum ApptStatus {
@@ -131,6 +134,23 @@ model User {
   concerns                 Concern[]
   refreshTokens            RefreshToken[]
   counsellingNotesWritten  CounsellingNote[] @relation("CounsellorNotes")
+  individualOrders         IndividualOrder[]
+}
+
+// Paid access to an individual-portal module. Module "A" = the five Intell
+// student development assessments; "B" = the 7-test psychological battery.
+model IndividualOrder {
+  id              String    @id @default(uuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  module          String    // "A" | "B"
+  amount          Float
+  cashfreeOrderId String    @unique
+  status          String    @default("CREATED") // CREATED | PAID
+  paidAt          DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@index([userId])
 }
 
 model Test {

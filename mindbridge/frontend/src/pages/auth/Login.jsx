@@ -220,6 +220,7 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={() => setShowPass(v => !v)}
+                  aria-label={showPass ? 'Hide password' : 'Show password'}
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600"
                 >
                   {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -245,12 +246,18 @@ export default function Login() {
               size="lg"
               className="w-full bg-white flex items-center justify-center gap-2 hover:bg-surface-50 transition-colors"
               onClick={handleGoogleLogin}
+              aria-label="Sign in with Google"
               disabled={loading}
             >
               <FcGoogle className="w-5 h-5" />
               <span>Google</span>
             </Button>
           </div>
+
+          <p className="mt-8 text-center text-sm text-surface-500">
+            Not part of a school programme?{' '}
+            <Link to="/register" className="font-medium text-primary-700 hover:text-primary-800">Create an individual account</Link>
+          </p>
 
         </div>
       </div>

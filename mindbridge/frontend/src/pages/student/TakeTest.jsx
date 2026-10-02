@@ -4,26 +4,28 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { ArrowLeft, ArrowRight, CheckCircle } from 'lucide-react';
 import { Card, Button, Spinner } from '../../components/ui';
 import SeverityBadge from '../../components/charts/SeverityBadge';
+import ResultInsights from '../../components/charts/ResultInsights';
+import { getIntellTone } from '../../utils/formatters';
 import api from '../../lib/axios';
+import usePortalBase from '../../utils/portalBase';
 
 export default function TakeTest() {
   const { testId } = useParams();
   const navigate = useNavigate();
+  const base = usePortalBase(); // '/student' or '/individual'
 
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState({});
-  const [shareWithTherapist, setShareWithTherapist] = useState(false);
   const [result, setResult] = useState(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['test', testId],
-    queryFn: () => api.get('/student/tests').then(r => r.data.tests?.find(t => t.id === testId)),
+    queryFn: () => api.get(`${base}/tests`).then(r => r.data.tests?.find(t => t.id === testId)),
   });
 
   const mutation = useMutation({
-    mutationFn: () => api.post(`/student/tests/${testId}/submit`, {
+    mutationFn: () => api.post(`${base}/tests/${testId}/submit`, {
       answers: Object.entries(answers).map(([questionId, value]) => ({ questionId, value })),
-      shareWithTherapist,
     }),
     onSuccess: ({ data }) => setResult(data),
     onError: (err) => alert("Submission failed: " + (err.response?.data?.error || err.message)),
@@ -60,7 +62,10 @@ export default function TakeTest() {
 
   // ── Result View ───────────────────────────────────────────────
   if (result) {
+    // isLow here = "needs the counselling team" (server-side rule), not just a low band
     const isLow = result.isLow;
+    const row = result.result;
+    const isLearning = row?.test?.category === 'LearningPattern';
     return (
       <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #312e81 100%)' }}>
         <div className="max-w-2xl mx-auto space-y-6 animate-slide-up relative z-10 w-full">
@@ -70,14 +75,27 @@ export default function TakeTest() {
             <p className="text-indigo-200 mb-8 font-medium">{test.name}</p>
 
             <div className="bg-white/5 rounded-3xl p-8 mb-8 border border-white/10">
-              <p className="text-sm text-indigo-300 font-bold uppercase tracking-widest mb-3">Your Score</p>
-              <div className="flex items-center justify-center gap-3">
-                <span className="text-6xl font-extrabold text-white">{result.result?.score}</span>
-                <span className="text-2xl text-indigo-300 font-medium">/ {result.result?.maxScore}</span>
-              </div>
-              <div className="mt-6 flex justify-center">
-                <SeverityBadge severity={result.severity} size="md" />
-              </div>
+              {isLearning ? (
+                <>
+                  <p className="text-sm text-indigo-300 font-bold uppercase tracking-widest mb-3">Your learning style</p>
+                  <p className="text-2xl font-extrabold text-white">{result.severity}</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-indigo-300 font-bold uppercase tracking-widest mb-3">Your Score</p>
+                  <div className="flex items-center justify-center gap-3">
+                    <span className="text-6xl font-extrabold text-white">{row?.score}</span>
+                    <span className="text-2xl text-indigo-300 font-medium">/ {row?.maxScore}</span>
+                  </div>
+                  <div className="mt-6 flex justify-center">
+                    <SeverityBadge severity={result.severity} size="md" tone={getIntellTone(row)} />
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="mb-8">
+              <ResultInsights result={row} tone="dark" />
             </div>
 
             {isLow && (
@@ -87,31 +105,24 @@ export default function TakeTest() {
                   Your score suggests you might benefit from talking to someone.
                   We've notified your school's mental health team, who will reach out soon.
                 </p>
+                <p className="text-sm text-amber-100/90 leading-relaxed mt-3">
+                  If you feel unsafe or need to talk right now, call{' '}
+                  <a href="tel:14416" className="font-bold underline">Tele-MANAS 14416</a> (free, 24×7) or{' '}
+                  <a href="tel:112" className="font-bold underline">112</a> in an emergency.
+                </p>
               </div>
             )}
 
-            {/* Share toggle */}
-            <div className="flex items-center justify-between p-6 bg-white/5 rounded-2xl mb-8 border border-white/10">
-              <div className="text-left">
-                <p className="text-base font-bold text-white mb-1">Share with therapist</p>
-                <p className="text-sm text-indigo-200">Allow your school's psychiatrist to view this result</p>
-              </div>
-              <button
-                onClick={() => setShareWithTherapist(v => !v)}
-                role="switch"
-                aria-checked={shareWithTherapist}
-                aria-label="Share result with therapist"
-                className={`relative w-14 h-7 rounded-full transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/70 ${shareWithTherapist ? 'bg-indigo-500' : 'bg-white/20'}`}
-              >
-                <span className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform ${shareWithTherapist ? 'translate-x-8' : 'translate-x-1'}`} />
-              </button>
-            </div>
+            {/* Who sees this — stated plainly instead of a toggle that did nothing */}
+            <p className="text-sm text-indigo-200 bg-white/5 rounded-2xl p-5 mb-8 border border-white/10 text-left">
+              Your result is private to you, your parent or guardian, and your school's counselling team, so they can support you.
+            </p>
 
             <div className="flex flex-col sm:flex-row gap-4">
-              <button onClick={() => navigate('/student/results')} className="flex-1 px-6 py-4 bg-white/10 text-white border border-white/20 rounded-full font-bold hover:bg-white/20 transition-all">
+              <button onClick={() => navigate(`${base}/results`)} className="flex-1 px-6 py-4 bg-white/10 text-white border border-white/20 rounded-full font-bold hover:bg-white/20 transition-all">
                 View All Results
               </button>
-              <button onClick={() => navigate('/student')} className="flex-1 px-6 py-4 bg-white text-indigo-900 rounded-full font-bold hover:scale-105 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)]">
+              <button onClick={() => navigate(base)} className="flex-1 px-6 py-4 bg-white text-indigo-900 rounded-full font-bold hover:scale-105 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)]">
                 Back to Dashboard
               </button>
             </div>
