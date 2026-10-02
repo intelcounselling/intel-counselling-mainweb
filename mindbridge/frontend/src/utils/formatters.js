@@ -115,3 +115,42 @@ export function downloadCSV(rows, filename = 'export.csv') {
   a.click();
   URL.revokeObjectURL(url);
 }
+
+// ── INTELL Student Success Assessment helpers ─────────────────────
+
+export const VALIDITY_MESSAGE = 'Please answer based on real experience for better understanding.';
+
+const INTELL_SCORED = ['StudyBehaviour', 'EmotionalWellness', 'InternetUsage', 'PersonalityDimensions'];
+
+// Older results carried "[Validity Warning] " in front of the severity text.
+export const cleanSeverity = (severity) => String(severity ?? '').replace(/^\[Validity Warning\]\s*/i, '');
+
+// Learning-pattern dimension (4–20): 16–20 strong, 11–15 moderate, 4–10 low
+export const getLearningPreference = (score) =>
+  score >= 16 ? 'Strong Preference' : score >= 11 ? 'Moderate Preference' : 'Low Preference';
+
+// 80%+ of the answers are "5" on a 1–5 INTELL scale → possible self-presentation bias.
+// Works for new results and for older rows (derived from the saved answers).
+export function hasValidityFlag(result) {
+  if (!result) return false;
+  if (/^\[Validity Warning\]/i.test(result.severity || '')) return true;
+  const category = result.test?.category;
+  if (category !== 'LearningPattern' && !INTELL_SCORED.includes(category)) return false;
+  const raw = result.answers || {};
+  const values = (Array.isArray(raw) ? raw.map((a) => a.value ?? a) : Object.values(raw)).map(Number).filter(Number.isFinite);
+  return values.length > 0 && values.filter((v) => v >= 5).length / values.length >= 0.8;
+}
+
+// Green 48–60 · Yellow 36–47 · Orange 24–35 · Red 12–23 for the four scored INTELL domains.
+export function getIntellTone(result) {
+  if (!result || !INTELL_SCORED.includes(result.test?.category) || typeof result.score !== 'number') return null;
+  return result.score >= 48 ? 'green' : result.score >= 36 ? 'yellow' : result.score >= 24 ? 'orange' : 'red';
+}
+
+export const TONE_BADGE = {
+  green: 'bg-green-50 text-green-700 border-green-200',
+  yellow: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+  orange: 'bg-orange-50 text-orange-700 border-orange-200',
+  red: 'bg-red-50 text-red-700 border-red-200',
+};
+export const TONE_HEX = { green: '#16a34a', yellow: '#ca8a04', orange: '#ea580c', red: '#dc2626' };

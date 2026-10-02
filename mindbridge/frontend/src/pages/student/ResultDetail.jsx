@@ -4,10 +4,11 @@ import { useParams, Link } from 'react-router-dom';
 import { ChevronDown, ChevronUp, LineChart, Activity, FileCheck, ArrowRight } from 'lucide-react';
 import { Card, Spinner, EmptyState, Button } from '../../components/ui';
 import SeverityBadge from '../../components/charts/SeverityBadge';
+import ResultInsights from '../../components/charts/ResultInsights';
 import ScoreHistoryChart from '../../components/charts/ScoreHistoryChart';
 import RadarChart from '../../components/charts/RadarChart';
 import api from '../../lib/axios';
-import { formatDate, formatScore } from '../../utils/formatters';
+import { formatDate, formatScore, getIntellTone } from '../../utils/formatters';
 
 function ExpandableRow({ result, isOpen, toggle }) {
   const questions = result.test?.questions || [];
@@ -36,11 +37,17 @@ function ExpandableRow({ result, isOpen, toggle }) {
         </td>
         <td className="py-5 px-6 text-[#555555] font-medium text-sm">{formatDate(result.takenAt)}</td>
         <td className="py-5 px-6">
-          <span className="inline-flex items-center gap-1.5 bg-[#f5f2eb] px-3 py-1 rounded-lg text-[#111111] font-bold text-sm border border-[#e4dcd0]">
-            {result.score}<span className="text-[#8c8270] font-medium">/{result.maxScore}</span>
-          </span>
+          {result.test?.category === 'LearningPattern' && result.subScores ? (
+            <span className="text-xs font-bold text-[#555555]">
+              V {result.subScores.Visual} · A {result.subScores.Auditory} · K {result.subScores.Kinesthetic}
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 bg-[#f5f2eb] px-3 py-1 rounded-lg text-[#111111] font-bold text-sm border border-[#e4dcd0]">
+              {result.score}<span className="text-[#8c8270] font-medium">/{result.maxScore}</span>
+            </span>
+          )}
         </td>
-        <td className="py-5 px-6"><SeverityBadge severity={result.severity} /></td>
+        <td className="py-5 px-6"><SeverityBadge severity={result.severity} tone={getIntellTone(result)} /></td>
         <td className="py-5 px-6">
           {result.sharedWithTherapist ? (
              <span className="inline-flex items-center gap-1 text-emerald-700 text-xs font-bold bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
@@ -60,6 +67,7 @@ function ExpandableRow({ result, isOpen, toggle }) {
         <tr>
           <td colSpan={6} className="p-0 border-b border-[#f0eee9]">
             <div className="bg-[#faf8f5] p-6 md:p-8 animate-slide-down border-t border-[#f0eee9]">
+              <div className="mb-6 empty:hidden"><ResultInsights result={result} /></div>
               <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
                 <div className="space-y-4">
                   <div className="flex items-center gap-3 mb-6">
@@ -71,7 +79,7 @@ function ExpandableRow({ result, isOpen, toggle }) {
                   
                   <div className="space-y-3 bg-white rounded-2xl p-5 border border-[#e4dcd0] shadow-sm">
                     {answerList.map(({ qId, val }, i) => {
-                      const q = questions.find(q => q.id === parseInt(qId));
+                      const q = questions.find(q => String(q.id) === String(qId));
                       return (
                         <div key={qId} className="flex items-start gap-4 p-3 rounded-xl hover:bg-[#faf8f5] transition-colors border border-transparent hover:border-[#f0eee9]">
                           <span className="text-[#786c5c] font-bold flex-shrink-0 w-6 text-right">{i + 1}.</span>

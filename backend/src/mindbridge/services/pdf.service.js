@@ -1,5 +1,6 @@
 const PDFDocument = require('pdfkit');
 const path = require('path');
+const { INTELL_DOMAINS, bandColorFor, hasValidityWarning, VALIDITY_MESSAGE } = require('../utils/scoringLogic');
 
 // ── Brand ────────────────────────────────────────────────────────
 const BRAND = {
@@ -37,6 +38,35 @@ function getSeverityColor(severity) {
   if (/mild/.test(s)) return '#ca8a04';
   if (/minimal|low|stable/.test(s)) return '#16a34a';
   return BRAND.muted;
+}
+
+const TONE_HEX = { Green: '#16a34a', Yellow: '#ca8a04', Orange: '#ea580c', Red: '#dc2626' };
+const isLearning = (r) => r.test?.category === 'LearningPattern';
+
+// INTELL domains use the Green / Yellow / Orange / Red bands (by score);
+// clinical screenings use their severity wording.
+function resultColor(result) {
+  if (INTELL_DOMAINS.includes(result.test?.category) && typeof result.score === 'number') {
+    return TONE_HEX[bandColorFor(result.score)];
+  }
+  return getSeverityColor(result.severity);
+}
+
+// Visual / Auditory / Kinesthetic scores (each 4–20) — the 12-item total isn't meaningful
+function learningLine(result) {
+  const s = result.subScores || {};
+  return `Visual ${s.Visual ?? '-'}  •  Auditory ${s.Auditory ?? '-'}  •  Kinesthetic ${s.Kinesthetic ?? '-'}`;
+}
+
+const cleanSeverity = (sev) => String(sev ?? '').replace(/^\[Validity Warning\]\s*/i, '');
+
+function validityFlagged(result) {
+  if (/^\[Validity Warning\]/i.test(result.severity || '')) return true;
+  const raw = result.answers || {};
+  const map = Array.isArray(raw)
+    ? Object.fromEntries(raw.map((a) => [a.questionId ?? a.id, Number(a.value ?? a)]))
+    : Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, Number(v)]));
+  return hasValidityWarning(map, result.test?.category);
 }
 
 // ── Document setup ───────────────────────────────────────────────
@@ -169,17 +199,24 @@ function severityBar(doc, x, y, w, ratio, color) {
 
 // One assessment result: title, score line, bar. Keeps itself on one page.
 function resultCard(doc, result) {
-  const need = 66;
+  const learning = isLearning(result);
+  const flagged = validityFlagged(result);
+  const need = (learning ? 40 : 66) + (flagged ? 16 : 0);
   ensureSpace(doc, need);
   const y = doc.y;
-  const color = getSeverityColor(result.severity);
-  const severity = safe(result.severity, 'n/a').toUpperCase();
+  const color = learning ? BRAND.green : resultColor(result);
+  const label = safe(cleanSeverity(result.severity), 'n/a');
 
-  doc.fillColor(BRAND.ink).font('Helvetica-Bold').fontSize(11).text(safe(result.test?.name, 'Assessment'), MARGIN.left, y, { width: 330, lineBreak: false, ellipsis: true });
-  doc.fillColor(color).font('Helvetica-Bold').fontSize(9.5).text(severity, MARGIN.left + 330, y + 1, { width: CONTENT_W - 330, align: 'right', lineBreak: false, ellipsis: true });
+  doc.fillColor(BRAND.ink).font('Helvetica-Bold').fontSize(11).text(safe(result.test?.name, 'Assessment'), MARGIN.left, y, { width: 220, lineBreak: false, ellipsis: true });
+  doc.fillColor(color).font('Helvetica-Bold').fontSize(9.5).text(label.toUpperCase(), MARGIN.left + 220, y + 1, { width: CONTENT_W - 220, align: 'right', lineBreak: false, ellipsis: true });
   doc.fillColor(BRAND.muted).font('Helvetica').fontSize(9.5).text(
-    `Score ${result.score}/${result.maxScore}   •   ${fmtDate(result.takenAt)}`, MARGIN.left, y + 17, { lineBreak: false });
-  severityBar(doc, MARGIN.left, y + 36, CONTENT_W, pct(result.score, result.maxScore), color);
+    `${learning ? learningLine(result) : `Score ${result.score}/${result.maxScore}`}   •   ${fmtDate(result.takenAt)}`, MARGIN.left, y + 17, { lineBreak: false });
+  if (!learning) severityBar(doc, MARGIN.left, y + 36, CONTENT_W, pct(result.score, result.maxScore), color);
+
+  if (flagged) {
+    doc.fillColor('#B45309').font('Helvetica-Oblique').fontSize(8.5).text(
+      `Possible self-presentation bias — ${VALIDITY_MESSAGE}`, MARGIN.left, y + (learning ? 32 : 50), { width: CONTENT_W, lineBreak: false, ellipsis: true });
+  }
   doc.y = y + need;
 }
 
@@ -192,7 +229,7 @@ function responsesSection(doc, result) {
   ensureSpace(doc, 120);
   sectionTitle(doc, `${safe(result.test?.name, 'Assessment')} — responses`);
   doc.fillColor(BRAND.muted).font('Helvetica').fontSize(9).text(
-    `Taken ${fmtDateTime(result.takenAt)}  •  Score ${result.score}/${result.maxScore}  •  ${safe(result.severity, 'n/a')}`, MARGIN.left, doc.y);
+    `Taken ${fmtDateTime(result.takenAt)}  •  ${isLearning(result) ? learningLine(result) : `Score ${result.score}/${result.maxScore}`}  •  ${safe(cleanSeverity(result.severity), 'n/a')}`, MARGIN.left, doc.y);
   doc.y += 8;
 
   rows.forEach((row) => {
@@ -268,7 +305,8 @@ function trendChart(doc, results) {
   doc.text('100%', MARGIN.left - 2, top - 3, { width: 24, lineBreak: false });
   doc.text('0%', MARGIN.left + 8, top + chartH - 3, { width: 14, lineBreak: false });
 
-  const sorted = [...results].sort((a, b) => new Date(a.takenAt) - new Date(b.takenAt));
+  // the learning pattern has no single score, so it isn't plotted
+  const sorted = results.filter((r) => !isLearning(r)).sort((a, b) => new Date(a.takenAt) - new Date(b.takenAt));
   const point = (r, i) => ({
     x: sorted.length > 1 ? x0 + (i * w) / (sorted.length - 1) : x0 + w / 2,
     y: top + chartH - pct(r.score, r.maxScore) * chartH,
@@ -328,7 +366,7 @@ async function generateDetailedStudentReport(res, { student, results }) {
     doc.fillColor(BRAND.muted).font('Helvetica-Oblique').fontSize(10).text('No assessments have been completed yet.', MARGIN.left, doc.y);
   } else {
     sectionTitle(doc, 'Assessment history & trends');
-    trendChart(doc, results);
+    if (results.some((r) => !isLearning(r))) trendChart(doc, results);
 
     sectionTitle(doc, 'Summary');
     results.forEach((r) => resultCard(doc, r));

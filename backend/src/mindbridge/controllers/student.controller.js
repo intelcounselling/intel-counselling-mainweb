@@ -1,5 +1,5 @@
 const prisma = require('../prisma');
-const { calculateScore } = require('../utils/scoringLogic');
+const { calculateScore, evaluateCounselling, INTELL_DOMAINS, VALIDITY_MESSAGE } = require('../utils/scoringLogic');
 const { createAlertAndNotify } = require('../services/alert.service');
 const { parsePagination, buildPaginationMeta } = require('../utils/pagination');
 const { handleError } = require('../utils/errorHandler');
@@ -107,14 +107,57 @@ async function submitTest(req, res) {
     }
     console.log(`[submitTest] Parsed answers count: ${Object.keys(answersMap).length}`);
 
+    // Every question must be answered with one of its options. A missing
+    // answer would silently count as 0 — or as 6 on a reverse-scored item,
+    // above the scale's maximum.
+    const unanswered = Array.isArray(questions)
+      ? questions.filter((q) => {
+          const v = answersMap[String(q.id)];
+          if (v === undefined) return true;
+          const allowed = Array.isArray(q.options) && q.options.length ? q.options.map((o) => o.value) : [1, 2, 3, 4, 5];
+          return !allowed.includes(v);
+        })
+      : [];
+    if (unanswered.length) {
+      return res.status(400).json({ error: `Please answer every question (${unanswered.length} missing or invalid).` });
+    }
+
     const {
       score,
       severity,
-      isLow,
+      isLow: bandLow,
       subScores,
-      requiresCounselling,
-      validityWarning
+      learningStyle,
+      preferences,
+      color,
+      requiresCounselling: domainCounselling,
+      validityWarning,
     } = calculateScore(answersMap, questions, thresholds, test.category);
+
+    // ── Does this submission need the counsellor? ───────────────
+    // Scored INTELL domains: the recommendation is rule-based across ALL of the
+    // student's domains (EW < 36, IU < 36, or any two domains < 36), judged on
+    // the latest result in each. Learning Pattern is descriptive — never flagged.
+    // Clinical screenings flag from their own severity bands (and PHQ-9 item 9).
+    let lowDomains = [];
+    let flagged;
+    if (INTELL_DOMAINS.includes(test.category)) {
+      const previous = await prisma.testResult.findMany({
+        where: { studentId, isParentPerspective: false, test: { category: { in: INTELL_DOMAINS } } },
+        orderBy: { takenAt: 'desc' },
+        select: { score: true, test: { select: { category: true } } },
+      });
+      const latest = {};
+      for (const r of previous) if (!(r.test.category in latest)) latest[r.test.category] = r.score;
+      latest[test.category] = score; // this submission replaces the older one
+      const overall = evaluateCounselling(latest);
+      lowDomains = overall.lowDomains;
+      flagged = bandLow && overall.requires;
+    } else if (test.category === 'LearningPattern') {
+      flagged = false;
+    } else {
+      flagged = bandLow || domainCounselling; // clinical screenings
+    }
 
     // Compute maxScore dynamically from questions/thresholds
     let maxScore = 0;
@@ -133,17 +176,17 @@ async function submitTest(req, res) {
         testId,
         score,
         maxScore,
-        severity: validityWarning ? `[Validity Warning] ${severity}` : severity,
-        isLow: requiresCounselling || isLow,
+        severity,
+        isLow: flagged,
         answers: Object.keys(answersMap).length ? answersMap : {},
         ...(subScores && { subScores }),
-        sharedWithTherapist: shareWithTherapist ?? (requiresCounselling || isLow),
+        sharedWithTherapist: shareWithTherapist ?? flagged,
       },
       include: { test: { select: { name: true, category: true, thresholds: true } } },
     });
 
-    // Trigger alert if isLow
-    if (isLow) {
+    // Alert the counsellor when this submission needs counselling
+    if (flagged) {
       createAlertAndNotify({
         studentId,
         resultId: result.id,
@@ -154,7 +197,19 @@ async function submitTest(req, res) {
       }).catch(err => console.error('Alert error:', err));
     }
 
-    res.status(201).json({ result, severity, isLow });
+    res.status(201).json({
+      result,
+      severity,
+      color,
+      isLow: flagged,
+      requiresCounselling: flagged,
+      lowDomains,
+      subScores,
+      learningStyle,
+      preferences,
+      validityWarning,
+      validityMessage: validityWarning ? VALIDITY_MESSAGE : null,
+    });
   } catch (err) {
     handleError(res, err, 'submitTest');
   }

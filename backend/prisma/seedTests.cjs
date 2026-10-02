@@ -200,6 +200,11 @@ async function main() {
   console.log('Seeding complete.');
 }
 
-main()
-  .catch((e) => { console.error(e); process.exit(1); })
-  .finally(async () => { await prisma.$disconnect(); });
+// Importable (tests read the INTELL definitions); only seeds when run directly.
+module.exports = { tests };
+
+if (require.main === module) {
+  main()
+    .catch((e) => { console.error(e); process.exit(1); })
+    .finally(async () => { await prisma.$disconnect(); });
+}

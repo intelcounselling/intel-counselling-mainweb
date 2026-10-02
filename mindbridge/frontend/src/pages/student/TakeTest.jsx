@@ -4,6 +4,8 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { ArrowLeft, ArrowRight, CheckCircle } from 'lucide-react';
 import { Card, Button, Spinner } from '../../components/ui';
 import SeverityBadge from '../../components/charts/SeverityBadge';
+import ResultInsights from '../../components/charts/ResultInsights';
+import { getIntellTone } from '../../utils/formatters';
 import api from '../../lib/axios';
 
 export default function TakeTest() {
@@ -58,7 +60,10 @@ export default function TakeTest() {
 
   // ── Result View ───────────────────────────────────────────────
   if (result) {
+    // isLow here = "needs the counselling team" (server-side rule), not just a low band
     const isLow = result.isLow;
+    const row = result.result;
+    const isLearning = row?.test?.category === 'LearningPattern';
     return (
       <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #312e81 100%)' }}>
         <div className="max-w-2xl mx-auto space-y-6 animate-slide-up relative z-10 w-full">
@@ -68,14 +73,27 @@ export default function TakeTest() {
             <p className="text-indigo-200 mb-8 font-medium">{test.name}</p>
 
             <div className="bg-white/5 rounded-3xl p-8 mb-8 border border-white/10">
-              <p className="text-sm text-indigo-300 font-bold uppercase tracking-widest mb-3">Your Score</p>
-              <div className="flex items-center justify-center gap-3">
-                <span className="text-6xl font-extrabold text-white">{result.result?.score}</span>
-                <span className="text-2xl text-indigo-300 font-medium">/ {result.result?.maxScore}</span>
-              </div>
-              <div className="mt-6 flex justify-center">
-                <SeverityBadge severity={result.severity} size="md" />
-              </div>
+              {isLearning ? (
+                <>
+                  <p className="text-sm text-indigo-300 font-bold uppercase tracking-widest mb-3">Your learning style</p>
+                  <p className="text-2xl font-extrabold text-white">{result.severity}</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-indigo-300 font-bold uppercase tracking-widest mb-3">Your Score</p>
+                  <div className="flex items-center justify-center gap-3">
+                    <span className="text-6xl font-extrabold text-white">{row?.score}</span>
+                    <span className="text-2xl text-indigo-300 font-medium">/ {row?.maxScore}</span>
+                  </div>
+                  <div className="mt-6 flex justify-center">
+                    <SeverityBadge severity={result.severity} size="md" tone={getIntellTone(row)} />
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="mb-8">
+              <ResultInsights result={row} tone="dark" />
             </div>
 
             {isLow && (

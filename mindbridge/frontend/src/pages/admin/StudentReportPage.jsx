@@ -12,9 +12,10 @@ import {
   PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar
 } from 'recharts';
 import api from '../../lib/axios';
-import { formatDate, formatDateTime, getSeverityColor, getSeverityBg } from '../../utils/formatters';
+import { formatDate, formatDateTime, getSeverityColor, getSeverityBg, getIntellTone, TONE_HEX } from '../../utils/formatters';
 import { Spinner } from '../../components/ui';
 import SeverityBadge from '../../components/charts/SeverityBadge';
+import ResultInsights from '../../components/charts/ResultInsights';
 import { useToast } from '../../components/ui/Toast';
 
 // ── Severity icon helper ────────────────────────────────────────
@@ -28,9 +29,9 @@ function SeverityIcon({ severity }) {
 }
 
 // ── Score progress bar ──────────────────────────────────────────
-function ScoreBar({ score, maxScore, severity }) {
+function ScoreBar({ score, maxScore, severity, color: forcedColor }) {
   const pct = maxScore ? Math.round((score / maxScore) * 100) : 0;
-  const color = getSeverityColor(severity);
+  const color = forcedColor || getSeverityColor(severity);
   return (
     <div className="flex items-center gap-3">
       <div className="flex-1 h-2.5 bg-surface-100 rounded-full overflow-hidden">
@@ -166,7 +167,8 @@ function QuestionBreakdown({ result }) {
 function TestCard({ result, index }) {
   const [expanded, setExpanded] = useState(false);
   const pct = result.maxScore ? Math.round((result.score / result.maxScore) * 100) : 0;
-  const color = getSeverityColor(result.severity);
+  const tone = getIntellTone(result);
+  const color = tone ? TONE_HEX[tone] : getSeverityColor(result.severity);
 
   return (
     <div className="bg-white border border-surface-200/60 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
@@ -189,19 +191,23 @@ function TestCard({ result, index }) {
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <SeverityBadge severity={result.severity} size="sm" />
-            <SeverityIcon severity={result.severity} />
+            <SeverityBadge severity={result.severity} size="sm" tone={tone} />
+            {!tone && <SeverityIcon severity={result.severity} />}
           </div>
         </div>
 
-        {/* Score bar */}
-        <div className="mt-4">
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-xs text-surface-400 font-medium">Score</span>
-            <span className="text-xs font-bold" style={{ color }}>{pct}%</span>
+        {/* Score bar — the learning-pattern total is meaningless; its V/A/K breakdown is shown below */}
+        {result.test?.category !== 'LearningPattern' && (
+          <div className="mt-4">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs text-surface-400 font-medium">Score</span>
+              <span className="text-xs font-bold" style={{ color }}>{pct}%</span>
+            </div>
+            <ScoreBar score={result.score} maxScore={result.maxScore} severity={result.severity} color={tone ? TONE_HEX[tone] : undefined} />
           </div>
-          <ScoreBar score={result.score} maxScore={result.maxScore} severity={result.severity} />
-        </div>
+        )}
+
+        <div className="mt-4 empty:hidden"><ResultInsights result={result} /></div>
 
         {/* Category tag */}
         {result.test?.category && (
