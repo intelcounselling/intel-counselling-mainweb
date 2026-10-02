@@ -1,4 +1,5 @@
 const prisma = require('../prisma');
+const { buildProfile } = require('../services/individualProfile');
 const { generateSessionReport } = require('../services/pdf.service');
 const { handleError } = require('../utils/errorHandler');
 
@@ -39,8 +40,20 @@ async function getReport(req, res) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
+    // Individual clients: the report carries their integrated profile (built from every result,
+    // not only the ones attached to this session) so the counsellor has the full picture.
+    let profile = null;
+    if (appointment.patient?.role === 'INDIVIDUAL') {
+      const all = await prisma.testResult.findMany({
+        where: { studentId: appointment.patientId },
+        include: { test: { select: { name: true, category: true, questions: true } } },
+      });
+      profile = buildProfile(all, 'B');
+    }
+
     await generateSessionReport(res, {
       appointment,
+      profile,
       patient: appointment.patient,
       psychiatrist: appointment.psychiatrist,
       school: appointment.patient?.school,

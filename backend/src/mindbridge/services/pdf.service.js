@@ -242,12 +242,69 @@ function responsesSection(doc, result) {
   });
 }
 
+// ── Integrated profile (individual clients) ──────────────────────
+
+const LEVEL_HEX = { ok: '#16a34a', watch: '#ca8a04', concern: '#ea580c', high: '#dc2626' };
+const REC_HEX = { none: '#16a34a', monitor: '#ca8a04', counselling: '#ea580c', referral: '#dc2626' };
+
+function paragraph(doc, text, { x = MARGIN.left, width = CONTENT_W, size = 10, color = BRAND.ink, font = 'Helvetica', gap = 4 } = {}) {
+  const t = safe(text);
+  doc.font(font).fontSize(size);
+  ensureSpace(doc, doc.heightOfString(t, { width, lineGap: 3 }) + gap);
+  doc.fillColor(color).text(t, x, doc.y, { width, lineGap: 3 });
+  doc.y += gap;
+}
+
+const bullet = (doc, text, opts) => paragraph(doc, '•  ' + text, { x: MARGIN.left + 6, width: CONTENT_W - 6, size: 9.5, ...opts });
+
+function profileSection(doc, profile) {
+  sectionTitle(doc, 'Integrated psychological profile');
+  paragraph(doc, profile.summary, { color: BRAND.muted, size: 9.5 });
+  if (!profile.complete && profile.completed) {
+    paragraph(doc, 'Incomplete battery — not yet taken: ' + profile.missingNames.join(', ') + '.', { font: 'Helvetica-Oblique', color: '#B45309', size: 9 });
+  }
+  if (!profile.completed) return;
+
+  const rec = profile.recommendation;
+  ensureSpace(doc, 50);
+  doc.fillColor(REC_HEX[rec.level]).font('Helvetica-Bold').fontSize(12).text(safe(rec.headline), MARGIN.left, doc.y);
+  doc.y += 3;
+  rec.actions.forEach((a) => bullet(doc, a));
+
+  if (profile.concerns.length) {
+    sectionTitle(doc, 'Risks and concerns');
+    profile.concerns.forEach((c) => bullet(doc, c.area + ' — ' + c.detail, { color: LEVEL_HEX[c.level] }));
+  }
+  if (profile.interventions.length) {
+    sectionTitle(doc, 'Areas requiring intervention');
+    profile.interventions.forEach((i) => bullet(doc, i));
+  }
+  if (profile.strengths.length) {
+    sectionTitle(doc, 'Strengths');
+    profile.strengths.forEach((s) => bullet(doc, s));
+  }
+
+  sectionTitle(doc, 'Test-wise interpretation');
+  profile.tests.forEach((t) => {
+    ensureSpace(doc, 62);
+    const y = doc.y;
+    const detail = t.subScores && t.category === 'LearningPattern'
+      ? 'Visual ' + t.subScores.Visual + '  •  Auditory ' + t.subScores.Auditory + '  •  Kinesthetic ' + t.subScores.Kinesthetic
+      : 'Score ' + t.score + '/' + t.maxScore;
+    doc.fillColor(BRAND.ink).font('Helvetica-Bold').fontSize(10.5).text(safe(t.name), MARGIN.left, y, { width: 240, lineBreak: false, ellipsis: true });
+    doc.fillColor(LEVEL_HEX[t.level]).font('Helvetica-Bold').fontSize(9).text(safe(cleanSeverity(t.severity)).toUpperCase(), MARGIN.left + 240, y + 1, { width: CONTENT_W - 240, align: 'right', lineBreak: false, ellipsis: true });
+    doc.fillColor(BRAND.muted).font('Helvetica').fontSize(9).text(detail + '   •   ' + fmtDate(t.takenAt), MARGIN.left, y + 15, { lineBreak: false });
+    doc.y = y + 29;
+    paragraph(doc, t.note, { size: 9.5, gap: 8 });
+  });
+}
+
 // ── Session report ───────────────────────────────────────────────
 
 /**
  * Generate a session report PDF and stream it to res.
  */
-async function generateSessionReport(res, { appointment, patient, psychiatrist, school, results }) {
+async function generateSessionReport(res, { appointment, patient, psychiatrist, school, results, profile }) {
   const doc = createDocument(res, {
     filename: `Intel_Counselling_Session_Report_${safe(patient.firstName)}_${safe(patient.lastName)}_${new Date().toISOString().split('T')[0]}.pdf`,
     title: `Session Report — ${safe(patient.firstName)} ${safe(patient.lastName)}`,
@@ -256,8 +313,14 @@ async function generateSessionReport(res, { appointment, patient, psychiatrist, 
 
   reportTitle(doc, 'Session Report', `Generated ${fmtDateTime(new Date())}`);
 
-  sectionTitle(doc, 'Student');
-  keyValueTable(doc, [
+  const individual = patient.role === 'INDIVIDUAL';
+  sectionTitle(doc, individual ? 'Client' : 'Student');
+  keyValueTable(doc, individual ? [
+    ['Name', `${patient.firstName} ${patient.lastName}`],
+    ['Email', patient.email],
+    ['Phone', patient.phone],
+    ['Client type', 'Individual (self-registered)'],
+  ] : [
     ['Name', `${patient.firstName} ${patient.lastName}`],
     ['Grade', patient.grade],
     ['Date of birth', patient.dateOfBirth ? fmtDate(patient.dateOfBirth) : 'N/A'],
@@ -276,6 +339,8 @@ async function generateSessionReport(res, { appointment, patient, psychiatrist, 
     sectionTitle(doc, 'Assessment results');
     results.forEach((r) => resultCard(doc, r));
   }
+
+  if (profile) profileSection(doc, profile);
 
   if (appointment.notes) {
     sectionTitle(doc, 'Session notes');
@@ -344,22 +409,31 @@ function answerRows(result) {
   });
 }
 
-async function generateDetailedStudentReport(res, { student, results }) {
+async function generateDetailedStudentReport(res, { student, results, profile }) {
+  const individual = student.role === 'INDIVIDUAL';
   const doc = createDocument(res, {
     filename: `Intel_Counselling_Student_Report_${safe(student.firstName)}_${safe(student.lastName)}_${new Date().toISOString().split('T')[0]}.pdf`,
     title: `Student Assessment Report — ${safe(student.firstName)} ${safe(student.lastName)}`,
-    footerNote: 'Confidential — intended for authorised school administrators and counsellors only.',
+    footerNote: individual
+      ? 'Confidential — intended for the client and authorised counsellors only.'
+      : 'Confidential — intended for authorised school administrators and counsellors only.',
   });
 
-  reportTitle(doc, 'Student Assessment Report', `Generated ${fmtDateTime(new Date())}`);
+  reportTitle(doc, profile ? 'Psychological Assessment Report' : 'Student Assessment Report', `Generated ${fmtDateTime(new Date())}`);
 
-  sectionTitle(doc, 'Student');
-  keyValueTable(doc, [
+  sectionTitle(doc, individual ? 'Client' : 'Student');
+  keyValueTable(doc, individual ? [
+    ['Name', `${student.firstName} ${student.lastName}`],
+    ['Email', student.email],
+    ['Client type', 'Individual (self-registered)'],
+  ] : [
     ['Name', `${student.firstName} ${student.lastName}`],
     ['Email', student.email],
     ['Grade', student.grade],
     ['School', student.school?.name],
   ]);
+
+  if (profile) profileSection(doc, profile);
 
   if (!results?.length) {
     sectionTitle(doc, 'Assessments');

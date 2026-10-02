@@ -5,6 +5,12 @@ import { Avatar } from '../ui';
 
 // First matching pattern wins — more specific routes come first.
 const TITLES = [
+  [/^\/individual\/tests\/.+/, 'Assessment'],
+  [/^\/individual\/results/, 'My Results'],
+  [/^\/individual\/profile/, 'My Profile'],
+  [/^\/individual\/sessions/, 'Sessions'],
+  [/^\/individual\/?$/, 'My Assessments'],
+  [/^\/psychiatrist\/individuals/, 'Individual Clients'],
   [/^\/student\/tests\/.+/, 'Assessment'],
   [/^\/student\/tests$/, 'Take a Test'],
   [/^\/student\/results/, 'My Results'],

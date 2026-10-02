@@ -178,5 +178,6 @@ module.exports = {
   bandColorFor,
   preferenceFor,
   INTELL_DOMAINS,
+  SELF_HARM_ITEM,
   VALIDITY_MESSAGE,
 };

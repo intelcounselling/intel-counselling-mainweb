@@ -3,6 +3,7 @@ const { parsePagination, buildPaginationMeta } = require('../utils/pagination');
 const { generateCredentials, generatePassword, regeneratePassword, syncUserToFirebase, updateFirebasePassword, deleteFirebaseUser } = require('../services/credential.service');
 const { sendCredentialsEmail } = require('../services/email.service');
 const { generateDetailedStudentReport } = require('../services/pdf.service');
+const { buildProfile } = require('../services/individualProfile');
 const logger = require('../utils/logger');
 const { handleError } = require('../utils/errorHandler');
 const crypto = require('crypto');
@@ -1077,11 +1078,12 @@ async function downloadStudentPDFReport(req, res) {
       return res.status(404).json({ error: 'Student not found' });
     }
 
-    if (student.role !== 'STUDENT') {
+    if (!['STUDENT', 'INDIVIDUAL'].includes(student.role)) {
       return res.status(400).json({ error: 'User is not a student' });
     }
 
-    await generateDetailedStudentReport(res, { student, results });
+    const profile = student.role === 'INDIVIDUAL' ? buildProfile(results, 'B') : null;
+    await generateDetailedStudentReport(res, { student, results, profile });
   } catch (err) {
     handleError(res, err, 'downloadStudentPDFReport');
   }
@@ -1241,7 +1243,8 @@ async function getStudentsForAppointment(req, res) {
 
     const students = await prisma.user.findMany({
       where: {
-        role: 'STUDENT',
+        // school students and self-registered individual clients
+        role: { in: ['STUDENT', 'INDIVIDUAL'] },
         isActive: true,
         ...(isSchoolAdmin && { schoolId }),
         ...(search && {
@@ -1255,7 +1258,7 @@ async function getStudentsForAppointment(req, res) {
       take: 50,
       orderBy: { lastName: 'asc' },
       select: {
-        id: true, firstName: true, lastName: true, grade: true, email: true,
+        id: true, firstName: true, lastName: true, grade: true, email: true, role: true,
         school: { select: { id: true, name: true } },
         alerts: { where: { status: 'UNREAD' }, select: { id: true, severity: true } },
         testResults: {

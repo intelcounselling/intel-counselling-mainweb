@@ -7,6 +7,7 @@ const studentRoutes = require('./student.routes');
 const parentRoutes = require('./parent.routes');
 const psychiatristRoutes = require('./psychiatrist.routes');
 const appointmentRoutes = require('./appointment.routes');
+const individualRoutes = require('./individual.routes');
 
 router.use('/auth', authRoutes);
 router.use('/admin', adminRoutes);
@@ -14,6 +15,7 @@ router.use('/student', studentRoutes);
 router.use('/parent', parentRoutes);
 router.use('/psychiatrist', psychiatristRoutes);
 router.use('/appointments', appointmentRoutes);
+router.use('/individual', individualRoutes);
 
 // Health check
 router.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));

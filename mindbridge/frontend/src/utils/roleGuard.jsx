@@ -7,6 +7,7 @@ const ROLE_DASHBOARDS = {
   PSYCHIATRIST: '/psychiatrist',
   PARENT: '/parent',
   STUDENT: '/student',
+  INDIVIDUAL: '/individual',
 };
 
 /**

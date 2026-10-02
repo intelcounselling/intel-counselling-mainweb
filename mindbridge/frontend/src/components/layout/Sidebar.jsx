@@ -8,6 +8,13 @@ import {
 } from 'lucide-react';
 
 const NAV_BY_ROLE = {
+  INDIVIDUAL: [
+    { to: '/individual', label: 'My Assessments', icon: LayoutDashboard, exact: true },
+    { to: '/individual/profile', label: 'My Profile', icon: Brain },
+    { to: '/individual/results', label: 'My Results', icon: FileText },
+    { to: '/individual/sessions', label: 'Sessions', icon: Calendar },
+    { to: '/individual/settings', label: 'Settings', icon: Settings },
+  ],
   STUDENT: [
     { to: '/student', label: 'Dashboard', icon: LayoutDashboard, exact: true },
     { to: '/student/tests', label: 'Take a Test', icon: TestTube2 },
@@ -27,6 +34,7 @@ const NAV_BY_ROLE = {
     { to: '/psychiatrist/alerts', label: 'Alerts', icon: Bell, badge: 'alerts' },
     { to: '/admin/schools', label: 'Schools', icon: School },
     { to: '/psychiatrist/schools', label: 'Student Profiles', icon: User },
+    { to: '/psychiatrist/individuals', label: 'Individual Clients', icon: Brain },
     { to: '/admin/users', label: 'Users', icon: Users },
     { to: '/admin/appointments', label: 'Appointments', icon: Calendar },
     { to: '/psychiatrist/appointments', label: 'Session Notes', icon: FileText },
@@ -42,6 +50,7 @@ const NAV_BY_ROLE = {
 };
 
 const ROLE_LABELS = {
+  INDIVIDUAL: 'Individual',
   STUDENT: 'Student',
   PARENT: 'Parent',
   SUPER_ADMIN: 'Super Admin',

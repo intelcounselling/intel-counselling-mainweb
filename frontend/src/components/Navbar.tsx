@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Home, Info, Users, Calendar, Heart, Layers, LogIn, LogOut, Menu, X, Image as ImageIcon, Sparkles, UserRound } from 'lucide-react';
 import { clearAuthSession, authHeaders, useAuthUser } from '../utils/auth';
-import { SCHOOL_PORTAL_URL } from '../utils/site';
+import { SCHOOL_PORTAL_URL, INDIVIDUAL_PORTAL_URL } from '../utils/site';
 
 interface NavbarProps {
   onBookClick: () => void;
@@ -166,6 +166,12 @@ const Navbar: React.FC<NavbarProps> = ({ onBookClick, onAssessmentClick, onLogin
               <LogOut size={15} />
             </button>
           )}
+          <a
+            href={INDIVIDUAL_PORTAL_URL}
+            className="hidden xl:block text-white/50 hover:text-white text-[9px] font-black uppercase tracking-widest whitespace-nowrap px-1"
+          >
+            Student Assessments
+          </a>
           {/* Separate, school-issued Mindbridge login — not the site account */}
           <a
             href={SCHOOL_PORTAL_URL}
@@ -266,6 +272,12 @@ const Navbar: React.FC<NavbarProps> = ({ onBookClick, onAssessmentClick, onLogin
                 Log out ({user.name.split(' ')[0]}) <LogOut size={16} />
               </button>
             )}
+            <a
+              href={INDIVIDUAL_PORTAL_URL}
+              className="w-full py-3 text-white/50 text-[10px] font-black uppercase tracking-[0.2em] text-center"
+            >
+              Student Assessments (Individuals)
+            </a>
             <a
               href={SCHOOL_PORTAL_URL}
               className="w-full py-3 text-white/50 text-[10px] font-black uppercase tracking-[0.2em] text-center"
