@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Brain, Activity, HeartPulse, Moon, ArrowRight, History, Smartphone, Compass, Layers } from 'lucide-react';
+import { ArrowLeft, Brain, Activity, HeartPulse, Moon, ArrowRight, History, Smartphone, Compass, Layers, Sparkles } from 'lucide-react';
 import FadeIn from './FadeIn';
 import { useAuthUser } from '../utils/auth';
 
@@ -24,7 +24,8 @@ const TestOptions: React.FC<TestOptionsProps> = ({ onBack, onSelectTest }) => {
       shortTitle: 'Mood',
       desc: 'A brief self-check to understand your emotional well-being and depressive symptoms.',
       icon: <HeartPulse size={22} />,
-      color: 'bg-[#9C5B47]'
+      color: 'bg-[#9C5B47]',
+      tint: 'bg-lavender'
     },
     {
       id: 'gad7',
@@ -32,7 +33,8 @@ const TestOptions: React.FC<TestOptionsProps> = ({ onBack, onSelectTest }) => {
       shortTitle: 'Worry',
       desc: 'Measure your feelings of anxiety, worry, and tension.',
       icon: <Activity size={22} />,
-      color: 'bg-[#2D6A4F]'
+      color: 'bg-[#2D6A4F]',
+      tint: 'bg-sage'
     },
     {
       id: 'pss10',
@@ -40,7 +42,8 @@ const TestOptions: React.FC<TestOptionsProps> = ({ onBack, onSelectTest }) => {
       shortTitle: 'Stress',
       desc: 'Understand how stressful you have found your life during the past month.',
       icon: <Brain size={22} />,
-      color: 'bg-[#B08968]'
+      color: 'bg-[#B08968]',
+      tint: 'bg-peach'
     },
     {
       id: 'sleep',
@@ -48,7 +51,8 @@ const TestOptions: React.FC<TestOptionsProps> = ({ onBack, onSelectTest }) => {
       shortTitle: 'Sleep',
       desc: 'Reflect on your sleep habits and bedtime routines to improve rest quality.',
       icon: <Moon size={22} />,
-      color: 'bg-[#4A4E69]'
+      color: 'bg-[#4A4E69]',
+      tint: 'bg-sky'
     },
     {
       id: 'sas',
@@ -56,13 +60,14 @@ const TestOptions: React.FC<TestOptionsProps> = ({ onBack, onSelectTest }) => {
       shortTitle: 'Screen time',
       desc: 'Assess your smartphone usage and digital habits to find a healthy balance.',
       icon: <Smartphone size={22} />,
-      color: 'bg-[#3E5C76]'
+      color: 'bg-[#3E5C76]',
+      tint: 'bg-lavender'
     }
   ];
 
   const premium = [
     { path: '/career-assessment', icon: <Compass size={22} />, tile: 'bg-white/10 text-white', tag: 'Career mapping', title: 'Career Guidance Assessment', desc: 'Multiple intelligences, vocational interests and career personality, with a detailed PDF report.', cta: 'Explore the career test' },
-    { path: '/intell-assessment', icon: <Layers size={22} />, tile: 'bg-terracotta text-intel-dark', tag: 'Module A + Module B', title: 'Intel Student Assessments', desc: 'How you learn, study habits, feelings, screen time and personality, plus PHQ-9 and GAD-7, in one integrated profile.', cta: 'Explore Intel assessments' },
+    { path: '/intell-assessment', icon: <Layers size={22} />, tile: 'bg-terracotta text-intel-dark', tag: 'Module A + Module B', title: 'Intel Student Assessments', desc: 'How you learn, study habits, feelings, screen time and personality, plus mood and worry screenings, in one integrated profile.', cta: 'Explore Intel assessments' },
   ];
 
   return (
@@ -76,11 +81,13 @@ const TestOptions: React.FC<TestOptionsProps> = ({ onBack, onSelectTest }) => {
         </button>
 
         <FadeIn>
-          <header className="max-w-2xl mb-10">
-            <p className="text-sm font-semibold text-[#8a6a3f] mb-3">Assessments</p>
-            <h1 className="serif text-4xl md:text-5xl leading-tight text-intel-dark">Assessments and screenings</h1>
-            <p className="mt-4 text-base md:text-lg text-intel-dark/70 leading-relaxed">
-              Validated self-checks and in-depth assessments to help you understand yourself and plan your next step.
+          <header className="relative max-w-2xl mb-10">
+            <span className="pointer-events-none absolute -left-10 -top-6 w-40 h-40 rounded-full bg-sage/70 blur-2xl" aria-hidden="true" />
+            <span className="pointer-events-none absolute right-0 top-4 w-32 h-32 rounded-full bg-lavender/80 blur-2xl" aria-hidden="true" />
+            <p className="relative inline-flex items-center gap-1.5 rounded-full bg-white/70 px-3 py-1 text-sm font-semibold text-[#8a6a3f] mb-3"><Sparkles size={14} /> Assessments</p>
+            <h1 className="serif relative text-4xl md:text-5xl leading-tight text-intel-dark">Check in with yourself</h1>
+            <p className="relative mt-4 text-base md:text-lg text-intel-dark/70 leading-relaxed">
+              Quick, friendly self-checks and in-depth assessments to help you understand yourself and plan your next step.
             </p>
           </header>
         </FadeIn>
@@ -131,20 +138,21 @@ const TestOptions: React.FC<TestOptionsProps> = ({ onBack, onSelectTest }) => {
         <section aria-labelledby="free-heading">
           <div className="flex flex-wrap items-baseline justify-between gap-2 mb-6 pb-4 border-b border-black/10">
             <h2 id="free-heading" className="serif text-2xl md:text-3xl text-intel-dark">Free screenings</h2>
-            <span className="text-sm text-intel-dark/55">Free, about 5 minutes each</span>
+            <span className="text-sm text-intel-dark/55">Free, no sign-in needed</span>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {freeTests.map((test, idx) => (
               <FadeIn key={test.id} delay={idx * 60} className="h-full">
                 <button
                   onClick={() => onSelectTest(test.id)}
-                  className="group h-full w-full text-left flex flex-col rounded-[32px] bg-white border border-black/5 p-7 transition-all duration-500 ease-bounce hover:-translate-y-1.5 hover:shadow-[0_12px_32px_rgba(26,26,26,0.08)] hover:border-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-serene-green"
+                  className={`group relative overflow-hidden h-full w-full text-left flex flex-col rounded-[32px] border border-black/5 p-7 transition-all duration-500 ease-bounce hover:-translate-y-1.5 hover:-rotate-[0.6deg] hover:shadow-[0_14px_34px_rgba(26,26,26,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-serene-green ${test.tint}`}
                 >
-                  <span className={`w-12 h-12 rounded-full flex items-center justify-center transition-transform duration-500 ease-bounce group-hover:-rotate-12 group-hover:scale-110 text-white ${test.color}`} aria-hidden="true">{test.icon}</span>
-                  <h3 className="serif text-xl text-intel-dark mt-6">{test.title}</h3>
-                  <span className="text-xs font-medium text-intel-dark/50 mt-1">{test.shortTitle}</span>
-                  <p className="mt-3 text-[15px] text-intel-dark/70 leading-relaxed flex-1">{test.desc}</p>
-                  <span className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-serene-green">
+                  <span className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-white/50 transition-transform duration-700 group-hover:scale-125" aria-hidden="true" />
+                  <span className={`relative w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm transition-transform duration-500 ease-bounce group-hover:-rotate-12 group-hover:scale-110 text-white ${test.color}`} aria-hidden="true">{test.icon}</span>
+                  <span className="relative mt-5 inline-flex self-start items-center rounded-full bg-white/70 px-3 py-1 text-xs font-semibold text-intel-dark/70">{test.shortTitle} · about 5 min</span>
+                  <h3 className="serif relative text-xl text-intel-dark mt-3">{test.title}</h3>
+                  <p className="relative mt-2 text-[15px] text-intel-dark/70 leading-relaxed flex-1">{test.desc}</p>
+                  <span className="relative mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-serene-green">
                     Start free check <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />
                   </span>
                 </button>
