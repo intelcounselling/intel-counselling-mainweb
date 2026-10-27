@@ -62,10 +62,15 @@ const TOPICS = [
 ];
 
 const STEPS = [
-  { icon: Calendar, title: 'Pick a time', text: 'Choose a day and slot that suits you, online or in person.' },
-  { icon: MessageCircle, title: 'Talk it through', text: 'Meet your counsellor and share at your own pace, with no pressure.' },
-  { icon: Sprout, title: 'Grow from here', text: 'Build a plan that fits your life and take it one step at a time.' },
+  { icon: Calendar, tint: 'bg-lavender', title: 'Pick a time', text: 'Choose a day and slot that suits you, online or in person.' },
+  { icon: MessageCircle, tint: 'bg-sage', title: 'Talk it through', text: 'Meet your counsellor and share at your own pace, with no pressure.' },
+  { icon: Sprout, tint: 'bg-peach', title: 'Grow from here', text: 'Build a plan that fits your life and take it one step at a time.' },
 ];
+
+// Small accents cycle through the whole palette
+const TICK_TINTS = ['bg-lavender', 'bg-sage', 'bg-peach', 'bg-sky', 'bg-terracotta'];
+const DOT_COLORS = ['#C19B6C', '#1C3F39', '#9C5B47', '#3E5C76', '#4A4E69'];
+const STRIP = ['#DCE8DC', '#DCE6EE', '#E6DEEC', '#F6DCC8', '#C19B6C'];
 
 const FEATURES = [
   'One-on-one confidential counseling',
@@ -116,8 +121,10 @@ const PersonalTherapy: React.FC<PersonalTherapyProps> = ({ onBack, onBook }) => 
     <div className="relative overflow-x-clip">
       {/* ── 1. Hero · lavender ─────────────────────────────── */}
       <section className="relative pt-24 md:pt-28 pb-6 md:pb-10" style={{ background: C.cream }}>
-        <div className="pt-bob pointer-events-none absolute top-24 -left-20 w-72 h-72 rounded-full bg-terracotta/15 blur-3xl" aria-hidden="true" />
-        <div className="pt-bob-alt pointer-events-none absolute bottom-0 right-0 w-80 h-64 rounded-full bg-serene-green/10 blur-3xl" aria-hidden="true" />
+        <div className="pt-bob pointer-events-none absolute top-24 -left-20 w-72 h-72 rounded-full bg-lavender/80 blur-3xl" aria-hidden="true" />
+        <div className="pt-bob-alt pointer-events-none absolute bottom-0 right-0 w-80 h-64 rounded-full bg-sky/80 blur-3xl" aria-hidden="true" />
+        <div className="pt-bob pointer-events-none absolute top-1/3 left-1/2 w-56 h-56 rounded-full bg-peach/70 blur-3xl" aria-hidden="true" />
+        <div className="pt-bob-alt pointer-events-none absolute bottom-10 left-10 w-48 h-48 rounded-full bg-sage/80 blur-3xl" aria-hidden="true" />
         <Inner className="relative">
           <button
             onClick={onBack}
@@ -159,9 +166,9 @@ const PersonalTherapy: React.FC<PersonalTherapyProps> = ({ onBack, onBook }) => 
                 </a>
               </div>
               <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-intel-dark/65">
-                <li className="inline-flex items-center gap-2"><Globe size={16} className="text-serene-green" /> Online and in person</li>
-                <li className="inline-flex items-center gap-2"><Lock size={16} className="text-serene-green" /> Confidential, always</li>
-                <li className="inline-flex items-center gap-2"><Heart size={16} className="text-serene-green" /> No judgement</li>
+                <li className="inline-flex items-center gap-2"><span className="w-8 h-8 rounded-full bg-sky flex items-center justify-center text-intel-dark"><Globe size={15} /></span> Online and in person</li>
+                <li className="inline-flex items-center gap-2"><span className="w-8 h-8 rounded-full bg-lavender flex items-center justify-center text-intel-dark"><Lock size={15} /></span> Confidential, always</li>
+                <li className="inline-flex items-center gap-2"><span className="w-8 h-8 rounded-full bg-peach flex items-center justify-center text-intel-dark"><Heart size={15} /></span> No judgement</li>
               </ul>
             </div>
 
@@ -174,10 +181,13 @@ const PersonalTherapy: React.FC<PersonalTherapyProps> = ({ onBack, onBook }) => 
               <span className="pt-bob absolute -top-3 -left-6 sm:-left-10 inline-flex items-center gap-1.5 rounded-full bg-terracotta text-intel-dark px-4 py-2 text-sm font-semibold shadow-[0_8px_18px_rgba(0,0,0,0.25)] -rotate-[6deg]" aria-hidden="true">
                 <Heart size={15} /> A safe space
               </span>
-              <span className="pt-bob-alt absolute bottom-10 -right-4 sm:-right-10 inline-flex items-center gap-1.5 rounded-full bg-white text-intel-dark px-4 py-2 text-sm font-semibold shadow-[0_8px_18px_rgba(0,0,0,0.18)] rotate-[5deg]" aria-hidden="true">
+              <span className="pt-bob-alt absolute bottom-10 -right-4 sm:-right-10 inline-flex items-center gap-1.5 rounded-full bg-sage text-intel-dark px-4 py-2 text-sm font-semibold shadow-[0_8px_18px_rgba(0,0,0,0.18)] rotate-[5deg]" aria-hidden="true">
                 <ShieldCheck size={15} className="text-serene-green" /> Private
               </span>
-              <Sparkles className="pt-bob absolute -bottom-6 left-4 text-terracotta" size={28} aria-hidden="true" />
+              <span className="pt-bob absolute -bottom-4 left-2 sm:-left-6 inline-flex items-center gap-1.5 rounded-full bg-lavender text-intel-dark px-4 py-2 text-sm font-semibold shadow-[0_8px_18px_rgba(0,0,0,0.18)] -rotate-[4deg]" aria-hidden="true">
+                <Smile size={15} /> No judgement
+              </span>
+              <Sparkles className="pt-bob-alt absolute top-1/3 -right-6 sm:-right-10 text-terracotta" size={26} aria-hidden="true" />
             </div>
           </div>
         </Inner>
@@ -238,9 +248,10 @@ const PersonalTherapy: React.FC<PersonalTherapyProps> = ({ onBack, onBook }) => 
                 {topic.items.map((item, i) => (
                   <li
                     key={item}
-                    className="pt-chip rounded-full bg-white/75 px-4 py-2 text-[14.5px] font-medium text-intel-dark/85 hover:bg-white transition-colors"
+                    className="pt-chip inline-flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-[14.5px] font-medium text-intel-dark/85 hover:bg-white transition-colors"
                     style={{ animationDelay: `${i * 45}ms` }}
                   >
+                    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: DOT_COLORS[(i + active) % DOT_COLORS.length] }} aria-hidden="true" />
                     {item}
                   </li>
                 ))}
@@ -264,11 +275,11 @@ const PersonalTherapy: React.FC<PersonalTherapyProps> = ({ onBack, onBook }) => 
             </div>
           </FadeIn>
           <div className="relative grid md:grid-cols-3 gap-12 md:gap-8">
-            <div className="hidden md:block absolute top-9 left-[17%] right-[17%] border-t-2 border-dashed border-intel-dark/30" aria-hidden="true" />
-            {STEPS.map(({ icon: Icon, title, text }, i) => (
+            <div className="hidden md:block absolute top-9 left-[17%] right-[17%] border-t-2 border-dashed border-terracotta/70" aria-hidden="true" />
+            {STEPS.map(({ icon: Icon, tint, title, text }, i) => (
               <FadeIn key={title} delay={i * 100}>
                 <div className="group relative text-center px-2">
-                  <div className="relative mx-auto w-[72px] h-[72px] rounded-full bg-white shadow-[0_8px_20px_rgba(26,26,26,0.12)] flex items-center justify-center text-serene-green transition-transform duration-500 ease-bounce group-hover:-rotate-12 group-hover:scale-110">
+                  <div className={`relative mx-auto w-[72px] h-[72px] rounded-full ${tint} shadow-[0_8px_20px_rgba(26,26,26,0.12)] flex items-center justify-center text-intel-dark transition-transform duration-500 ease-bounce group-hover:-rotate-12 group-hover:scale-110`}>
                     <Icon size={30} />
                     <span className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-intel-dark text-terracotta serif text-base flex items-center justify-center" aria-hidden="true">{i + 1}</span>
                   </div>
@@ -293,9 +304,9 @@ const PersonalTherapy: React.FC<PersonalTherapyProps> = ({ onBack, onBook }) => 
                 What&rsquo;s <span className="italic text-terracotta">included</span>
               </h2>
               <ul className="mt-8 space-y-4">
-                {FEATURES.map((f) => (
+                {FEATURES.map((f, i) => (
                   <li key={f} className="flex items-start gap-3.5 text-[17px] text-white/85 leading-relaxed">
-                    <span className="mt-0.5 w-7 h-7 rounded-full bg-terracotta text-intel-dark flex items-center justify-center shrink-0" aria-hidden="true"><Check size={15} strokeWidth={3} /></span>
+                    <span className={`mt-0.5 w-7 h-7 rounded-full ${TICK_TINTS[i % TICK_TINTS.length]} text-intel-dark flex items-center justify-center shrink-0`} aria-hidden="true"><Check size={15} strokeWidth={3} /></span>
                     {f}
                   </li>
                 ))}
@@ -312,6 +323,7 @@ const PersonalTherapy: React.FC<PersonalTherapyProps> = ({ onBack, onBook }) => 
               {[
                 { icon: ShieldCheck, title: 'Safe and secure', text: 'Confidential sessions, with your records kept private and encrypted.', tilt: '-rotate-[1.5deg]', tint: 'bg-lavender' },
                 { icon: Heart, title: 'Care without judgement', text: 'We listen carefully and without judgement, so you feel supported.', tilt: 'rotate-[1.5deg]', tint: 'bg-peach' },
+                { icon: Globe, title: 'Online or in person', text: 'Meet at the clinic or from home, whichever feels easier for you.', tilt: '-rotate-[1deg]', tint: 'bg-sky' },
               ].map(({ icon: Icon, title, text, tilt, tint }) => (
                 <FadeIn key={title}>
                   <div className={`group rounded-[32px] ${tint} text-intel-dark p-7 ${tilt} transition-transform duration-500 ease-bounce hover:rotate-0 hover:-translate-y-1.5`}>
@@ -346,9 +358,9 @@ const PersonalTherapy: React.FC<PersonalTherapyProps> = ({ onBack, onBook }) => 
                 <button
                   key={test}
                   onClick={() => navigate(`/assessments/${test}`)}
-                  className="group inline-flex items-center gap-3 rounded-full bg-white pl-2 pr-6 py-2 text-lg font-semibold text-intel-dark shadow-[0_6px_0_rgba(26,26,26,0.12)] hover:-translate-y-1 active:translate-y-0.5 active:shadow-[0_2px_0_rgba(26,26,26,0.12)] transition-all duration-300 ease-bounce"
+                  className={`group inline-flex items-center gap-3 rounded-full ${tint} pl-2 pr-6 py-2 text-lg font-semibold text-intel-dark shadow-[0_6px_0_rgba(26,26,26,0.14)] hover:-translate-y-1 active:translate-y-0.5 active:shadow-[0_2px_0_rgba(26,26,26,0.14)] transition-all duration-300 ease-bounce`}
                 >
-                  <span className={`w-11 h-11 rounded-full flex items-center justify-center ${tint} transition-transform duration-500 ease-bounce group-hover:-rotate-12 group-hover:scale-110`} aria-hidden="true"><Icon size={20} /></span>
+                  <span className={`w-11 h-11 rounded-full flex items-center justify-center bg-white/75 transition-transform duration-500 ease-bounce group-hover:-rotate-12 group-hover:scale-110`} aria-hidden="true"><Icon size={20} /></span>
                   {label}
                 </button>
               ))}
@@ -368,6 +380,9 @@ const PersonalTherapy: React.FC<PersonalTherapyProps> = ({ onBack, onBook }) => 
         <Inner>
           <FadeIn>
             <div className="max-w-3xl mx-auto text-center">
+              <div className="flex justify-center gap-2 mb-8" aria-hidden="true">
+                {STRIP.map((c, i) => <span key={c} className="pt-bob h-2 w-10 rounded-full" style={{ background: c, animationDelay: `${i * 0.25}s` }} />)}
+              </div>
               <h2 className="serif text-4xl md:text-6xl text-[#F4EFE6] leading-[1.1]">
                 Ready when <span className="italic text-terracotta">you are.</span>
               </h2>
