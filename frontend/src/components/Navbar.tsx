@@ -8,13 +8,13 @@ interface NavbarProps {
   onBookClick: () => void;
 }
 
-// Home-page sections, plus the assessments page. The logo is the way home.
+// Home-page sections in the order they appear on the page, plus the assessments page. The logo is the way home.
 const NAV_LINKS = [
   { id: 'approach', label: 'Our approach' },
   { id: 'services', label: 'Services' },
   { id: 'assessments', label: 'Assessments' },
-  { id: 'founders', label: 'Our team' },
   { id: 'gallery', label: 'Gallery' },
+  { id: 'founders', label: 'Our team' },
 ];
 
 // Icon + tint for each link in the mobile menu
