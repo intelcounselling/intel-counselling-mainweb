@@ -15,6 +15,7 @@ async function verifyToken(req, res, next) {
     const token = authHeader.slice(7);
     let payload;
     let emailFromFirebase = null;
+    let firebaseEmailVerified = false;
 
     const { admin, initialized } = require('../config/firebaseAdmin');
 
@@ -23,6 +24,7 @@ async function verifyToken(req, res, next) {
         // Try Firebase first
         const decodedToken = await admin.auth().verifyIdToken(token);
         emailFromFirebase = decodedToken.email;
+        firebaseEmailVerified = decodedToken.email_verified === true;
       } else {
         throw new Error('Firebase Admin not initialized');
       }
@@ -60,9 +62,10 @@ async function verifyToken(req, res, next) {
       return res.status(401).json({ error: 'User not found or inactive' });
     }
 
-    // The super admin must use password + emailed code (two-step), never Google sign-in
-    if (emailFromFirebase && user.role === 'SUPER_ADMIN' && String(process.env.ADMIN_MFA || 'on').toLowerCase() !== 'off') {
-      return res.status(401).json({ error: 'Admins sign in with email, password and a code. Google sign-in is not available for this account.', code: 'ADMIN_PASSWORD_REQUIRED' });
+    // The super admin may sign in with Google, but only with a Google-verified email, so nobody
+    // can reach this account by creating a look-alike sign-in with the admin's address.
+    if (emailFromFirebase && user.role === 'SUPER_ADMIN' && !firebaseEmailVerified) {
+      return res.status(401).json({ error: 'Please verify your email with Google to sign in as an admin.', code: 'ADMIN_EMAIL_UNVERIFIED' });
     }
 
     // If they authenticated via Firebase (e.g., Google) and still have mustResetPassword flagged,

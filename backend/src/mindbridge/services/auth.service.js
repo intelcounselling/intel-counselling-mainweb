@@ -208,11 +208,17 @@ async function requestOTP(email) {
   });
 
   const { sendOTPEmail } = require('./email.service');
-  await sendOTPEmail({
-    to: user.email,
-    recipientName: `${user.firstName} ${user.lastName}`,
-    otp,
-  });
+  try {
+    await sendOTPEmail({
+      to: user.email,
+      recipientName: `${user.firstName} ${user.lastName}`,
+      otp,
+    });
+  } catch (err) {
+    // Answer the same way whether or not the email went out, so the response never
+    // reveals which addresses have accounts. The failure is in the server log.
+    logger.error(`Password reset email failed for user ${user.id}: ${err.message}`);
+  }
 
   return true;
 }

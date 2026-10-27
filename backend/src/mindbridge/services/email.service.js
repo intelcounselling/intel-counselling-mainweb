@@ -24,7 +24,39 @@ function getTransporter() {
   return transporter;
 }
 
+// Brevo is what the rest of the platform already uses, so prefer it when its key is set;
+// SMTP stays as a fallback for deployments that configure it instead.
+async function sendViaBrevo({ to, subject, html, text }) {
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: { accept: 'application/json', 'content-type': 'application/json', 'api-key': process.env.BREVO_API_KEY },
+    body: JSON.stringify({
+      to: [{ email: to }],
+      sender: { email: process.env.SENDER_EMAIL || 'intelcounselling@gmail.com', name: 'Intel Counselling' },
+      subject,
+      ...(html ? { htmlContent: html } : { textContent: text }),
+    }),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    throw new Error(`Brevo ${res.status}: ${detail.slice(0, 200)}`);
+  }
+  return res.json().catch(() => ({}));
+}
+
 async function sendEmail({ to, subject, html, text }) {
+  const brevoKey = process.env.BREVO_API_KEY;
+  if (brevoKey && brevoKey !== 'dummy') {
+    try {
+      const result = await sendViaBrevo({ to, subject, html, text });
+      logger.info(`Email sent to ${to} via Brevo`);
+      return result;
+    } catch (err) {
+      logger.error(`Email failed to ${to} (Brevo):`, err);
+      throw err;
+    }
+  }
+
   const t = getTransporter();
   if (!t) {
     logger.info(`[DEV EMAIL] To: ${to} | Subject: ${subject}\n${text || html}`);

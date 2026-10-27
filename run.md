@@ -231,7 +231,7 @@ drop them.
 What the code now does: parent/guardian consent for under-18s (website: emailed code;
 school portal: the school records it), a consent log, download-my-data and delete-my-account,
 a Grievance Officer page, a daily retention job, a one-year access log in the school portal,
-two-step sign-in for the super admin, and encryption of school-portal answers and session notes.
+two-step sign-in (password + emailed code) for the super admin, who can also sign in with a Google-verified account, and encryption of school-portal answers and session notes.
 
 Before deploying:
 
