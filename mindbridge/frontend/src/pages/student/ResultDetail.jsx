@@ -59,7 +59,7 @@ function ExpandableRow({ result, isOpen, toggle }) {
           )}
         </td>
         <td className="py-5 px-6 text-right">
-          <div className={`inline-flex w-8 h-8 items-center justify-center rounded-full transition-colors ${isOpen ? 'bg-[#1c1a3b] text-white' : 'bg-[#f5f2eb] text-[#786c5c] hover:bg-[#e4dcd0]'}`}>
+          <div className={`inline-flex w-8 h-8 items-center justify-center rounded-full transition-colors ${isOpen ? 'bg-[#1F1E1B] text-white' : 'bg-[#f5f2eb] text-[#786c5c] hover:bg-[#e4dcd0]'}`}>
             {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </div>
         </td>
@@ -132,7 +132,7 @@ export default function ResultDetail() {
   const results = data?.results || [];
 
   return (
-    <div className="-m-6 p-6 md:p-10 min-h-[calc(100vh-64px)] bg-[#1c1a3b] text-white animate-fade-in font-sans relative">
+    <div className="-m-6 p-6 md:p-10 min-h-[calc(100vh-64px)] bg-[#1F1E1B] text-white animate-fade-in font-sans relative">
       <div className="space-y-12 max-w-6xl mx-auto pb-12 relative z-10">
         
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pt-8">
@@ -147,7 +147,7 @@ export default function ResultDetail() {
 
         {!results.length ? (
           <div className="flex flex-col items-center justify-center p-16 text-center border-dashed border-2 border-[#8c8270]/30 bg-white/5 rounded-[2rem]">
-            <div className="w-24 h-24 bg-[#1c1a3b] rounded-full flex items-center justify-center shadow-inner mb-6 border border-[#8c8270]/30">
+            <div className="w-24 h-24 bg-[#1F1E1B] rounded-full flex items-center justify-center shadow-inner mb-6 border border-[#8c8270]/30">
               <LineChart className="w-10 h-10 text-[#b3aaa0]" />
             </div>
             <h3 className="text-2xl font-bold text-white mb-3" style={{ fontFamily: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif' }}>No results yet</h3>

@@ -25,7 +25,7 @@ export default function ResultInsights({ result, tone = 'light' }) {
     <div className="space-y-3 text-left">
       {dims.length > 0 && (
         <div className={dark ? 'rounded-2xl bg-white/5 border border-white/10 p-5' : 'rounded-xl bg-surface-50 border border-surface-100 p-4'}>
-          <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${dark ? 'text-indigo-300' : 'text-surface-500'}`}>
+          <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${dark ? 'text-primary-300' : 'text-surface-500'}`}>
             Learning preferences
           </p>
           <div className="space-y-3">
@@ -35,7 +35,7 @@ export default function ResultInsights({ result, tone = 'light' }) {
                 <div key={dim}>
                   <div className={`flex items-center justify-between text-sm mb-1 ${dark ? 'text-white' : 'text-surface-800'}`}>
                     <span className="font-semibold">{dim}</span>
-                    <span className={dark ? 'text-indigo-200' : 'text-surface-500'}>
+                    <span className={dark ? 'text-primary-200' : 'text-surface-500'}>
                       {score}/20 · {pref}
                     </span>
                   </div>

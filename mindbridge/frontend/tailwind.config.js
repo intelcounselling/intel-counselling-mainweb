@@ -48,6 +48,11 @@ export default {
           900: '#1A1A1A', // Primary Dark
           950: '#111111',
         },
+        // Playful pastels, shared with the main website
+        sage:     '#DCE8DC',
+        sky:      '#DCE6EE',
+        lavender: '#E6DEEC',
+        peach:    '#F6DCC8',
         // Severity
         severity: {
           minimal: '#16a34a',
@@ -61,8 +66,9 @@ export default {
         serif: ['Playfair Display', 'serif'],
       },
       boxShadow: {
-        'glass': '0 8px 32px 0 rgba(79, 70, 229, 0.12)',
-        'glass-lg': '0 16px 48px 0 rgba(79, 70, 229, 0.18)',
+        'glass': '0 8px 32px 0 rgba(28, 63, 57, 0.12)',
+        'glass-lg': '0 16px 48px 0 rgba(28, 63, 57, 0.18)',
+        'pop': '0 6px 0 rgba(28, 63, 57, 0.14), 0 14px 30px rgba(26, 26, 26, 0.10)',
         'card':  '0 1px 2px rgba(26, 26, 26, 0.04), 0 1px 3px rgba(26, 26, 26, 0.05)',
         'card-hover': '0 4px 12px rgba(26, 26, 26, 0.08), 0 2px 4px rgba(26, 26, 26, 0.05)',
       },

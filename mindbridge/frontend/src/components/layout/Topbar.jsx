@@ -41,18 +41,18 @@ export default function Topbar({ onMenuClick, alertCount = 0, showAlerts = false
 
   return (
     <header
-      className="topbar fixed top-0 right-0 z-20 bg-white/80 backdrop-blur-md border-b border-surface-100"
+      className="topbar fixed top-0 right-0 z-20 bg-[#F4EFE6]/85 backdrop-blur-md border-b border-surface-200/70"
     >
       <div className="flex items-center justify-between h-full px-4 sm:px-6">
         <div className="flex items-center gap-4">
           <button
-            className="md:hidden p-2 rounded-lg hover:bg-surface-100 text-surface-600"
+            className="md:hidden p-2 rounded-full hover:bg-white text-surface-600"
             onClick={onMenuClick}
             aria-label="Open navigation menu"
           >
             <Menu className="w-5 h-5" />
           </button>
-          <h1 className="text-base sm:text-lg font-semibold text-surface-900 truncate">{title}</h1>
+          <h1 className="font-serif text-lg sm:text-xl font-semibold text-surface-900 truncate">{title}</h1>
         </div>
 
         <div className="flex items-center gap-3">
@@ -62,7 +62,7 @@ export default function Topbar({ onMenuClick, alertCount = 0, showAlerts = false
               to="/psychiatrist/alerts"
               aria-label={alertCount > 0 ? `${alertCount} unread alerts` : 'Alerts'}
               title="Alerts"
-              className="relative p-2 rounded-lg hover:bg-surface-100 text-surface-500 hover:text-surface-700 transition-colors"
+              className="relative p-2.5 rounded-full hover:bg-white text-surface-500 hover:text-surface-800 transition-colors"
             >
               <Bell className="w-5 h-5" />
               {alertCount > 0 && (

@@ -2,23 +2,11 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { ArrowRight, ArrowDown, Clock, Sparkles, MessageCircle, Calendar } from 'lucide-react';
-import { Card, Spinner, EmptyState, Badge, Button } from '../../components/ui';
+import { Card, Spinner, EmptyState, Badge, Button, TestIcon, testTint } from '../../components/ui';
 import useAuthStore from '../../store/authStore';
 import api from '../../lib/axios';
 import { formatRelative, formatDate } from '../../utils/formatters';
 
-
-const TEST_ICONS = {
-  LearningPattern: '🧠',
-  StudyBehaviour: '📚',
-  EmotionalWellness: '💙',
-  InternetUsage: '📱',
-  PersonalityDimensions: '✨',
-  // Legacy
-  Depression: '😔',
-  Anxiety: '😰',
-  Stress: '😤',
-};
 
 export default function StudentDashboard() {
   const user = useAuthStore(s => s.user);
@@ -50,7 +38,7 @@ export default function StudentDashboard() {
   };
 
   return (
-    <div className="-m-6 p-6 md:p-10 min-h-[calc(100vh-64px)] bg-[#1c1a3b] text-white animate-fade-in overflow-x-hidden font-sans relative">
+    <div className="-m-6 p-6 md:p-10 min-h-[calc(100vh-64px)] bg-[#1F1E1B] text-white animate-fade-in overflow-x-hidden font-sans relative">
       <div className="w-full max-w-[1400px] mx-auto pb-24 space-y-24 relative z-10">
         
         {/* 1. Full-Height Welcome Hero */}
@@ -68,7 +56,7 @@ export default function StudentDashboard() {
 
             <button 
               onClick={scrollToAssessments}
-              className="group relative inline-flex items-center justify-center gap-3 bg-[#e5ddd0] text-[#786c5c] px-8 py-4 rounded-xl font-bold text-lg hover:bg-[#d9d0c2] transition-all duration-300 active:scale-95 shadow-md"
+              className="group relative inline-flex items-center justify-center gap-3 bg-[#e5ddd0] text-[#786c5c] px-8 py-4 rounded-full font-bold text-lg hover:bg-[#d9d0c2] transition-all duration-300 active:scale-95 shadow-md"
             >
               Explore Assessments 
               <div className="w-8 h-8 rounded-full bg-white/50 flex items-center justify-center group-hover:translate-y-1 transition-transform">
@@ -92,7 +80,7 @@ export default function StudentDashboard() {
 
           {!tests.length ? (
             <div className="flex flex-col items-center justify-center p-16 text-center border-dashed border-2 border-[#8c8270]/30 bg-white/5 max-w-3xl mx-auto rounded-[2rem]">
-              <div className="text-5xl mb-6 opacity-50">📋</div>
+              <div className="mb-6 opacity-60"><TestIcon category="" size="lg" /></div>
               <h3 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif' }}>No tests available right now</h3>
               <p className="text-[#b3aaa0]">Check back later for new assessments.</p>
             </div>
@@ -103,9 +91,9 @@ export default function StudentDashboard() {
                   <div className="relative rounded-[2rem] overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform group-hover:-translate-y-2 bg-white h-full flex flex-col border border-[#f0eee9]">
                     
                     {/* Header Section */}
-                    <div className="p-8 pb-4 flex flex-col items-center text-center border-b border-[#f0eee9] bg-[#faf8f5]">
-                      <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-3xl mb-4 shadow-sm border border-[#e4dcd0] group-hover:scale-110 transition-transform duration-300">
-                        {TEST_ICONS[test.category] || '📋'}
+                    <div className={`p-8 pb-4 flex flex-col items-center text-center border-b border-[#f0eee9] ${testTint(test.category)}`}>
+                      <div className="mb-4 group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]">
+                        <TestIcon category={test.category} size="lg" className="bg-white/70 shadow-sm" />
                       </div>
                       <h3 className="text-xl font-bold text-[#111111] mb-1 leading-tight" style={{ fontFamily: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif' }}>
                         {test.name}
@@ -148,9 +136,7 @@ export default function StudentDashboard() {
                   {latestByCategory.map(result => (
                     <div key={result.id} className="flex flex-col gap-4 bg-white shadow-xl border border-[#f0eee9] rounded-[2rem] p-6 hover:shadow-2xl transition-all">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-[#faf8f5] flex items-center justify-center text-2xl border border-[#e4dcd0]">
-                          {TEST_ICONS[result.test?.category] || '📋'}
-                        </div>
+                        <TestIcon category={result.test?.category} size="md" />
                         <div>
                           <p className="font-bold text-[#111111]">{result.test?.category}</p>
                         </div>
@@ -167,7 +153,7 @@ export default function StudentDashboard() {
             {/* Concern Card */}
             <div className="bg-white rounded-[2rem] p-8 md:p-10 shadow-xl relative overflow-hidden group hover:shadow-2xl transition-all duration-300 border border-[#f0eee9]">
               <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-500">
-                <MessageCircle className="w-32 h-32 text-[#1c1a3b]" />
+                <MessageCircle className="w-32 h-32 text-[#1F1E1B]" />
               </div>
               <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
                 <div className="flex-1 text-center md:text-left">
@@ -180,7 +166,7 @@ export default function StudentDashboard() {
                   </p>
                 </div>
                 <div className="w-full md:w-auto">
-                  <Link to="/student/concerns" className="w-full bg-[#1c1a3b] text-white px-8 py-4 rounded-xl font-bold hover:bg-[#2c2957] transition-colors shadow-lg active:scale-95 flex items-center justify-center gap-3">
+                  <Link to="/student/concerns" className="w-full bg-[#1F1E1B] text-white px-8 py-4 rounded-full font-bold hover:bg-[#34312c] transition-colors shadow-lg active:scale-95 flex items-center justify-center gap-3">
                     Write a Concern <ArrowRight className="w-4 h-4" />
                   </Link>
                 </div>
@@ -214,7 +200,7 @@ export default function StudentDashboard() {
                         </div>
                       </div>
                       {appt.meetingLink ? (
-                        <a href={appt.meetingLink} target="_blank" rel="noopener noreferrer" className="bg-[#1c1a3b] text-white px-4 py-2 text-sm rounded-lg font-bold shadow-md hover:bg-[#2c2957] transition-colors">
+                        <a href={appt.meetingLink} target="_blank" rel="noopener noreferrer" className="bg-[#1F1E1B] text-white px-4 py-2 text-sm rounded-full font-bold shadow-md hover:bg-[#34312c] transition-colors">
                           Join
                         </a>
                       ) : (
@@ -238,9 +224,7 @@ export default function StudentDashboard() {
                   <div className="divide-y divide-[#f0eee9]">
                     {recentResults.slice(0, 3).map(r => (
                       <div key={r.id} className="flex items-center gap-4 p-5 hover:bg-[#faf8f5] transition-colors">
-                        <div className="w-10 h-10 rounded-xl bg-[#fdfaf5] border border-[#e4dcd0] flex items-center justify-center text-lg">
-                          {TEST_ICONS[r.test?.category] || '📋'}
-                        </div>
+                        <TestIcon category={r.test?.category} size="sm" />
                         <div className="flex-1 min-w-0">
                           <p className="font-bold text-[#111111] text-sm truncate">{r.test?.name}</p>
                           <p className="text-[10px] text-[#8c8270] font-bold mt-1 uppercase tracking-wider">{formatRelative(r.takenAt)}</p>

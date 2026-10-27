@@ -3,7 +3,7 @@ import {
 } from 'recharts';
 import { formatDate } from '../../utils/formatters';
 
-const COLORS = ['#4F46E5', '#0ea5e9', '#16a34a', '#ca8a04', '#ea580c'];
+const COLORS = ['#1C3F39', '#0ea5e9', '#16a34a', '#ca8a04', '#ea580c'];
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload?.length) {

@@ -62,7 +62,7 @@ function CustomTooltip({ active, payload, label }) {
   );
 }
 
-const CHART_COLORS = ['#4F46E5', '#0ea5e9', '#16a34a', '#f59e0b', '#ef4444', '#8b5cf6'];
+const CHART_COLORS = ['#1C3F39', '#0ea5e9', '#16a34a', '#f59e0b', '#ef4444', '#C19B6C'];
 
 const SORT_OPTIONS = [
   { label: 'Newest First', value: 'date-desc' },
@@ -420,9 +420,9 @@ export default function StudentReportPage() {
             {
               label: 'Assessments Taken',
               value: results.length,
-              icon: <FileText className="w-5 h-5 text-indigo-500" />,
-              bg: 'bg-indigo-50',
-              border: 'border-indigo-100',
+              icon: <FileText className="w-5 h-5 text-primary-500" />,
+              bg: 'bg-primary-50',
+              border: 'border-primary-100',
             },
             {
               label: 'Average Score',
@@ -507,7 +507,7 @@ export default function StudentReportPage() {
             {/* Radar chart (avg by category) */}
             <div className="bg-white border border-surface-200/60 rounded-2xl p-6 shadow-sm">
               <div className="flex items-center gap-2 mb-5">
-                <BarChart2 className="w-4 h-4 text-purple-500" />
+                <BarChart2 className="w-4 h-4 text-accent-500" />
                 <h3 className="font-bold text-surface-900 text-sm">Avg Score by Category</h3>
               </div>
               {radarData.length > 2 ? (
@@ -519,8 +519,8 @@ export default function StudentReportPage() {
                     <Radar
                       name="Avg %"
                       dataKey="score"
-                      stroke="#4F46E5"
-                      fill="#4F46E5"
+                      stroke="#1C3F39"
+                      fill="#1C3F39"
                       fillOpacity={0.15}
                       strokeWidth={2}
                     />

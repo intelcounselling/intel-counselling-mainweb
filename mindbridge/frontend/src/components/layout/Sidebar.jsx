@@ -89,7 +89,7 @@ export default function Sidebar({ mobileOpen, onClose, unreadAlerts = 0 }) {
         <div className="sidebar-logo">
           <div className="flex flex-col gap-2">
             <img src="/assets/logo_full.png" alt="Intel Counselling" className="h-10 w-auto object-contain self-start" />
-            <span className="self-start text-[11px] font-medium uppercase tracking-wider text-accent-600/90 bg-white/5 border border-white/10 rounded-md px-2 py-0.5">
+            <span className="self-start text-[11px] font-semibold uppercase tracking-wider text-accent-600 bg-accent-600/10 border border-accent-600/30 rounded-full px-3 py-1">
               {ROLE_LABELS[user?.role]}
             </span>
           </div>
@@ -122,7 +122,7 @@ export default function Sidebar({ mobileOpen, onClose, unreadAlerts = 0 }) {
         {/* User info + logout */}
         <div className="border-t border-white/10 p-4">
           <div className="flex items-center gap-3 px-2 mb-3">
-            <div className="w-8 h-8 rounded-full bg-accent-600/90 flex items-center justify-center text-primary-950 text-xs font-bold flex-shrink-0">
+            <div className="w-9 h-9 rounded-full bg-accent-600 flex items-center justify-center text-surface-900 text-xs font-bold flex-shrink-0">
               {user?.firstName?.[0]}{user?.lastName?.[0]}
             </div>
             <div className="flex-1 min-w-0">

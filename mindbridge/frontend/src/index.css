@@ -55,7 +55,7 @@ h1, h2, h3, h4, h5, h6, .heading-font {
 }
 
 /* On dark student-facing surfaces, use a light focus ring for contrast */
-[class*="bg-[#1c1a3b]"] :focus-visible {
+[class*="bg-[#1F1E1B]"] :focus-visible {
   outline-color: #e5ddd0;
 }
 
@@ -69,7 +69,7 @@ h1, h2, h3, h4, h5, h6, .heading-font {
 
 /* ── Sidebar ───────────────────────────────────────────── */
 .sidebar {
-  background: #10201c;
+  background: #1F1E1B;
   border-right: 1px solid rgba(255, 255, 255, 0.06);
   width: var(--sidebar-width);
   height: 100vh;
@@ -91,20 +91,21 @@ h1, h2, h3, h4, h5, h6, .heading-font {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 9px 12px;
-  border-radius: 8px;
-  margin: 2px 12px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  margin: 3px 12px;
   color: rgba(255,255,255,0.64);
   font-size: 14px;
   font-weight: 500;
   text-decoration: none;
-  transition: background var(--transition-fast), color var(--transition-fast);
+  transition: background var(--transition-fast), color var(--transition-fast), translate 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   cursor: pointer;
 }
 
 .sidebar-nav-item:hover {
-  background: rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.08);
   color: rgba(255,255,255,0.95);
+  translate: 3px 0;
 }
 
 .sidebar-nav-item:focus-visible {
@@ -113,13 +114,14 @@ h1, h2, h3, h4, h5, h6, .heading-font {
 }
 
 .sidebar-nav-item.active {
-  background: rgba(255,255,255,0.09);
-  color: #ffffff;
+  background: #C19B6C;
+  color: #1F1E1B;
   font-weight: 600;
+  box-shadow: 0 6px 16px rgba(193, 155, 108, 0.28);
 }
 
 .sidebar-nav-item.active svg {
-  color: #C19B6C;
+  color: #1F1E1B;
 }
 
 /* ── Main Content & Topbar ───────────────────────────────── */
@@ -137,16 +139,17 @@ h1, h2, h3, h4, h5, h6, .heading-font {
 /* ── Stat Cards ────────────────────────────────────────── */
 .stat-card {
   background: white;
-  border-radius: 12px;
-  padding: 20px;
+  border-radius: 24px;
+  padding: 20px 22px;
   box-shadow: 0 1px 2px rgba(26, 26, 26, 0.04), 0 1px 3px rgba(26, 26, 26, 0.05);
   border: 1px solid rgba(214, 205, 189, 0.55);
-  transition: box-shadow var(--transition-base);
+  transition: box-shadow var(--transition-base), translate 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   position: relative;
 }
 
 .stat-card:hover {
-  box-shadow: 0 4px 12px rgba(26, 26, 26, 0.08);
+  box-shadow: 0 12px 28px rgba(26, 26, 26, 0.10);
+  translate: 0 -3px;
 }
 
 /* ── Alert Cards ───────────────────────────────────────── */
@@ -223,7 +226,7 @@ h1, h2, h3, h4, h5, h6, .heading-font {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.6);
+  background: rgba(26, 26, 26, 0.6);
   backdrop-filter: blur(4px);
   z-index: 50;
   display: flex;
@@ -234,8 +237,8 @@ h1, h2, h3, h4, h5, h6, .heading-font {
 }
 
 .modal-panel {
-  background: white;
-  border-radius: 16px;
+  background: #FFFDF8;
+  border-radius: 28px;
   max-width: 600px;
   width: 100%;
   max-height: 90vh;
@@ -259,8 +262,9 @@ h1, h2, h3, h4, h5, h6, .heading-font {
   background: white;
   border-radius: 12px;
   padding: 14px 18px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.15);
+  box-shadow: 0 8px 24px rgba(26, 26, 26, 0.15);
   border: 1px solid #e2e8f0;
+  border-radius: 18px;
   min-width: 280px;
   max-width: 380px;
   animation: slideUp 0.25s ease;
@@ -319,20 +323,22 @@ h1, h2, h3, h4, h5, h6, .heading-font {
 /* ── Input Styles ──────────────────────────────────────── */
 .form-input {
   width: 100%;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 10px 14px;
+  border: 2px solid transparent;
+  border-radius: 16px;
+  padding: 11px 16px;
+  box-shadow: 0 2px 0 rgba(26, 26, 26, 0.06);
   font-size: 14px;
   font-family: inherit;
-  color: #0f172a;
+  color: #1A1A1A;
   background: white;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   outline: none;
 }
 
 .form-input:focus {
-  border-color: #1C3F39;
-  box-shadow: 0 0 0 3px rgba(28, 63, 57, 0.1);
+  border-color: #C19B6C;
+  box-shadow: 0 0 0 4px rgba(193, 155, 108, 0.2);
+  transform: translateY(-1px);
 }
 
 .form-input::placeholder { color: #94a3b8; }
@@ -359,4 +365,86 @@ h1, h2, h3, h4, h5, h6, .heading-font {
   .topbar {
     left: 0;
   }
+}
+
+/* ── Playful touches (shared with the main website) ─────── */
+:is(button, a):is(.rounded-full):is(.font-medium, .font-semibold, .font-bold):not(:disabled) {
+  transition: translate 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), scale 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.3s ease;
+}
+:is(button, a):is(.rounded-full):is(.font-medium, .font-semibold, .font-bold):not(:disabled):hover {
+  translate: 0 -2px;
+  scale: 1.04;
+}
+:is(button, a):is(.rounded-full):is(.font-medium, .font-semibold, .font-bold):not(:disabled):active {
+  translate: 0 1px;
+  scale: 0.95;
+  transition-duration: 0.1s;
+}
+@keyframes blobDrift {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  50%      { transform: translate(10px, -14px) rotate(6deg); }
+}
+.blob-drift { animation: blobDrift 9s ease-in-out infinite; }
+.blob-drift-alt { animation: blobDrift 12s ease-in-out infinite reverse; }
+@media (prefers-reduced-motion: reduce) {
+  .blob-drift, .blob-drift-alt { animation: none; }
+  :is(button, a):is(.rounded-full):is(.font-medium, .font-semibold, .font-bold):hover,
+  :is(button, a):is(.rounded-full):is(.font-medium, .font-semibold, .font-bold):active { translate: none; scale: none; }
+}
+
+/* ── Login: card pop-in and the welcome splash ───────────── */
+@keyframes loginPop {
+  from { opacity: 0; transform: translateY(24px) scale(0.96) rotate(-1deg); }
+  to   { opacity: 1; transform: translateY(0) scale(1) rotate(0); }
+}
+.login-pop { animation: loginPop 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+@keyframes splashReveal {
+  from { clip-path: circle(0% at 50% 50%); }
+  to   { clip-path: circle(150% at 50% 50%); }
+}
+.splash-reveal { animation: splashReveal 0.7s cubic-bezier(0.4, 0, 0.2, 1) both; }
+
+@keyframes splashLogo {
+  0%   { opacity: 0; transform: scale(0.3) rotate(-25deg); }
+  60%  { opacity: 1; transform: scale(1.12) rotate(6deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+.splash-logo { animation: splashLogo 0.8s 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+@keyframes splashRise {
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.splash-rise { animation: splashRise 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+@keyframes splashConfetti {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.2); }
+  20%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1); }
+}
+.splash-confetti { animation: splashConfetti 1.2s cubic-bezier(0.2, 0.8, 0.3, 1) both; }
+
+@keyframes splashGlow {
+  0%, 100% { transform: scale(0.9); opacity: 0.6; }
+  50%      { transform: scale(1.1); opacity: 1; }
+}
+.splash-glow { animation: splashGlow 2.6s ease-in-out infinite; }
+
+@keyframes splashDot {
+  0%, 100% { transform: translateY(0); opacity: 0.5; }
+  50%      { transform: translateY(-6px); opacity: 1; }
+}
+.splash-dot { animation: splashDot 0.9s ease-in-out infinite; }
+
+@keyframes splashWiggle {
+  0%, 100% { transform: rotate(0); }
+  25% { transform: rotate(-14deg); }
+  60% { transform: rotate(12deg); }
+}
+.splash-wiggle { animation: splashWiggle 2.4s ease-in-out infinite; transform-origin: center; }
+
+@media (prefers-reduced-motion: reduce) {
+  .login-pop, .splash-reveal, .splash-logo, .splash-rise, .splash-confetti, .splash-glow, .splash-dot, .splash-wiggle { animation: none !important; }
 }

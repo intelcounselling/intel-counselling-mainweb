@@ -1,19 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Clock, ArrowRight, ShieldCheck } from 'lucide-react';
-import { Card, Spinner, EmptyState } from '../../components/ui';
+import { Card, Spinner, EmptyState, TestIcon, testTint } from '../../components/ui';
 import api from '../../lib/axios';
-
-const TEST_ICONS = { 
-  Depression: '😔', 
-  Anxiety: '😰', 
-  Stress: '😤',
-  LearningPattern: '🧠',
-  StudyBehaviour: '📚',
-  EmotionalWellness: '💙',
-  InternetUsage: '📱',
-  PersonalityDimensions: '✨'
-};
 
 export default function TestList() {
   const { data, isLoading } = useQuery({
@@ -26,7 +15,7 @@ export default function TestList() {
   const tests = data?.tests || [];
 
   return (
-    <div className="-m-6 p-6 md:p-10 min-h-[calc(100vh-64px)] bg-[#1c1a3b] text-white animate-fade-in font-sans relative">
+    <div className="-m-6 p-6 md:p-10 min-h-[calc(100vh-64px)] bg-[#1F1E1B] text-white animate-fade-in font-sans relative">
       <div className="space-y-12 max-w-5xl mx-auto pb-12 relative z-10">
         
         <div className="text-center max-w-2xl mx-auto pt-8">
@@ -50,9 +39,9 @@ export default function TestList() {
                 <div className="relative rounded-[2rem] overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform group-hover:-translate-y-2 bg-white h-full flex flex-col border border-[#f0eee9]">
                   
                   {/* Header Section */}
-                  <div className="p-8 pb-4 flex flex-col items-center text-center border-b border-[#f0eee9] bg-[#faf8f5]">
-                    <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-3xl mb-4 shadow-sm border border-[#e4dcd0] group-hover:scale-110 transition-transform duration-300">
-                      {TEST_ICONS[test.category] || '📋'}
+                  <div className={`p-8 pb-4 flex flex-col items-center text-center border-b border-[#f0eee9] ${testTint(test.category)}`}>
+                    <div className="mb-4 group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]">
+                      <TestIcon category={test.category} size="lg" className="bg-white/70 shadow-sm" />
                     </div>
                     <h3 className="text-xl font-bold text-[#111111] mb-1 leading-tight" style={{ fontFamily: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif' }}>
                       {test.name}

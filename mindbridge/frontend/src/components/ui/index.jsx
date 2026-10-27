@@ -1,7 +1,34 @@
 import { useEffect } from 'react';
 import { clsx } from 'clsx';
 import { Link } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Brain, Inbox, BookOpen, HeartPulse, Smartphone, Sparkles, CloudRain, Wind, Flame, ClipboardList } from 'lucide-react';
+
+// ── Test icon ─────────────────────────────────────────────────
+// A proper icon on a pastel tile for each assessment category.
+const TEST_ICON_MAP = {
+  LearningPattern:       { Icon: Brain,         tint: 'bg-lavender' },
+  StudyBehaviour:        { Icon: BookOpen,      tint: 'bg-sage' },
+  EmotionalWellness:     { Icon: HeartPulse,    tint: 'bg-peach' },
+  InternetUsage:         { Icon: Smartphone,    tint: 'bg-sky' },
+  PersonalityDimensions: { Icon: Sparkles,      tint: 'bg-lavender' },
+  Depression:            { Icon: CloudRain,     tint: 'bg-lavender' },
+  Anxiety:               { Icon: Wind,          tint: 'bg-sky' },
+  Stress:                { Icon: Flame,         tint: 'bg-peach' },
+};
+
+export function testTint(category) {
+  return (TEST_ICON_MAP[category] || {}).tint || 'bg-sage';
+}
+
+export function TestIcon({ category, size = 'md', className = '' }) {
+  const { Icon, tint } = TEST_ICON_MAP[category] || { Icon: ClipboardList, tint: 'bg-sage' };
+  const sizes = { sm: 'w-10 h-10 rounded-xl [&>svg]:w-5 [&>svg]:h-5', md: 'w-12 h-12 rounded-2xl [&>svg]:w-6 [&>svg]:h-6', lg: 'w-16 h-16 rounded-3xl [&>svg]:w-8 [&>svg]:h-8' };
+  return (
+    <div className={clsx('flex items-center justify-center text-surface-900 flex-shrink-0', tint, sizes[size], className)} aria-hidden="true">
+      <Icon />
+    </div>
+  );
+}
 
 // ── Page Header ───────────────────────────────────────────────
 // Standard page-level header: back link, eyebrow meta, title,
@@ -15,14 +42,14 @@ export function PageHeader({ title, description, actions, backTo, meta, classNam
           <Link
             to={backTo}
             aria-label="Go back"
-            className="mt-1 p-2 rounded-lg bg-white border border-surface-200 text-surface-500 hover:text-surface-900 hover:border-surface-300 transition-colors flex-shrink-0"
+            className="mt-1 p-2.5 rounded-full bg-white border border-surface-200 text-surface-500 hover:text-surface-900 hover:border-surface-300 hover:-translate-x-0.5 transition-all flex-shrink-0"
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
         )}
         <div className="min-w-0">
           {meta && <div className="mb-1.5">{meta}</div>}
-          <h1 className="text-2xl font-semibold tracking-tight text-surface-900">{title}</h1>
+          <h1 className="font-serif text-3xl font-semibold tracking-tight text-surface-900">{title}</h1>
           {description && <p className="text-sm text-surface-500 mt-1">{description}</p>}
         </div>
       </div>
@@ -37,23 +64,23 @@ export function PageHeader({ title, description, actions, backTo, meta, classNam
 
 export function StatCard({ label, value, icon: Icon, tone = 'default', hint, className = '' }) {
   const tones = {
-    default: 'bg-surface-100 text-surface-600',
-    primary: 'bg-primary-50 text-primary-700',
-    accent:  'bg-accent-100 text-accent-800',
-    success: 'bg-green-50 text-green-700',
-    warning: 'bg-amber-50 text-amber-700',
-    danger:  'bg-red-50 text-red-600',
-    info:    'bg-blue-50 text-blue-600',
+    default: 'bg-lavender text-surface-700',
+    primary: 'bg-sage text-primary-800',
+    accent:  'bg-peach text-accent-800',
+    success: 'bg-sage text-green-800',
+    warning: 'bg-peach text-amber-800',
+    danger:  'bg-[#F9D9D4] text-red-700',
+    info:    'bg-sky text-sky-900',
   };
   return (
-    <div className={clsx('stat-card flex items-start justify-between gap-4 min-h-[96px]', className)}>
+    <div className={clsx('stat-card group flex items-start justify-between gap-4 min-h-[96px]', className)}>
       <div className="min-w-0">
         <p className="text-xs font-medium uppercase tracking-wider text-surface-500">{label}</p>
-        <p className="text-2xl font-semibold text-surface-900 mt-1.5 tabular-nums">{value ?? '—'}</p>
+        <p className="font-serif text-3xl font-semibold text-surface-900 mt-1.5 tabular-nums">{value ?? '—'}</p>
         {hint && <p className="text-xs text-surface-400 mt-1">{hint}</p>}
       </div>
       {Icon && (
-        <div className={clsx('w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0', tones[tone] || tones.default)}>
+        <div className={clsx('w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:-rotate-6 group-hover:scale-110', tones[tone] || tones.default)}>
           <Icon className="w-5 h-5" />
         </div>
       )}
@@ -109,15 +136,15 @@ export function Button({
   icon,
   ...props
 }) {
-  const base = 'inline-flex items-center justify-center gap-2 font-medium rounded-lg transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed select-none';
+  const base = 'inline-flex items-center justify-center gap-2 font-semibold rounded-full transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed select-none';
 
   const variants = {
-    primary: 'bg-primary-700 text-white hover:bg-primary-800 active:bg-primary-900 shadow-sm',
-    secondary: 'bg-primary-50 text-primary-800 border border-primary-100 hover:bg-primary-100',
+    primary: 'bg-primary-800 text-white hover:bg-primary-700 active:bg-primary-900 shadow-[0_4px_14px_rgba(28,63,57,0.28)]',
+    secondary: 'bg-sage text-primary-800 hover:bg-[#cfdfcf]',
     ghost: 'text-surface-600 hover:bg-surface-100 hover:text-surface-900',
     danger: 'bg-red-600 text-white hover:bg-red-700',
     success: 'bg-green-600 text-white hover:bg-green-700',
-    outline: 'bg-white border border-surface-200 text-surface-700 hover:bg-surface-50 hover:border-surface-300',
+    outline: 'bg-white border-2 border-surface-200 text-surface-700 hover:bg-surface-50 hover:border-surface-300',
   };
 
   const sizes = {
@@ -151,7 +178,7 @@ export function Card({ children, className = '', padding = true, hover = false, 
   return (
     <div
       className={clsx(
-        'bg-white rounded-xl border border-surface-200/70',
+        'bg-white rounded-3xl border border-surface-200/70',
         padding && 'p-6',
         hover && 'transition-shadow duration-200 cursor-pointer hover:border-surface-300',
         hover ? 'shadow-card hover:shadow-card-hover' : 'shadow-card',
@@ -286,8 +313,8 @@ export function LoadingPage() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-surface-50">
       <div className="flex flex-col items-center gap-4">
-        <div className="w-12 h-12 rounded-xl bg-primary-800 flex items-center justify-center">
-          <span className="text-white text-xl">🧠</span>
+        <div className="w-14 h-14 rounded-2xl bg-primary-800 flex items-center justify-center blob-drift">
+          <Brain className="w-7 h-7 text-accent-600" />
         </div>
         <Spinner size="lg" />
         <p className="text-surface-500 text-sm">Loading Intel Counselling...</p>
@@ -321,11 +348,11 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', footer })
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className={clsx('modal-panel w-full', sizes[size])} role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : undefined}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-surface-100">
-          <h2 className="text-lg font-semibold text-surface-900">{title}</h2>
+          <h2 className="font-serif text-xl font-semibold text-surface-900">{title}</h2>
           <button
             onClick={onClose}
             aria-label="Close dialog"
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-surface-400 hover:text-surface-600 hover:bg-surface-100 transition-colors"
+            className="w-9 h-9 flex items-center justify-center rounded-full text-surface-400 hover:text-surface-600 hover:bg-surface-100 hover:rotate-90 transition-all"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -341,11 +368,11 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', footer })
 
 // ── Empty State ───────────────────────────────────────────────
 
-export function EmptyState({ icon = '📭', title, description, action, className = '' }) {
+export function EmptyState({ icon, title, description, action, className = '' }) {
   return (
     <div className={clsx('flex flex-col items-center justify-center py-14 px-6 text-center', className)}>
-      <div className="w-12 h-12 rounded-xl bg-surface-100 flex items-center justify-center text-2xl mb-4" aria-hidden="true">{icon}</div>
-      <h3 className="text-base font-semibold text-surface-800 mb-1.5">{title}</h3>
+      <div className="w-14 h-14 rounded-2xl bg-lavender flex items-center justify-center text-2xl mb-4 text-surface-600" aria-hidden="true">{icon || <Inbox className="w-6 h-6" />}</div>
+      <h3 className="font-serif text-lg font-semibold text-surface-800 mb-1.5">{title}</h3>
       {description && <p className="text-surface-500 text-sm max-w-sm mb-5">{description}</p>}
       {action}
     </div>
@@ -377,7 +404,7 @@ export function Avatar({ user, size = 'md' }) {
   return (
     <div
       className={clsx(
-        'rounded-full bg-primary-700 flex items-center justify-center text-white font-semibold flex-shrink-0',
+        'rounded-full bg-primary-800 ring-2 ring-accent-600/60 flex items-center justify-center text-white font-semibold flex-shrink-0',
         sizes[size]
       )}
     >

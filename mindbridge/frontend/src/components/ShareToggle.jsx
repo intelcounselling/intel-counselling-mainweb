@@ -36,7 +36,7 @@ export default function ShareToggle({ result }) {
         <Share2 className="w-4 h-4 text-[#8c8270]" />
         Share this result with the counsellor
       </span>
-      <input type="checkbox" checked={shared} disabled={saving} onChange={toggle} className="h-5 w-5 accent-[#1c1a3b]" aria-label="Share this result with the counsellor" />
+      <input type="checkbox" checked={shared} disabled={saving} onChange={toggle} className="h-5 w-5 accent-[#1F1E1B]" aria-label="Share this result with the counsellor" />
     </label>
   );
 }

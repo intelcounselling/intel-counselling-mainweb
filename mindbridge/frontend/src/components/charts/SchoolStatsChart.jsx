@@ -2,7 +2,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
 
-const COLORS = ['#4F46E5', '#0ea5e9', '#16a34a', '#ca8a04'];
+const COLORS = ['#1C3F39', '#0ea5e9', '#16a34a', '#ca8a04'];
 
 export default function SchoolStatsChart({ data = [], height = 200 }) {
   if (!data.length) return null;

@@ -4,7 +4,7 @@ import {
   Tooltip, ResponsiveContainer, Cell, LabelList
 } from 'recharts';
 
-const DEFAULT_COLORS = ['#1C3F39', '#C19B6C', '#4F46E5', '#0EA5E9', '#16A34A'];
+const DEFAULT_COLORS = ['#1C3F39', '#C19B6C', '#1C3F39', '#0EA5E9', '#16A34A'];
 
 const SEVERITY_COLORS = {
   severe: '#DC2626',

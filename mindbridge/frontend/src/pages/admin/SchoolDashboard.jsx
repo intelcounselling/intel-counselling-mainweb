@@ -17,8 +17,8 @@ const TOOL_META = {
   LearningPattern: {
     label: 'Intel Learning Pattern Tool™',
     icon: Brain,
-    color: 'from-indigo-500 to-indigo-700',
-    iconBg: 'bg-indigo-100 text-indigo-700',
+    color: 'from-primary-500 to-primary-700',
+    iconBg: 'bg-primary-100 text-primary-700',
     desc: 'Visual, Auditory, Kinesthetic & Multi-Modal distribution',
   },
   StudyBehaviour: {
@@ -46,14 +46,14 @@ const TOOL_META = {
   PersonalityDimensions: {
     label: 'Intel Personality Dimensions™',
     icon: User,
-    color: 'from-purple-500 to-purple-700',
-    iconBg: 'bg-purple-100 text-purple-700',
+    color: 'from-accent-500 to-accent-700',
+    iconBg: 'bg-accent-100 text-accent-700',
     desc: 'Character strengths across 5 core dimensions',
   },
 };
 
 const DONUT_COLORS = {
-  LearningPattern:    ['#4F46E5', '#0EA5E9', '#16A34A', '#C19B6C'],
+  LearningPattern:    ['#1C3F39', '#0EA5E9', '#16A34A', '#C19B6C'],
   StudyBehaviour:     ['#DC2626', '#EA580C', '#16A34A'],
   EmotionalWellness:  ['#DC2626', '#EA580C', '#16A34A'],
   InternetUsage:      ['#16A34A', '#EA580C', '#DC2626'],
@@ -61,10 +61,10 @@ const DONUT_COLORS = {
 };
 
 const COUNSELLING_NEEDS = [
-  { key: 'academicSupport',    label: 'Academic Support',    icon: '📚', color: 'text-indigo-700 bg-indigo-50 border-indigo-200' },
+  { key: 'academicSupport',    label: 'Academic Support',    icon: '📚', color: 'text-primary-700 bg-primary-50 border-primary-200' },
   { key: 'emotionalSupport',   label: 'Emotional Support',   icon: '💙', color: 'text-rose-700 bg-rose-50 border-rose-200' },
   { key: 'digitalBalance',     label: 'Digital Balance',     icon: '📱', color: 'text-amber-700 bg-amber-50 border-amber-200' },
-  { key: 'confidenceBuilding', label: 'Confidence Building', icon: '🌟', color: 'text-purple-700 bg-purple-50 border-purple-200' },
+  { key: 'confidenceBuilding', label: 'Confidence Building', icon: '🌟', color: 'text-accent-700 bg-accent-50 border-accent-200' },
 ];
 
 // ── Completion Ring ───────────────────────────────────────────

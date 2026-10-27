@@ -70,20 +70,20 @@ export default function TakeTest() {
           <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-[2.5rem] shadow-2xl p-10 text-center">
             <div className="text-6xl mb-6">{isLow ? '💙' : '✅'}</div>
             <h2 className="text-3xl font-bold text-white mb-2">Assessment Complete</h2>
-            <p className="text-indigo-200 mb-8 font-medium">{test.name}</p>
+            <p className="text-primary-200 mb-8 font-medium">{test.name}</p>
 
             <div className="bg-white/5 rounded-3xl p-8 mb-8 border border-white/10">
               {isLearning ? (
                 <>
-                  <p className="text-sm text-indigo-300 font-bold uppercase tracking-widest mb-3">Your learning style</p>
+                  <p className="text-sm text-primary-300 font-bold uppercase tracking-widest mb-3">Your learning style</p>
                   <p className="text-2xl font-extrabold text-white">{result.severity}</p>
                 </>
               ) : (
                 <>
-                  <p className="text-sm text-indigo-300 font-bold uppercase tracking-widest mb-3">Your Score</p>
+                  <p className="text-sm text-primary-300 font-bold uppercase tracking-widest mb-3">Your Score</p>
                   <div className="flex items-center justify-center gap-3">
                     <span className="text-6xl font-extrabold text-white">{row?.score}</span>
-                    <span className="text-2xl text-indigo-300 font-medium">/ {row?.maxScore}</span>
+                    <span className="text-2xl text-primary-300 font-medium">/ {row?.maxScore}</span>
                   </div>
                   <div className="mt-6 flex justify-center">
                     <SeverityBadge severity={result.severity} size="md" tone={getIntellTone(row)} />
@@ -112,7 +112,7 @@ export default function TakeTest() {
             )}
 
             {/* Who sees this — stated plainly instead of a toggle that did nothing */}
-            <p className="text-sm text-indigo-200 bg-white/5 rounded-2xl p-5 mb-8 border border-white/10 text-left">
+            <p className="text-sm text-primary-200 bg-white/5 rounded-2xl p-5 mb-8 border border-white/10 text-left">
               Your result is private to you, your parent or guardian, and your school's counselling team, so they can support you.
             </p>
 
@@ -120,7 +120,7 @@ export default function TakeTest() {
               <button onClick={() => navigate('/student/results')} className="flex-1 px-6 py-4 bg-white/10 text-white border border-white/20 rounded-full font-bold hover:bg-white/20 transition-all">
                 View All Results
               </button>
-              <button onClick={() => navigate('/student')} className="flex-1 px-6 py-4 bg-white text-indigo-900 rounded-full font-bold hover:scale-105 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)]">
+              <button onClick={() => navigate('/student')} className="flex-1 px-6 py-4 bg-white text-primary-900 rounded-full font-bold hover:scale-105 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)]">
                 Back to Dashboard
               </button>
             </div>

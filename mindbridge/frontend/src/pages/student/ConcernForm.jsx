@@ -29,7 +29,7 @@ export default function ConcernForm() {
   const concerns = data?.concerns || [];
 
   return (
-    <div className="-m-6 p-6 md:p-10 min-h-[calc(100vh-64px)] bg-[#1c1a3b] text-white animate-fade-in font-sans relative">
+    <div className="-m-6 p-6 md:p-10 min-h-[calc(100vh-64px)] bg-[#1F1E1B] text-white animate-fade-in font-sans relative">
       <div className="w-full max-w-3xl mx-auto pb-12 space-y-12 relative z-10 pt-8">
         <div>
           <h2 className="text-4xl font-bold text-white mb-4" style={{ fontFamily: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif' }}>Share a Concern</h2>
@@ -42,7 +42,7 @@ export default function ConcernForm() {
         {/* Submit form */}
         <div className="bg-white rounded-[2rem] border border-[#f0eee9] p-8 md:p-10 shadow-xl relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-500">
-            <MessageSquare className="w-32 h-32 text-[#1c1a3b]" />
+            <MessageSquare className="w-32 h-32 text-[#1F1E1B]" />
           </div>
           <div className="relative z-10">
             <div className="flex items-center gap-4 mb-6">
@@ -63,7 +63,7 @@ export default function ConcernForm() {
             />
             <div className="flex justify-end mt-6">
               <button
-                className={`flex items-center gap-3 px-8 py-4 rounded-xl font-bold shadow-lg transition-all active:scale-95 ${!message.trim() ? 'bg-[#f0eee9] text-[#b3aaa0] cursor-not-allowed' : 'bg-[#1c1a3b] text-white hover:bg-[#2c2957]'}`}
+                className={`flex items-center gap-3 px-8 py-4 rounded-xl font-bold shadow-lg transition-all active:scale-95 ${!message.trim() ? 'bg-[#f0eee9] text-[#b3aaa0] cursor-not-allowed' : 'bg-[#1F1E1B] text-white hover:bg-[#34312c]'}`}
                 disabled={!message.trim() || mutation.isPending}
                 onClick={() => mutation.mutate()}
               >

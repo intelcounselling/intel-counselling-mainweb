@@ -1,7 +1,7 @@
 // DonutChart.jsx — Reusable donut/pie chart using Recharts
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
-const COLORS = ['#1C3F39', '#C19B6C', '#4F46E5', '#0EA5E9', '#16A34A', '#DC2626', '#CA8A04'];
+const COLORS = ['#1C3F39', '#C19B6C', '#1C3F39', '#0EA5E9', '#16A34A', '#DC2626', '#CA8A04'];
 
 const RADIAN = Math.PI / 180;
 const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
