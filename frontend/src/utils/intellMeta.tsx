@@ -19,8 +19,8 @@ export const INTELL_META: Record<string, IntellMeta> = {
   intell_ew: { label: 'Feelings & stress', icon: Heart, color: 'bg-[#B4676E]', blurb: 'Your mood, stress level and how you cope.', module: 'A' },
   intell_iu: { label: 'Screen time', icon: Smartphone, color: 'bg-[#6E5675]', blurb: 'How phones, games and social media fit into your day.', module: 'A' },
   intell_pd: { label: 'Personality', icon: Sparkles, color: 'bg-[#5E7F67]', blurb: 'Confidence, responsibility and getting along with others.', module: 'A' },
-  phq9: { label: 'Mood check (PHQ-9)', icon: CloudSun, color: 'bg-[#9C5B47]', blurb: 'A standard screening for low mood over the last two weeks.', module: 'B' },
-  gad7: { label: 'Worry check (GAD-7)', icon: Wind, color: 'bg-[#2D6A4F]', blurb: 'A standard screening for worry and nervousness.', module: 'B' },
+  phq9: { label: 'Mood check', icon: CloudSun, color: 'bg-[#9C5B47]', blurb: 'A standard screening for low mood over the last two weeks.', module: 'B' },
+  gad7: { label: 'Worry check', icon: Wind, color: 'bg-[#2D6A4F]', blurb: 'A standard screening for worry and nervousness.', module: 'B' },
 };
 
 export const INTELL_ORDER = Object.keys(INTELL_META);

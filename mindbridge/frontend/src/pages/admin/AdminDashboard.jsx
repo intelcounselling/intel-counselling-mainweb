@@ -236,11 +236,11 @@ export default function AdminDashboard() {
               <div className="space-y-1">
                 {[
                   { label: 'Career Guidance Assessment', count: stats?.mainWebsiteStats?.career || 0, icon: Sparkles },
-                  { label: 'Depression Screening (PHQ-9)', count: stats?.mainWebsiteStats?.phq9 || 0, icon: HeartPulse },
-                  { label: 'Anxiety Screening (GAD-7)', count: stats?.mainWebsiteStats?.gad7 || 0, icon: Activity },
-                  { label: 'Stress Self-Check (PSS-10)', count: stats?.mainWebsiteStats?.pss10 || 0, icon: Brain },
+                  { label: 'Depression Screening', count: stats?.mainWebsiteStats?.phq9 || 0, icon: HeartPulse },
+                  { label: 'Anxiety Screening', count: stats?.mainWebsiteStats?.gad7 || 0, icon: Activity },
+                  { label: 'Stress Self-Check', count: stats?.mainWebsiteStats?.pss10 || 0, icon: Brain },
                   { label: 'Sleep Hygiene Check', count: stats?.mainWebsiteStats?.sleep || 0, icon: Moon },
-                  { label: 'Smartphone Addiction (SAS)', count: stats?.mainWebsiteStats?.sas || 0, icon: Smartphone }
+                  { label: 'Smartphone Addiction', count: stats?.mainWebsiteStats?.sas || 0, icon: Smartphone }
                 ].map((test, index) => {
                   const Icon = test.icon;
                   return (

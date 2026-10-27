@@ -25,9 +25,9 @@ const AssessmentRegistration: React.FC<AssessmentRegistrationProps> = ({ testId,
   const getTestTitle = () => {
     switch (testId) {
       case 'career': return 'Career Guidance Assessment';
-      case 'phq9': return 'Depression Screening (PHQ-9)';
-      case 'gad7': return 'Anxiety Screening (GAD-7)';
-      case 'pss10': return 'Stress Self-Check (PSS-10)';
+      case 'phq9': return 'Depression Screening';
+      case 'gad7': return 'Anxiety Screening';
+      case 'pss10': return 'Stress Self-Check';
       case 'sleep': return 'Sleep Hygiene Check';
       default: return 'Self-Assessment';
     }

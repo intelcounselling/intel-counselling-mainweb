@@ -87,7 +87,7 @@ export const PrivacyPage: React.FC = () => (
     <ul>
       <li><strong>You.</strong> Results linked to your account can only be opened by you.</li>
       <li><strong>Your counsellor</strong>, only when you choose to share, for example by ticking "share my report" when you book a session.</li>
-      <li><strong>Safety exception:</strong> if a result suggests you may be at risk (for example the self-harm question on the PHQ-9), our team is alerted so we can reach out. Confidentiality can also be set aside when the law requires it, such as a court order or a mandatory report under the POCSO Act.</li>
+      <li><strong>Safety exception:</strong> if a result suggests you may be at risk (for example the self-harm question in the mood screening), our team is alerted so we can reach out. Confidentiality can also be set aside when the law requires it, such as a court order or a mandatory report under the POCSO Act.</li>
     </ul>
     <h2>Children (under 18)</h2>
     <p>

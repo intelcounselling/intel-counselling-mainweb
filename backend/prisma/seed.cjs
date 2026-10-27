@@ -101,7 +101,7 @@ const PHQ9_QUESTIONS = [
 
 const PHQ9_THRESHOLDS = [
   { min: 0, max: 4, severity: 'minimal', isLow: false, description: 'Minimal depression. Continue monitoring.' },
-  { min: 5, max: 9, severity: 'mild', isLow: false, description: 'Mild depression. Watchful waiting, repeat PHQ-9 at follow-up.' },
+  { min: 5, max: 9, severity: 'mild', isLow: false, description: 'Mild depression. Watchful waiting, repeat the screening at follow-up.' },
   { min: 10, max: 14, severity: 'moderate', isLow: true, description: 'Moderate depression. Treatment plan recommended.' },
   { min: 15, max: 19, severity: 'moderately severe', isLow: true, description: 'Moderately severe depression. Active treatment recommended.' },
   { min: 20, max: 27, severity: 'severe', isLow: true, description: 'Severe depression. Immediate action and treatment warranted.' },
@@ -327,7 +327,7 @@ async function main() {
     update: {},
     create: {
       id: 'test-phq9-0001',
-      name: 'PHQ-9',
+      name: 'Depression Screening',
       description: 'Patient Health Questionnaire-9 measures depression severity over the past two weeks.',
       category: 'Depression',
       questions: PHQ9_QUESTIONS,
@@ -341,7 +341,7 @@ async function main() {
     update: {},
     create: {
       id: 'test-gad7-0001',
-      name: 'GAD-7',
+      name: 'Anxiety Screening',
       description: 'Generalized Anxiety Disorder-7 screens for and measures severity of generalized anxiety.',
       category: 'Anxiety',
       questions: GAD7_QUESTIONS,
@@ -355,7 +355,7 @@ async function main() {
     update: {},
     create: {
       id: 'test-pss10-001',
-      name: 'PSS-10',
+      name: 'Stress Self-Check',
       description: 'Perceived Stress Scale-10 measures the degree to which situations in life are perceived as stressful.',
       category: 'Stress',
       questions: PSS10_QUESTIONS,

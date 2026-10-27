@@ -30,7 +30,7 @@ const clinical = (texts) => texts.map((text, i) => ({ id: i + 1, text, options: 
 
 // PHQ-9 / GAD-7 as the site asks them (frontend/src/components/ClinicalQuestions.ts)
 const PHQ9 = {
-  name: 'PHQ-9', category: 'Depression', estimatedMinutes: 5,
+  name: 'Depression Screening', category: 'Depression', estimatedMinutes: 5,
   questions: clinical([
     'Little interest or pleasure in doing things',
     'Feeling down, depressed, or hopeless',
@@ -51,7 +51,7 @@ const PHQ9 = {
   ],
 };
 const GAD7 = {
-  name: 'GAD-7', category: 'Anxiety', estimatedMinutes: 4,
+  name: 'Anxiety Screening', category: 'Anxiety', estimatedMinutes: 4,
   questions: clinical([
     'Feeling nervous, anxious, or on edge',
     'Not being able to stop worrying',

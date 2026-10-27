@@ -65,7 +65,7 @@ const TestOptions: React.FC<TestOptionsProps> = ({ onBack, onSelectTest }) => {
     {
       id: 'phq9',
       title: 'Depression Screening',
-      shortTitle: 'PHQ-9',
+      shortTitle: 'Mood',
       desc: 'A brief self-check to understand your emotional well-being and depressive symptoms.',
       icon: <HeartPulse size={28} />,
       color: 'bg-terracotta'
@@ -73,7 +73,7 @@ const TestOptions: React.FC<TestOptionsProps> = ({ onBack, onSelectTest }) => {
     {
       id: 'gad7',
       title: 'Anxiety Screening',
-      shortTitle: 'GAD-7',
+      shortTitle: 'Worry',
       desc: 'Measure your feelings of anxiety, worry, and tension.',
       icon: <Activity size={28} />,
       color: 'bg-[#2D6A4F]'
@@ -81,7 +81,7 @@ const TestOptions: React.FC<TestOptionsProps> = ({ onBack, onSelectTest }) => {
     {
       id: 'pss10',
       title: 'Stress Self-Check',
-      shortTitle: 'PSS-10',
+      shortTitle: 'Stress',
       desc: 'Understand how stressful you have found your life during the past month.',
       icon: <Brain size={28} />,
       color: 'bg-[#B08968]'
@@ -89,7 +89,7 @@ const TestOptions: React.FC<TestOptionsProps> = ({ onBack, onSelectTest }) => {
     {
       id: 'sleep',
       title: 'Sleep Hygiene Check',
-      shortTitle: 'InterSleek',
+      shortTitle: 'Sleep',
       desc: 'Reflect on your sleep habits and bedtime routines to improve rest quality.',
       icon: <Moon size={28} />,
       color: 'bg-[#4A4E69]'

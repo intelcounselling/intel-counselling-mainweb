@@ -18,7 +18,7 @@ const MODULES = {
     key: 'B',
     name: 'Intel Student Psychological Assessment Battery™',
     tagline: 'Module B',
-    description: 'The complete 7-test battery: the five Intel assessments plus the PHQ-9 and GAD-7 screenings.',
+    description: 'The complete 7-test battery: the five Intel assessments plus the depression and anxiety screenings.',
     categories: [...INTELL, ...CLINICAL],
     deliverables: [
       '7 test results with test-wise interpretation',

@@ -31,13 +31,13 @@ const NOTES = {
     high: 'Needs structured emotional guidance.',
   },
   Depression: {
-    ok: 'No significant depressive symptoms on the PHQ-9.',
+    ok: 'No significant depressive symptoms in the mood screening.',
     watch: 'Mild depressive symptoms; monitor and repeat the screening at follow-up.',
     concern: 'Moderate depressive symptoms; a counselling or treatment plan is recommended.',
     high: 'Moderately severe to severe depressive symptoms; clinical evaluation is recommended.',
   },
   Anxiety: {
-    ok: 'No significant anxiety symptoms on the GAD-7.',
+    ok: 'No significant anxiety symptoms in the worry screening.',
     watch: 'Mild anxiety; monitor and reassess.',
     concern: 'Moderate anxiety; counselling or therapy is recommended.',
     high: 'Severe anxiety; clinical evaluation is recommended.',
@@ -59,8 +59,8 @@ const LABEL = {
   EmotionalWellness: 'Emotional Wellness',
   InternetUsage: 'Internet Usage',
   PersonalityDimensions: 'Personality',
-  Depression: 'PHQ-9 (Depression)',
-  Anxiety: 'GAD-7 (Anxiety)',
+  Depression: 'Depression screening',
+  Anxiety: 'Anxiety screening',
 };
 
 const STYLE_TIP = {
@@ -90,7 +90,7 @@ function assess(result) {
     return { level: 'ok', selfHarm: false, note: `${result.severity}.${top ? ` Works best with ${STYLE_TIP[top]}.` : ''}` };
   }
   if (cat === 'Depression' && selfHarmFlag(result)) {
-    return { level: 'high', selfHarm: true, note: `${NOTES.Depression.high} Thoughts of self-harm were reported (PHQ-9 item 9) — please review in person with a counsellor.` };
+    return { level: 'high', selfHarm: true, note: `${NOTES.Depression.high} Thoughts of self-harm were reported — please review in person with a counsellor.` };
   }
   const level = INTELL_DOMAINS.includes(cat) ? bandLevel(result.score) : clinicalLevel(result.score);
   return { level, selfHarm: false, note: NOTES[cat]?.[level] || '' };

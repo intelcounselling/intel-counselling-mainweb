@@ -191,7 +191,7 @@ const IntellAssessmentPage: React.FC = () => {
               <div className="grid md:grid-cols-2 gap-8 mb-10">
                 {[
                   { tag: 'Module A', title: 'Intel Student Development Assessments', text: 'Five Intel-developed assessments with colour-banded interpretation and your learning style.', ids: INTELL_ORDER.filter((id) => INTELL_META[id].module === 'A') },
-                  { tag: 'Module B', title: 'Intel Student Psychological Assessment Battery™', text: 'All five plus PHQ-9 and GAD-7, combined into an integrated profile with risk identification and counselling recommendations.', ids: INTELL_ORDER.filter((id) => INTELL_META[id].module === 'B') },
+                  { tag: 'Module B', title: 'Intel Student Psychological Assessment Battery™', text: 'All five plus the mood and worry screenings, combined into an integrated profile with risk identification and counselling recommendations.', ids: INTELL_ORDER.filter((id) => INTELL_META[id].module === 'B') },
                 ].map((m) => (
                   <div key={m.tag} className="bg-white/5 border border-white/10 rounded-[32px] p-6">
                     <span className="text-[11px] font-black uppercase tracking-[0.14em] text-terracotta">{m.tag}</span>
