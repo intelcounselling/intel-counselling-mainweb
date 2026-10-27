@@ -1,5 +1,6 @@
 import PDFDocument from 'pdfkit-table';
 import { escapeHtml, plainText } from '../escape.js';
+import { emailLayout, p as para, panel, facts, list, h3 } from '../emailTheme.js';
 import { decrypt } from '../encryption.js';
 import { getResultFull, getOrder, markResultEmailed, getPaidCareerResultCount } from '../db.js';
 import { authenticateRequest } from '../token.js';
@@ -275,150 +276,53 @@ export default async function handler(req, res) {
 
     const { mi, interests, personality, summary } = result;
 
-    const formatMi = mi ? Object.entries(mi).map(([k, v]) => `<li><strong>${escapeHtml(k)}:</strong> ${escapeHtml(v)}</li>`).join('') : '';
-    const formatInterests = interests ? Object.entries(interests).map(([k, v]) => `<li><strong>${escapeHtml(k)}:</strong> ${escapeHtml(v)}</li>`).join('') : '';
-    const formatPersonality = personality ? Object.entries(personality).map(([k, v]) => `<li><strong>${escapeHtml(k)}:</strong> ${escapeHtml(v)}</li>`).join('') : '';
 
     const hasCounselling = appointment && appointment.date;
 
-    const adminHtml = `
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8" />
-        <title>Career Assessment Results</title>
-        <style>
-          body { font-family: 'Arial', sans-serif; background: #f9f9f9; padding: 20px; }
-          .container { background: #fff; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-          .section { margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
-          .section:last-child { border-bottom: none; }
-          .title { font-size: 18px; color: #1C3F39; font-weight: bold; margin-bottom: 15px; }
-          .field { margin-bottom: 12px; }
-          .label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; font-weight: bold; }
-          .val { font-size: 14px; color: #333; }
-          ul { padding-left: 20px; margin: 5px 0; font-size: 14px; color: #333; }
-          li { margin-bottom: 5px; }
-          .highlight { font-weight: bold; color: #C19B6C; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <h2 style="color: #1C3F39; margin-top: 0;">🎓 Career Assessment Results ${hasCounselling ? '& Booking' : ''}</h2>
-          <p style="color: #666; font-size: 14px; margin-top: -10px; margin-bottom: 25px;">A career guidance assessment has been completed.</p>
-          
-          <div class="section">
-            <div class="title">👤 User Details</div>
-            <div class="field">
-              <div class="label">Name</div>
-              <div class="val"><strong>${escapeHtml(name) || 'N/A'}</strong></div>
-            </div>
-            <div class="field">
-              <div class="label">Email & Phone</div>
-              <div class="val"><a href="mailto:${escapeHtml(email)}">${escapeHtml(email) || 'N/A'}</a> | ${escapeHtml(phone) || 'N/A'}</div>
-            </div>
-            <div class="field">
-              <div class="label">Age & Gender</div>
-              <div class="val">${escapeHtml(age) || 'N/A'} | ${escapeHtml(gender) || 'N/A'}</div>
-            </div>
-          </div>
+    const entries = (obj) => Object.entries(obj || {}).map(([k, v]) => `<strong>${escapeHtml(k)}:</strong> ${escapeHtml(v)}`);
+    const modeLabel = sessionMode === 'online' ? 'Online (Google Meet)' : 'In person';
 
-          ${hasCounselling ? `
-          <div class="section" style="background: #fdfaf4; padding: 15px; border-radius: 6px; border: 1px solid #ede8e0;">
-            <div class="title" style="color: #C19B6C; margin-bottom: 10px;">📅 Scheduled Appointment Details</div>
-            <div class="field">
-              <div class="label">Format</div>
-              <div class="val"><strong>${sessionMode === 'online' ? '🌐 Online (Virtual)' : '🏢 In-Person'}</strong></div>
-            </div>
-            <div class="field">
-              <div class="label">Date & Time Slot</div>
-              <div class="val highlight">${escapeHtml(date)} at ${escapeHtml(time)}</div>
-            </div>
-          </div>
-          ` : ''}
+    const adminHtml = emailLayout({
+      title: 'Career assessment results',
+      preheader: `${plainText(name)} completed the career assessment`,
+      eyebrow: 'Career guidance',
+      heading: hasCounselling ? 'Career results and a booking' : 'Career results are in',
+      audience: 'team',
+      body:
+        facts([
+          ['Name', `<strong>${escapeHtml(name) || 'N/A'}</strong>`],
+          ['Email', `<a href="mailto:${escapeHtml(email)}" style="color:#1C3F39;">${escapeHtml(email) || 'N/A'}</a>`],
+          ['Phone', escapeHtml(phone) || 'N/A'],
+          ['Age and gender', `${escapeHtml(age) || 'N/A'} | ${escapeHtml(gender) || 'N/A'}`],
+        ]) +
+        (hasCounselling
+          ? panel(`<strong>Scheduled session</strong><br/>${modeLabel}<br/>${escapeHtml(date)} at ${escapeHtml(time)}`, 'peach')
+          : '') +
+        panel(
+          `<strong>Top intelligence profile</strong><br/>${escapeHtml(summary?.topIntelligence?.join(', ')) || 'N/A'}<br/><br/>` +
+            `<strong>Top vocational interests</strong><br/>${escapeHtml(summary?.topInterests?.join(', ')) || 'N/A'}`,
+          'lavender'
+        ) +
+        h3('Intelligence scores') + list(entries(mi)) +
+        h3('Vocational interests') + list(entries(interests)) +
+        h3('Career personality') + list(entries(personality)),
+    });
 
-          <div class="section">
-            <div class="title">🧠 Test Scores Summary</div>
-            <div class="field">
-              <div class="label">Top Intelligence Profile</div>
-              <div class="val">${escapeHtml(summary?.topIntelligence?.join(', ')) || 'N/A'}</div>
-            </div>
-            <div class="field">
-              <div class="label">Top Vocational Interests</div>
-              <div class="val">${escapeHtml(summary?.topInterests?.join(', ')) || 'N/A'}</div>
-            </div>
-          </div>
-
-          <div class="section">
-            <div class="title">📊 Detailed Intelligence Scores</div>
-            <ul>
-              ${formatMi}
-            </ul>
-          </div>
-
-          <div class="section">
-            <div class="title">🎯 Detailed Vocational Interests</div>
-            <ul>
-              ${formatInterests}
-            </ul>
-          </div>
-
-          <div class="section">
-            <div class="title">💼 Career Personality Profile</div>
-            <ul>
-              ${formatPersonality}
-            </ul>
-          </div>
-
-          <div style="font-size: 11px; color: #aaa; margin-top: 30px; text-align: center;">
-            Sent automatically by Intel Counselling Portal
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-
-    const userHtml = `
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8" />
-        <title>Your Career Assessment Report</title>
-        <style>
-          body { font-family: 'Arial', sans-serif; background: #f9f9f9; padding: 20px; color: #333; }
-          .container { background: #fff; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-          .header { text-align: center; margin-bottom: 25px; }
-          .highlight { font-weight: bold; color: #C19B6C; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h2 style="color: #1C3F39; margin-top: 0;">🎓 Intel Counselling Career Assessment Report</h2>
-            <p style="color: #666; font-size: 14px;">Your comprehensive evaluation is ready.</p>
-          </div>
-          
-          <p>Dear ${escapeHtml(name)},</p>
-          <p>Thank you for taking the Career Guidance Assessment with Intel Counselling. We have compiled your responses and generated your custom report, which is attached to this email as a PDF document.</p>
-          
-          ${hasCounselling ? `
-          <div style="background: #fdfaf4; padding: 20px; border-radius: 6px; border: 1px solid #ede8e0; margin: 25px 0;">
-            <h3 style="color: #C19B6C; margin-top: 0; margin-bottom: 12px;">📅 Confirmed Counselling Session</h3>
-            <p style="margin: 5px 0;"><strong>Format:</strong> ${sessionMode === 'online' ? '🌐 Online (Virtual)' : '🏢 In-Person'}</p>
-            <p style="margin: 5px 0;"><strong>Scheduled Time:</strong> <span class="highlight">${escapeHtml(date)} at ${escapeHtml(time)}</span></p>
-            <p style="margin-top: 10px; font-size: 13px; color: #555;">Our expert counselor will review your report with you during this live session to provide detailed interpretation and answer any questions.</p>
-          </div>
-          ` : ''}
-
-          <p>You can access your report at any time by logging into your portal account.</p>
-          <p>Best regards,<br/><strong>Intel Counselling Team</strong></p>
-          
-          <div style="font-size: 11px; color: #aaa; margin-top: 30px; text-align: center; border-top: 1px solid #eee; padding-top: 15px;">
-            Healing Begins with Understanding.
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
+    const userHtml = emailLayout({
+      title: 'Your career assessment report',
+      preheader: 'Your report is attached to this email.',
+      eyebrow: 'Career guidance',
+      heading: `Your report is ready, ${escapeHtml(String(name || '').split(' ')[0])}`,
+      body:
+        para('Thank you for taking the Career Guidance Assessment with Intel Counselling. We have put your answers into a personal report, attached to this email as a PDF.') +
+        (hasCounselling
+          ? panel(
+              `<strong>Your counselling session is confirmed</strong><br/>${modeLabel}<br/>${escapeHtml(date)} at ${escapeHtml(time)}<br/><br/>Your counsellor will go through the report with you, help you read it and answer your questions.`,
+              'sage'
+            )
+          : '') +
+        para('You can open your report again at any time by signing in to your account on the website.'),
+    });
 
     // Generate PDF Attachment
     let pdfBase64 = null;

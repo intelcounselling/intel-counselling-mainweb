@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { emailLayout, p, codeBox, panel, note } from './emailTheme.js';
 
 // Shared OTP machinery for email verification and password reset.
 // Security properties:
@@ -37,38 +38,27 @@ export function otpMatches(providedOtp, storedHash) {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
-// Shared email styles matching the site's dark/gold brand.
-function emailShell(title, introHtml, bodyHtml, footerHtml) {
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-      <title>${title}</title>
-    </head>
-    <body style="font-family: Arial, sans-serif; background-color: #F7EBD3; padding: 20px;">
-      <div style="background-color: #1F1E1B; max-width: 600px; margin: 0 auto; padding: 40px; border-radius: 24px; color: white; border: 1px solid rgba(255,255,255,0.1);">
-        ${introHtml}
-        ${bodyHtml}
-        ${footerHtml}
-      </div>
-    </body>
-    </html>
-  `;
-}
-
-function otpBodyHtml(name, otp, minutes, purposeLabel) {
+function otpBodyHtml(name, otp, minutes, purposeLabel, guardian = false, childName = '') {
   const firstName = String(name || 'there').split(' ')[0].slice(0, 50);
-  return emailShell(
-    purposeLabel,
-    `<h2 style="color: #E2A080; margin-top: 0;">${purposeLabel}</h2>
-     <p style="color: rgba(255,255,255,0.7); font-size: 15px;">Hi ${firstName}, use the following 6-digit code to continue. This code is valid for ${minutes} minutes:</p>`,
-    `<div style="background-color: rgba(255,255,255,0.05); border: 2px dashed #E2A080; border-radius: 12px; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #E2A080; margin: 24px 0;">
-       ${otp}
-     </div>`,
-    `<p style="color: rgba(255,255,255,0.4); font-size: 12px; margin-top: 30px;">If you did not request this, you can safely ignore this email — your account is secure.</p>`
-  );
+  const child = String(childName || 'your child').slice(0, 60);
+  const intro = guardian
+    ? `Hello ${firstName}, <strong>${child}</strong> would like to use Intel Counselling's assessments, and because they are under 18 we need a parent or guardian to say yes first.`
+    : `Hi ${firstName}, here is your 6-digit code. Enter it on the website to continue.`;
+  const heading = guardian ? 'Your consent is needed' : purposeLabel === 'Verify Your Email' ? 'Verify your email' : 'Reset your password';
+  return emailLayout({
+    title: purposeLabel,
+    preheader: `Your code is ${otp}. It is valid for ${minutes} minutes.`,
+    eyebrow: purposeLabel,
+    heading,
+    body:
+      p(intro) +
+      codeBox(otp) +
+      p(`This code is valid for <strong>${minutes} minutes</strong>.`, 'text-align:center;') +
+      (guardian
+        ? panel("By entering the code you confirm you are the parent or legal guardian, and that you agree to Intel Counselling processing your child's assessment answers as described in our privacy policy.", 'sage')
+        : '') +
+      note("If you didn't ask for this, you can safely ignore this email. Your account is secure."),
+  });
 }
 
 // Sends an OTP code via Brevo. Returns true when delivered, false when the
@@ -103,7 +93,7 @@ export async function sendOtpEmail({ to, name, otp, purpose, childName }) {
     to: [{ email: to, name: name || undefined }],
     sender: { email: process.env.SENDER_EMAIL || 'intelcounselling@gmail.com', name: 'Intel Counselling Support' },
     subject,
-    htmlContent: otpBodyHtml(name, otp, minutes, label),
+    htmlContent: otpBodyHtml(name, otp, minutes, label, guardian, childName),
   };
 
   try {
@@ -143,13 +133,17 @@ export async function sendPasswordChangedEmail(to, name) {
   }
 
   const firstName = String(name || 'there').split(' ')[0].slice(0, 50);
-  const html = emailShell(
-    'Your password was changed',
-    `<h2 style="color: #E2A080; margin-top: 0;">Password Changed</h2>
-     <p style="color: rgba(255,255,255,0.7); font-size: 15px;">Hi ${firstName}, your Intel Counselling account password was just changed successfully.</p>`,
-    `<p style="color: rgba(255,255,255,0.7); font-size: 14px;">All active sessions were signed out. If this wasn't you, please reset your password immediately from the login screen and contact support.</p>`,
-    `<p style="color: rgba(255,255,255,0.4); font-size: 12px; margin-top: 30px;">This is an automated security notification.</p>`
-  );
+  const html = emailLayout({
+    title: 'Your password was changed',
+    preheader: 'Your Intel Counselling password was just changed.',
+    eyebrow: 'Security notice',
+    heading: 'Your password was changed',
+    body:
+      p(`Hi ${firstName}, the password on your Intel Counselling account was just changed.`) +
+      panel('All active sessions were signed out. If this was you, there is nothing more to do.', 'sage') +
+      p("If it wasn't you, please reset your password straight away from the sign-in page and write to us at intelcounselling@gmail.com.") +
+      note('This is an automated security notification.'),
+  });
 
   try {
     const response = await fetch('https://api.brevo.com/v3/smtp/email', {

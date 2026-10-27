@@ -2,6 +2,7 @@ import { authenticateRequest } from '../token.js';
 import { getAccountById } from '../db.js';
 import { getPrices } from '../pricing.js';
 import { escapeHtml } from '../escape.js';
+import { emailLayout, p as para, panel, facts } from '../emailTheme.js';
 import {
   INTELL_TEST_IDS, INTELL_SERVICE_ID, INTELL_MODULE_B_ID, publicDefinitions, intellAccess, intellPriceFor, loadIntellResults, intellProfile, writeReport,
 } from '../intell.js';
@@ -80,9 +81,21 @@ export async function notifyHighRisk(account, testName) {
       to: [{ email: admin, name: 'Intel Counselling' }],
       sender: { email: process.env.SENDER_EMAIL || admin, name: 'Intel Counselling Alerts' },
       subject: `Priority review: Intel assessment result (${testName})`,
-      htmlContent: `<p>A client's <strong>${escapeHtml(testName)}</strong> result needs clinical review (high score or the self-harm item).</p>
-        <p>Client: <strong>${escapeHtml(account?.name || '')}</strong> &lt;${escapeHtml(account?.email || '')}&gt;${account?.phone ? `, ${escapeHtml(account.phone)}` : ''}</p>
-        <p>Please reach out to them. Their full report is attached to any session they book, and they can share it from My Results.</p>`,
+      htmlContent: emailLayout({
+        title: 'Priority review',
+        preheader: `${escapeHtml(testName)} needs clinical review`,
+        eyebrow: 'Priority review',
+        heading: 'A result needs clinical review',
+        audience: 'team',
+        body:
+          para(`A client's <strong>${escapeHtml(testName)}</strong> result needs clinical review (a high score, or the self-harm question).`) +
+          facts([
+            ['Client', `<strong>${escapeHtml(account?.name || '')}</strong>`],
+            ['Email', escapeHtml(account?.email || '')],
+            ['Phone', account?.phone ? escapeHtml(account.phone) : ''],
+          ]) +
+          panel('Please reach out to them. Their full report is attached to any session they book, and they can share it from My Results.', 'peach'),
+      }),
     }),
   });
   if (!res.ok) console.error('High-risk alert email failed:', res.status, await res.text().catch(() => ''));

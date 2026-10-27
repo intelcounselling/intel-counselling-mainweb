@@ -152,12 +152,14 @@ async function getMyData(req, res) {
 // request is sent to the clinic inbox (to be actioned within the legal deadline).
 async function requestDeletion(req, res) {
   try {
-    const { sendEmail } = require('../services/email.service');
+    const { sendDeletionRequestEmail } = require('../services/email.service');
     const u = req.user;
-    await sendEmail({
+    await sendDeletionRequestEmail({
       to: process.env.ADMIN_EMAIL || 'intelcounselling@gmail.com',
-      subject: 'Data deletion request — school portal',
-      text: `${u.firstName} ${u.lastName} <${u.email}> (${u.role}, user id ${u.id}) has asked for their account and data to be deleted. Delete the user from User Management and reply to confirm.`,
+      name: `${u.firstName} ${u.lastName}`,
+      email: u.email,
+      role: u.role,
+      userId: u.id,
     });
     logger.info(`Deletion requested by user ${u.id}`);
     res.json({ requested: true });

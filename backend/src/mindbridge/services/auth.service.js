@@ -28,12 +28,8 @@ async function startMfa(user) {
     where: { id: user.id },
     data: { otpCode: crypto.createHash('sha256').update(otp).digest('hex'), otpExpiresAt: new Date(Date.now() + 10 * 60 * 1000) },
   });
-  const { sendEmail } = require('./email.service');
-  await sendEmail({
-    to: user.email,
-    subject: 'Your Intel Counselling sign-in code',
-    text: 'Your sign-in code is ' + otp + '. It expires in 10 minutes. If you did not just sign in, change your password now.',
-  });
+  const { sendMfaEmail } = require('./email.service');
+  await sendMfaEmail({ to: user.email, otp });
   const mfaToken = jwt.sign({ userId: user.id, purpose: 'admin-mfa' }, process.env.JWT_ACCESS_SECRET, { expiresIn: '10m' });
   return { mfaRequired: true, mfaToken };
 }

@@ -1,4 +1,5 @@
 import { escapeHtml, plainText } from '../escape.js';
+import { emailLayout, p as para, panel, facts } from '../emailTheme.js';
 
 export default async function handler(req, res) {
   // CORS headers
@@ -27,71 +28,25 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'BREVO_API_KEY is not set' });
     }
 
-    const adminHtml = `
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-        <title>New Pre-Assessment Registration</title>
-        <style>
-          body { font-family: 'Arial', sans-serif; background: #f9f9f9; padding: 20px; }
-          .container { background: #fff; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-          .field { margin-bottom: 20px; }
-          .label { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; font-weight: bold; }
-          .val { font-size: 16px; color: #333; }
-          .message-box { background: #f5f5f5; padding: 15px; border-radius: 6px; font-size: 15px; color: #444; line-height: 1.6; white-space: pre-wrap; }
-          .highlight { font-weight: bold; color: #1C3F39; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <h2 style="color: #C19B6C; margin-top: 0;">📋 New Pre-Assessment Registration</h2>
-          <p style="color: #666; font-size: 14px; margin-top: -10px; margin-bottom: 25px;">A user has registered to take a free assessment test.</p>
-          <hr style="border: 0; border-top: 1px solid #eee; margin-bottom: 25px;" />
-          
-          <div class="field">
-            <div class="label">Client Name</div>
-            <div class="val"><strong>${escapeHtml(name)}</strong></div>
-          </div>
-
-          <div class="field">
-            <div class="label">Email & Phone</div>
-            <div class="val"><a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a> | ${escapeHtml(phone)}</div>
-          </div>
-
-          <div class="field" style="display: flex; gap: 40px;">
-            <div>
-              <div class="label">Age</div>
-              <div class="val">${escapeHtml(age)}</div>
-            </div>
-            <div>
-              <div class="label">Gender</div>
-              <div class="val">${escapeHtml(gender)}</div>
-            </div>
-            <div>
-              <div class="label">Status</div>
-              <div class="val">${escapeHtml(occupation)}</div>
-            </div>
-          </div>
-
-          <div class="field" style="background: #fdfaf4; padding: 12px; border-radius: 6px; border: 1px solid #ede8e0;">
-            <div class="label" style="color: #C19B6C;">Intended Test</div>
-            <div class="val highlight">${escapeHtml(testTitle)}</div>
-          </div>
-          
-          <div class="field">
-            <div class="label">Primary Concerns / Reason for Assessment</div>
-            <div class="message-box">${reason ? escapeHtml(reason) : 'None provided'}</div>
-          </div>
-
-          <div style="font-size: 11px; color: #aaa; margin-top: 30px;">
-            Registered via Website: ${escapeHtml(registeredAt)}
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
+    const adminHtml = emailLayout({
+      title: 'New pre-assessment registration',
+      preheader: `${plainText(name)} registered for ${plainText(testTitle)}`,
+      eyebrow: 'New registration',
+      heading: 'A new person is taking an assessment',
+      audience: 'team',
+      body:
+        facts([
+          ['Name', `<strong>${escapeHtml(name)}</strong>`],
+          ['Email', `<a href="mailto:${escapeHtml(email)}" style="color:#1C3F39;">${escapeHtml(email)}</a>`],
+          ['Phone', escapeHtml(phone)],
+          ['Age', escapeHtml(age)],
+          ['Gender', escapeHtml(gender)],
+          ['Status', escapeHtml(occupation)],
+        ]) +
+        panel(`<strong>Intended test</strong><br/>${escapeHtml(testTitle)}`, 'lavender') +
+        panel(`<strong>Main concerns</strong><br/><div style="white-space:pre-wrap;">${reason ? escapeHtml(reason) : 'None provided'}</div>`, 'cream') +
+        para(`Registered on the website: ${escapeHtml(registeredAt)}`, 'font-size:13px;color:#8a847a;'),
+    });
 
     const payload = {
       to: [{ email: process.env.ADMIN_EMAIL || 'intelcounselling@gmail.com', name: 'Intel Counselling Admin' }],

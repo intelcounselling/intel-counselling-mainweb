@@ -1,4 +1,5 @@
 import { escapeHtml, plainText } from '../escape.js';
+import { emailLayout, p as para, panel, facts } from '../emailTheme.js';
 
 export default async function handler(req, res) {
   // CORS headers
@@ -35,45 +36,21 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'BREVO_API_KEY is not set' });
     }
 
-    const adminHtml = `
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-        <title>New Website Inquiry</title>
-        <style>
-          body { font-family: 'Arial', sans-serif; background: #f9f9f9; padding: 20px; }
-          .container { background: #fff; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-          .field { margin-bottom: 20px; }
-          .label { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; font-weight: bold; }
-          .val { font-size: 16px; color: #333; }
-          .message-box { background: #f5f5f5; padding: 15px; border-radius: 6px; font-size: 15px; color: #444; line-height: 1.6; white-space: pre-wrap; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <h2 style="color: #2D6A4F; margin-top: 0;">New Website Inquiry</h2>
-          <hr style="border: 0; border-top: 1px solid #eee; margin-bottom: 25px;" />
-          
-          <div class="field">
-            <div class="label">From</div>
-            <div class="val"><strong>${escapeHtml(name)}</strong> (<a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a>)</div>
-          </div>
-
-          <div class="field">
-            <div class="label">Interested Service</div>
-            <div class="val">${escapeHtml(service)}</div>
-          </div>
-
-          <div class="field">
-            <div class="label">Message</div>
-            <div class="message-box">${escapeHtml(message)}</div>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
+    const adminHtml = emailLayout({
+      title: 'New website inquiry',
+      preheader: `${plainText(name)} asked about ${plainText(service)}`,
+      eyebrow: 'New inquiry',
+      heading: 'Someone said hello',
+      audience: 'team',
+      body:
+        facts([
+          ['From', `<strong>${escapeHtml(name)}</strong>`],
+          ['Email', `<a href="mailto:${escapeHtml(email)}" style="color:#1C3F39;">${escapeHtml(email)}</a>`],
+          ['Interested in', escapeHtml(service)],
+        ]) +
+        panel(`<div style="white-space:pre-wrap;">${escapeHtml(message)}</div>`, 'cream') +
+        para('Reply to this email to answer them directly.', 'font-size:13px;color:#8a847a;'),
+    });
 
     const payload = {
       to: [{ email: process.env.ADMIN_EMAIL || 'intelcounselling@gmail.com', name: 'Intel Counselling Admin' }],

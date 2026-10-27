@@ -1,5 +1,6 @@
 import PDFDocument from 'pdfkit';
 import { escapeHtml, plainText } from '../escape.js';
+import { emailLayout, p as para, panel, facts, button, h3 } from '../emailTheme.js';
 import crypto from 'crypto';
 import { getOrder, markOrderUsed, releaseOrder, getResultFull, createBooking } from '../db.js';
 import { createMeetLink } from '../meet.js';
@@ -344,106 +345,50 @@ export default async function handler(req, res) {
           })
         : null;
       const meetBlock = meetLink
-        ? `<p class="message"><strong>Your Google Meet link:</strong><br/><a href="${escapeHtml(meetLink)}">${escapeHtml(meetLink)}</a></p>`
+        ? panel(`<strong>Your Google Meet link</strong><br/><a href="${escapeHtml(meetLink)}" style="color:#1C3F39;">${escapeHtml(meetLink)}</a>`, 'sky')
         : '';
       const sessionBadge = isOnline ? '🌐 Online (Virtual)' : '🏢 In-Person';
       const rescheduleText = rescheduleInfo || 'To reschedule, please reply to this email at least 24 hours in advance.';
 
       // ── Customer HTML (Simplified Thank You) ──────────────────────────────────
-      const customerHtml = `
-  <!DOCTYPE html>
-  <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Thank You – Intel Counselling</title>
-    <style>
-      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
-      body { margin: 0; padding: 0; background: #f4f1eb; font-family: 'Inter', Arial, sans-serif; }
-      .wrapper { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
-      .header { background: #1F1E1B; padding: 40px 48px; text-align: center; }
-      .header h1 { margin: 0; color: #F4EFE6; font-size: 20px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; }
-      .body { padding: 48px; text-align: center; }
-      .greeting { font-size: 22px; color: #1F1E1B; font-weight: 600; margin-bottom: 16px; }
-      .message { font-size: 16px; color: #444; line-height: 1.8; margin-bottom: 32px; }
-      .footer { background: #f9f7f2; padding: 24px 48px; text-align: center; border-top: 1px solid #eee; }
-      .footer p { margin: 4px 0; color: #888; font-size: 12px; }
-    </style>
-  </head>
-  <body>
-    <div class="wrapper">
-      <div class="header">
-        <h1>Intel Counselling</h1>
-      </div>
-      <div class="body">
-        <div class="greeting">Thank You, ${escapeHtml(toName)}.</div>
-        <p class="message">
-          We have received your booking request and payment. Thank you for choosing <strong>Intel Counselling</strong> as your partner in healing.<br/><br/>
-          Our team is reviewing your intake details now. <strong>We will contact you shortly</strong> to finalize your session and provide any necessary details.
-        </p>
-        ${meetBlock}
-      </div>
-      <div class="footer">
-        <p>Healing Begins with Understanding.</p>
-        <p>&copy; ${new Date().getFullYear()} Intel Counselling &bull; intelcounselling@gmail.com</p>
-      </div>
-    </div>
-  </body>
-  </html>`;
+      const customerHtml = emailLayout({
+        title: 'Thank you for choosing Intel Counselling',
+        preheader: 'We have received your booking and payment.',
+        eyebrow: 'Booking received',
+        heading: `Thank you, ${escapeHtml(toName)}`,
+        body:
+          para('We have received your booking request and payment. Thank you for choosing <strong>Intel Counselling</strong> as your partner in healing.') +
+          panel(
+            '<strong>What happens next</strong><br/>Our team is reviewing your intake details now and will contact you shortly to confirm your session and share anything you need.',
+            'sage'
+          ) +
+          h3('Your session') +
+          facts([
+            ['Date', escapeHtml(appointmentDate)],
+            ['Time', escapeHtml(appointmentTime)],
+            ['Format', isOnline ? 'Online (Google Meet)' : 'In person'],
+            ['Service', escapeHtml(serviceName || '')],
+          ]) +
+          meetBlock +
+          para(escapeHtml(rescheduleText), 'font-size:14px;color:#8a847a;'),
+      });
 
       // ── Admin HTML (Focus on Logistics & Intake) ───────────────────────────────
-      const adminHtml = `
-  <!DOCTYPE html>
-  <html lang="en">
-  <head>
-    <meta charset="UTF-8"/>
-    <title>New Booking – Intel Counselling</title>
-    <style>
-      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
-      body { margin: 0; padding: 0; background: #f0f0f0; font-family: 'Inter', sans-serif; }
-      .wrapper { max-width: 560px; margin: 32px auto; background: #fff; border-radius: 10px; overflow: hidden; }
-      .header { background: #1F1E1B; padding: 24px 36px; }
-      .header h1 { margin: 0; color: #F4EFE6; font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; }
-      .body { padding: 36px; }
-      .summary-card { background: #f8f6f2; border: 1px solid #e8ddd0; border-radius: 8px; padding: 24px; margin-bottom: 24px; }
-      .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #ede8e0; font-size: 14px; }
-      .row:last-child { border-bottom: none; }
-      .lbl { color: #888; font-weight: 500; }
-      .val { color: #1F1E1B; font-weight: 600; text-align: right; }
-      .highlight { color: #1C3F39; font-weight: 700; }
-    </style>
-  </head>
-  <body>
-    <div class="wrapper">
-      <div class="header">
-        <h1>🔔 New Session Booking</h1>
-      </div>
-      <div class="body">
-        <div style="font-size: 18px; font-weight: 600; margin-bottom: 20px;">Patient: ${escapeHtml(toName)}</div>
-      
-        <div class="summary-card">
-          <div class="row">
-            <span class="lbl">Timing</span>
-            <span class="val highlight">${escapeHtml(appointmentDate)} at ${escapeHtml(appointmentTime)}</span>
-          </div>
-          <div class="row">
-            <span class="lbl">Mode</span>
-            <span class="val">${sessionBadge}</span>
-          </div>
-          ${meetLink ? `<div class="row"><span class="lbl">Meet link</span><span class="val"><a href="${escapeHtml(meetLink)}">${escapeHtml(meetLink)}</a></span></div>` : ''}
-          <div class="row">
-            <span class="lbl">Reason (Concerns)</span>
-            <span class="val">${escapeHtml(details.mainConcerns?.join(', ')) || 'General'}</span>
-          </div>
-        </div>
-
-        <div style="font-size: 13px; color: #666; line-height: 1.6;">
-          <strong>Action Required:</strong> A complete intake PDF with all questionnaire answers is attached to this email. Please review it before the session.
-        </div>
-      </div>
-    </div>
-  </body>
-  </html>`;
+      const adminHtml = emailLayout({
+        title: 'New booking',
+        preheader: `${plainText(toName)} booked ${plainText(appointmentDate)} at ${plainText(appointmentTime)}`,
+        eyebrow: 'New session booking',
+        heading: `Patient: ${escapeHtml(toName)}`,
+        audience: 'team',
+        body:
+          facts([
+            ['When', `<strong>${escapeHtml(appointmentDate)} at ${escapeHtml(appointmentTime)}</strong>`],
+            ['Mode', sessionBadge],
+            ['Meet link', meetLink ? `<a href="${escapeHtml(meetLink)}" style="color:#1C3F39;">${escapeHtml(meetLink)}</a>` : ''],
+            ['Concerns', escapeHtml(details.mainConcerns?.join(', ')) || 'General'],
+          ]) +
+          panel('<strong>Action required</strong><br/>A complete intake PDF with all questionnaire answers is attached. Please review it before the session.', 'peach'),
+      });
 
       const headers = {
         'Accept': 'application/json',

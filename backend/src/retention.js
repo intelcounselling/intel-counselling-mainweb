@@ -9,6 +9,7 @@
 //   RETENTION_SESSION_DAYS   school-portal session records after the
 //                            student's last session                 (default 1095)
 import { createRequire } from 'module';
+import { emailLayout, p as para, panel, button } from './emailTheme.js';
 import { countOrDeleteAnonymousResults, findInactiveUsers, markInactivityWarned, eraseUser } from './db.js';
 
 const require = createRequire(import.meta.url);
@@ -30,7 +31,16 @@ async function sendWarning(user, deleteOn) {
       to: [{ email: user.email, name: user.name }],
       sender: { email: process.env.SENDER_EMAIL || 'intelcounselling@gmail.com', name: 'Intel Counselling' },
       subject: 'Your Intel Counselling account will be deleted',
-      htmlContent: `<p>Hi ${String(user.name || '').split(' ')[0]},</p><p>You haven't used your Intel Counselling account for a long time, so to protect your privacy we will delete it and your results on <strong>${deleteOn}</strong>.</p><p>To keep it, just <a href="${site}/login">sign in</a> and take or retake any assessment before then. You can also download your data from My Results.</p>`,
+      htmlContent: emailLayout({
+        title: 'Your Intel Counselling account will be deleted',
+        preheader: `We will delete your inactive account on ${deleteOn}.`,
+        eyebrow: 'Privacy notice',
+        heading: 'We will delete your inactive account',
+        body:
+          para(`Hi ${String(user.name || '').split(' ')[0]}, you have not used your Intel Counselling account for a long time, so to protect your privacy we will delete it, together with your results, on <strong>${deleteOn}</strong>.`) +
+          panel('Want to keep it? Just sign in and take or retake any assessment before then. You can also download your data from My Results first.', 'sage') +
+          button('Sign in to keep my account', `${site}/login`),
+      }),
     }),
   }).catch((e) => console.error('[retention] warning email failed', e.message));
 }

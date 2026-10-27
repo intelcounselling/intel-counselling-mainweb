@@ -48,201 +48,189 @@ async function sendEmail({ to, subject, html, text }) {
 }
 
 // ── Templates ────────────────────────────────────────────────
+// Built on the shared email theme (an ES module, loaded lazily from this CommonJS file).
+// Every dynamic value is escaped before it reaches the HTML.
 
-function alertEmailHtml({ psychiatristName, studentName, testName, score, maxScore, severity, schoolName, appUrl }) {
-  return `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><style>
-  body { font-family: Inter, Arial, sans-serif; background: #f8fafc; margin: 0; padding: 20px; }
-  .card { background: white; border-radius: 12px; padding: 32px; max-width: 600px; margin: 0 auto; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-  .header { background: linear-gradient(135deg, #4F46E5, #0EA5E9); border-radius: 8px; padding: 24px; margin-bottom: 24px; text-align: center; }
-  .header h1 { color: white; margin: 0; font-size: 24px; }
-  .alert-badge { display: inline-block; padding: 6px 16px; border-radius: 999px; font-weight: bold; font-size: 14px; margin: 8px 0; }
-  .severe { background: #fef2f2; color: #dc2626; }
-  .moderate { background: #fff7ed; color: #ea580c; }
-  .mild { background: #fefce8; color: #ca8a04; }
-  .minimal { background: #f0fdf4; color: #16a34a; }
-  .btn { display: inline-block; background: #4F46E5; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 16px; }
-  .footer { color: #9ca3af; font-size: 12px; text-align: center; margin-top: 24px; }
-</style></head>
-<body>
-  <div class="card">
-    <div class="header"><h1>🧠 Intel Counselling Alert</h1></div>
-    <p>Dear Dr. ${psychiatristName},</p>
-    <p>A student at <strong>${schoolName}</strong> has completed a mental health screening that requires your attention.</p>
-    <table style="width:100%;border-collapse:collapse;margin:16px 0;">
-      <tr><td style="padding:8px;color:#6b7280;">Student</td><td style="padding:8px;font-weight:bold;">${studentName}</td></tr>
-      <tr style="background:#f9fafb;"><td style="padding:8px;color:#6b7280;">Assessment</td><td style="padding:8px;">${testName}</td></tr>
-      <tr><td style="padding:8px;color:#6b7280;">Score</td><td style="padding:8px;">${score} / ${maxScore}</td></tr>
-      <tr style="background:#f9fafb;"><td style="padding:8px;color:#6b7280;">Severity</td><td style="padding:8px;"><span class="alert-badge ${severity}">${severity.toUpperCase()}</span></td></tr>
-    </table>
-    <p>Please log in to review this student's profile and consider scheduling a session.</p>
-    <a href="${appUrl}/psychiatrist/alerts" class="btn">View Alert →</a>
-    <div class="footer">This is an automated notification from Intel Counselling. Do not reply to this email.</div>
-  </div>
-</body>
-</html>`;
+let themeP;
+function theme() {
+  if (!themeP) themeP = Promise.all([import('../../emailTheme.js'), import('../../escape.js')]).then(([t, e]) => ({ ...t, esc: e.escapeHtml }));
+  return themeP;
 }
 
-function appointmentEmailHtml({ parentName, studentName, psychiatristName, slot, notes, meetingLink, appUrl }) {
-  return `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><style>
-  body { font-family: Inter, Arial, sans-serif; background: #f8fafc; margin: 0; padding: 20px; }
-  .card { background: white; border-radius: 12px; padding: 32px; max-width: 600px; margin: 0 auto; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-  .header { background: linear-gradient(135deg, #4F46E5, #0EA5E9); border-radius: 8px; padding: 24px; margin-bottom: 24px; text-align: center; }
-  .header h1 { color: white; margin: 0; font-size: 24px; }
-  .btn { display: inline-block; background: #4F46E5; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 16px; }
-  .footer { color: #9ca3af; font-size: 12px; text-align: center; margin-top: 24px; }
-</style></head>
-<body>
-  <div class="card">
-    <div class="header"><h1>📅 Appointment Confirmed</h1></div>
-    <p>Dear ${parentName},</p>
-    <p>An appointment has been scheduled for <strong>${studentName}</strong>.</p>
-    <table style="width:100%;border-collapse:collapse;margin:16px 0;">
-      <tr><td style="padding:8px;color:#6b7280;">Date & Time</td><td style="padding:8px;font-weight:bold;">${new Date(slot).toLocaleString()}</td></tr>
-      <tr style="background:#f9fafb;"><td style="padding:8px;color:#6b7280;">Psychiatrist</td><td style="padding:8px;">Dr. ${psychiatristName}</td></tr>
-      ${notes ? `<tr><td style="padding:8px;color:#6b7280;">Notes</td><td style="padding:8px;">${notes}</td></tr>` : ''}
-      ${meetingLink ? `<tr style="background:#f9fafb;"><td style="padding:8px;color:#6b7280;">Meeting Link</td><td style="padding:8px;"><a href="${meetingLink}">${meetingLink}</a></td></tr>` : ''}
-    </table>
-    <a href="${appUrl}/parent/appointments" class="btn">View Appointment →</a>
-    <div class="footer">Intel Counselling — Student Mental Health Platform</div>
-  </div>
-</body>
-</html>`;
+const FRONTEND = () => process.env.FRONTEND_URL || 'http://localhost:5173';
+
+async function alertEmailHtml({ psychiatristName, studentName, testName, score, maxScore, severity, schoolName, appUrl }) {
+  const t = await theme();
+  const tint = { severe: 'peach', moderate: 'peach', mild: 'cream', minimal: 'sage' }[severity] || 'cream';
+  return t.emailLayout({
+    title: 'Student alert',
+    preheader: `${t.esc(studentName)}: ${t.esc(testName)} needs your attention`,
+    eyebrow: 'Student alert',
+    heading: 'A screening needs your attention',
+    audience: 'team',
+    body:
+      t.p(`Dear Dr. ${t.esc(psychiatristName)}, a student at <strong>${t.esc(schoolName)}</strong> has completed a screening that needs your attention.`) +
+      t.facts([
+        ['Student', `<strong>${t.esc(studentName)}</strong>`],
+        ['Assessment', t.esc(testName)],
+        ['Score', `${t.esc(score)} / ${t.esc(maxScore)}`],
+        ['Severity', `<strong>${t.esc(String(severity).toUpperCase())}</strong>`],
+      ]) +
+      t.panel("Please sign in to review this student's profile and consider scheduling a session.", tint) +
+      t.button('View alert', `${appUrl}/psychiatrist/alerts`),
+  });
 }
 
-function credentialsEmailHtml({ recipientName, email, password, role, appUrl }) {
-  return `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><style>
-  body { font-family: Inter, Arial, sans-serif; background: #f8fafc; margin: 0; padding: 20px; }
-  .card { background: white; border-radius: 12px; padding: 32px; max-width: 600px; margin: 0 auto; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-  .header { background: linear-gradient(135deg, #4F46E5, #0EA5E9); border-radius: 8px; padding: 24px; margin-bottom: 24px; text-align: center; }
-  .header h1 { color: white; margin: 0; font-size: 24px; }
-  .cred-box { background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 16px 0; font-family: monospace; }
-  .btn { display: inline-block; background: #4F46E5; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 16px; }
-</style></head>
-<body>
-  <div class="card">
-    <div class="header"><h1>🔐 Your Intel Counselling Login</h1></div>
-    <p>Dear ${recipientName},</p>
-    <p>Your ${role} account has been created on Intel Counselling. Here are your login credentials:</p>
-    <div class="cred-box">
-      <div><strong>Email:</strong> ${email}</div>
-      <div><strong>Password:</strong> ${password}</div>
-    </div>
-    <p>⚠️ You will be asked to change your password on first login.</p>
-    <a href="${appUrl}/login" class="btn">Login Now →</a>
-  </div>
-</body>
-</html>`;
+async function appointmentEmailHtml({ parentName, studentName, psychiatristName, slot, notes, meetingLink, appUrl }) {
+  const t = await theme();
+  return t.emailLayout({
+    title: 'Appointment confirmed',
+    preheader: `An appointment is booked for ${t.esc(studentName)}`,
+    eyebrow: 'Appointment confirmed',
+    heading: `A session is booked for ${t.esc(studentName)}`,
+    body:
+      t.p(`Dear ${t.esc(parentName)}, an appointment has been scheduled for <strong>${t.esc(studentName)}</strong>.`) +
+      t.facts([
+        ['Date and time', `<strong>${t.esc(new Date(slot).toLocaleString())}</strong>`],
+        ['Counsellor', `Dr. ${t.esc(psychiatristName)}`],
+        ['Notes', notes ? t.esc(notes) : ''],
+        ['Meeting link', meetingLink ? `<a href="${t.esc(meetingLink)}" style="color:#1C3F39;">${t.esc(meetingLink)}</a>` : ''],
+      ]) +
+      t.button('View appointment', `${appUrl}/parent/appointments`),
+  });
+}
+
+async function credentialsEmailHtml({ recipientName, email, password, role, appUrl }) {
+  const t = await theme();
+  return t.emailLayout({
+    title: 'Your login',
+    preheader: 'Your Intel Counselling account is ready.',
+    eyebrow: 'Welcome',
+    heading: 'Your account is ready',
+    body:
+      t.p(`Dear ${t.esc(recipientName)}, your ${t.esc(role)} account has been created on Intel Counselling. Here are your sign-in details.`) +
+      t.facts([
+        ['Email', t.esc(email)],
+        ['Password', `<span style="font-family:Consolas,monospace;font-size:16px;">${t.esc(password)}</span>`],
+      ]) +
+      t.panel('You will be asked to choose a new password the first time you sign in.', 'peach') +
+      t.button('Sign in', `${appUrl}/login`),
+  });
+}
+
+async function otpEmailHtml({ recipientName, otp }) {
+  const t = await theme();
+  return t.emailLayout({
+    title: 'Password reset code',
+    preheader: `Your code is ${t.esc(otp)}. It is valid for 10 minutes.`,
+    eyebrow: 'Password reset',
+    heading: 'Reset your password',
+    body:
+      t.p(`Dear ${t.esc(recipientName)}, use this 6-digit code to reset your password.`) +
+      t.codeBox(t.esc(otp)) +
+      t.p('This code is valid for <strong>10 minutes</strong>.', 'text-align:center;') +
+      t.note("If you didn't ask for a reset, you can ignore this email, or contact us if you are worried."),
+  });
+}
+
+async function parentAlertEmailHtml({ parentName, studentName, testName, appUrl }) {
+  const t = await theme();
+  return t.emailLayout({
+    title: 'Support for your child',
+    preheader: `${t.esc(studentName)} may benefit from some extra support`,
+    eyebrow: 'A gentle heads-up',
+    heading: `${t.esc(studentName)} may benefit from extra support`,
+    body:
+      t.p(`Dear ${t.esc(parentName)}, your child <strong>${t.esc(studentName)}</strong> completed a screening (<strong>${t.esc(testName)}</strong>) that suggests they may benefit from some additional support.`) +
+      t.panel('This is not a diagnosis. It is a prompt to check in, and a counsellor can help from here.', 'sage') +
+      t.p('Please sign in to the portal to see the details and book a counselling session if you would like one.') +
+      t.button('Open the portal', `${appUrl}/parent/appointments`),
+  });
 }
 
 async function sendAlertEmail({ to, psychiatristName, studentName, testName, score, maxScore, severity, schoolName }) {
   return sendEmail({
     to,
-    subject: `⚠️ Intel Counselling Alert: ${studentName} — ${testName} Score Requires Attention`,
-    html: alertEmailHtml({
-      psychiatristName, studentName, testName, score, maxScore, severity, schoolName,
-      appUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
-    }),
+    subject: `Intel Counselling alert: ${studentName}, ${testName} needs attention`,
+    html: await alertEmailHtml({ psychiatristName, studentName, testName, score, maxScore, severity, schoolName, appUrl: FRONTEND() }),
   });
 }
 
 async function sendAppointmentEmail({ to, parentName, studentName, psychiatristName, slot, notes, meetingLink }) {
   return sendEmail({
     to,
-    subject: `📅 Intel Counselling: Appointment Confirmed for ${studentName}`,
-    html: appointmentEmailHtml({
-      parentName, studentName, psychiatristName, slot, notes, meetingLink,
-      appUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
-    }),
+    subject: `Intel Counselling: appointment confirmed for ${studentName}`,
+    html: await appointmentEmailHtml({ parentName, studentName, psychiatristName, slot, notes, meetingLink, appUrl: FRONTEND() }),
   });
 }
 
 async function sendCredentialsEmail({ to, recipientName, email, password, role }) {
   return sendEmail({
     to,
-    subject: '🔐 Your Intel Counselling Login Credentials',
-    html: credentialsEmailHtml({
-      recipientName, email, password, role,
-      appUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
-    }),
+    subject: 'Your Intel Counselling login',
+    html: await credentialsEmailHtml({ recipientName, email, password, role, appUrl: FRONTEND() }),
   });
-}
-
-function otpEmailHtml({ recipientName, otp }) {
-  return `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><style>
-  body { font-family: Inter, Arial, sans-serif; background: #f8fafc; margin: 0; padding: 20px; }
-  .card { background: white; border-radius: 12px; padding: 32px; max-width: 600px; margin: 0 auto; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-  .header { background: linear-gradient(135deg, #1A1A1A, #333333); border-radius: 8px; padding: 24px; margin-bottom: 24px; text-align: center; }
-  .header h1 { color: white; margin: 0; font-size: 24px; }
-  .otp-box { background: #f8fafc; border: 2px dashed #4F46E5; border-radius: 8px; padding: 20px; margin: 24px 0; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #4F46E5; }
-  .footer { color: #9ca3af; font-size: 12px; text-align: center; margin-top: 24px; }
-</style></head>
-<body>
-  <div class="card">
-    <div class="header"><h1>🧠 Intel Counselling</h1></div>
-    <p>Dear ${recipientName},</p>
-    <p>You requested to reset your password. Use the following 6-digit One-Time Password (OTP) to proceed. This code is valid for 10 minutes:</p>
-    <div class="otp-box">${otp}</div>
-    <p>If you did not request a password reset, please ignore this email or contact support if you have concerns.</p>
-    <div class="footer">Intel Counselling — Student Mental Health Platform</div>
-  </div>
-</body>
-</html>`;
 }
 
 async function sendOTPEmail({ to, recipientName, otp }) {
   return sendEmail({
     to,
-    subject: '🔐 Your Intel Counselling Password Reset OTP',
-    html: otpEmailHtml({ recipientName, otp }),
+    subject: 'Your Intel Counselling password reset code',
+    html: await otpEmailHtml({ recipientName, otp }),
   });
-}
-
-function parentAlertEmailHtml({ parentName, studentName, testName, appUrl }) {
-  return `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><style>
-  body { font-family: Inter, Arial, sans-serif; background: #f8fafc; margin: 0; padding: 20px; }
-  .card { background: white; border-radius: 12px; padding: 32px; max-width: 600px; margin: 0 auto; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-  .header { background: linear-gradient(135deg, #1A1A1A, #333333); border-radius: 8px; padding: 24px; margin-bottom: 24px; text-align: center; }
-  .header h1 { color: white; margin: 0; font-size: 24px; }
-  .btn { display: inline-block; background: #4F46E5; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 16px; }
-  .footer { color: #9ca3af; font-size: 12px; text-align: center; margin-top: 24px; }
-</style></head>
-<body>
-  <div class="card">
-    <div class="header"><h1>🧠 Intel Counselling</h1></div>
-    <p>Dear ${parentName},</p>
-    <p>Your child <strong>${studentName}</strong> has completed a mental health screening (<strong>${testName}</strong>) that indicates they may benefit from additional support.</p>
-    <p>Please log in to your portal to review the results and schedule a counseling session if needed.</p>
-    <a href="${appUrl}/parent/appointments" class="btn">Log In to Portal →</a>
-    <div class="footer">Intel Counselling — Student Mental Health Platform</div>
-  </div>
-</body>
-</html>`;
 }
 
 async function sendParentAlertEmail({ to, parentName, studentName, testName }) {
   return sendEmail({
     to,
-    subject: `⚠️ Intel Counselling Alert: Support resources for ${studentName}`,
-    html: parentAlertEmailHtml({
-      parentName, studentName, testName,
-      appUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+    subject: `Intel Counselling: support for ${studentName}`,
+    html: await parentAlertEmailHtml({ parentName, studentName, testName, appUrl: FRONTEND() }),
+  });
+}
+
+async function sendMfaEmail({ to, otp }) {
+  const t = await theme();
+  return sendEmail({
+    to,
+    subject: 'Your Intel Counselling sign-in code',
+    text: `Your sign-in code is ${otp}. It expires in 10 minutes. If you did not just sign in, change your password now.`,
+    html: t.emailLayout({
+      title: 'Sign-in code',
+      preheader: `Your sign-in code is ${t.esc(otp)}.`,
+      eyebrow: 'Admin sign-in',
+      heading: 'Your sign-in code',
+      audience: 'team',
+      body:
+        t.p('Enter this code to finish signing in.') +
+        t.codeBox(t.esc(otp)) +
+        t.p('It expires in <strong>10 minutes</strong>.', 'text-align:center;') +
+        t.panel("If you didn't just sign in, change your password now and tell the team.", 'peach'),
     }),
   });
 }
 
-module.exports = { sendEmail, sendAlertEmail, sendAppointmentEmail, sendCredentialsEmail, sendOTPEmail, sendParentAlertEmail };
+async function sendDeletionRequestEmail({ to, name, email, role, userId }) {
+  const t = await theme();
+  return sendEmail({
+    to,
+    subject: 'Data deletion request: school portal',
+    text: `${name} <${email}> (${role}, user id ${userId}) has asked for their account and data to be deleted. Delete the user from User Management and reply to confirm.`,
+    html: t.emailLayout({
+      title: 'Data deletion request',
+      preheader: `${t.esc(name)} has asked for their data to be deleted`,
+      eyebrow: 'Privacy request',
+      heading: 'A deletion request needs action',
+      audience: 'team',
+      body:
+        t.facts([
+          ['Name', `<strong>${t.esc(name)}</strong>`],
+          ['Email', t.esc(email)],
+          ['Role', t.esc(role)],
+          ['User id', t.esc(userId)],
+        ]) +
+        t.panel('Delete this user from User Management and reply to confirm, within the legal deadline.', 'peach'),
+    }),
+  });
+}
+
+module.exports = { sendEmail, sendAlertEmail, sendAppointmentEmail, sendCredentialsEmail, sendOTPEmail, sendParentAlertEmail, sendMfaEmail, sendDeletionRequestEmail };
