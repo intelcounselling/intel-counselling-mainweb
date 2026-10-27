@@ -82,7 +82,7 @@ const Hero: React.FC<HeroProps> = ({ onStartTest, onStartCareerTest }) => {
           </button>
           <button
             onClick={onStartCareerTest}
-            className="inline-flex items-center justify-center h-12 px-6 rounded-full border border-intel-dark/20 text-intel-dark font-semibold whitespace-nowrap hover:border-intel-dark/40 hover:bg-white/60 hover:-translate-y-0.5 hover:scale-[1.03] transition-all duration-300 ease-bounce focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-intel-dark"
+            className="inline-flex items-center justify-center h-12 px-6 rounded-full bg-intel-dark text-white font-semibold whitespace-nowrap shadow-[0_6px_20px_rgba(26,26,26,0.25)] hover:bg-black hover:-translate-y-0.5 hover:scale-[1.03] hover:shadow-[0_10px_28px_rgba(26,26,26,0.32)] transition-all duration-300 ease-bounce focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-intel-dark focus-visible:ring-offset-[#F7EBD3]"
           >
             Career guidance test
           </button>
@@ -119,8 +119,8 @@ const Hero: React.FC<HeroProps> = ({ onStartTest, onStartCareerTest }) => {
           {/* Soft pastel shapes drifting behind the photo */}
           <div className="blob-drift absolute -top-6 -right-8 w-32 h-32 sm:w-40 sm:h-40 bg-peach rounded-[42%_58%_63%_37%/45%_40%_60%_55%]" aria-hidden="true" />
           <div className="blob-drift-alt absolute -bottom-8 right-10 w-24 h-24 sm:w-28 sm:h-28 bg-sage rounded-[58%_42%_38%_62%/52%_60%_40%_48%]" aria-hidden="true" />
-          <div className="absolute -inset-4 rounded-full border border-serene-green/15" aria-hidden="true" />
-          <div className="group absolute inset-0 rounded-full overflow-hidden border-[6px] border-white shadow-[0_24px_60px_rgba(28,63,57,0.18)]">
+          <div className="absolute -inset-4 rounded-full border border-intel-dark/30" aria-hidden="true" />
+          <div className="group absolute inset-0 rounded-full overflow-hidden border-[6px] border-intel-dark shadow-[0_24px_60px_rgba(26,26,26,0.28)]">
             <LazyImage
               src="/assets/imgs/hero_img.png"
               alt="A counsellor in conversation with a client"

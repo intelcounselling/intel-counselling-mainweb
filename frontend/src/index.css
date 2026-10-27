@@ -145,3 +145,48 @@ html {
    elsewhere, e.g. Navbar, resolve too). */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Playful buttons, site-wide: a springy lift on hover, a squish when pressed,
+   and a little life in the icon. Uses the standalone translate/scale/rotate
+   properties so it stacks with any transform a button already has. */
+:is(button, a):is(.rounded-full, .rounded-xl, .rounded-2xl):is(.font-medium, .font-semibold, .font-bold) {
+    transition: translate 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), scale 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+                transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s ease, color 0.2s ease,
+                border-color 0.2s ease, box-shadow 0.3s ease, opacity 0.2s ease;
+}
+:is(button, a):is(.rounded-full, .rounded-xl, .rounded-2xl):is(.font-medium, .font-semibold, .font-bold):not(:disabled):hover {
+    translate: 0 -2px;
+    scale: 1.04;
+}
+:is(button, a):is(.rounded-full, .rounded-xl, .rounded-2xl):is(.font-medium, .font-semibold, .font-bold):not(:disabled):active {
+    translate: 0 1px;
+    scale: 0.95;
+    transition-duration: 0.1s;
+}
+:is(button, a):is(.rounded-full, .rounded-xl, .rounded-2xl):is(.font-medium, .font-semibold, .font-bold) svg {
+    transition: translate 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), rotate 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+/* Arrows dash forward; any other icon gives a little wiggle */
+:is(button, a):is(.rounded-full, .rounded-xl, .rounded-2xl):is(.font-medium, .font-semibold, .font-bold):not(:disabled):hover .lucide-arrow-right {
+    translate: 4px 0;
+}
+:is(button, a):is(.rounded-full, .rounded-xl, .rounded-2xl):is(.font-medium, .font-semibold, .font-bold):not(:disabled):hover svg:not(.lucide-arrow-right):not(.lucide-arrow-left) {
+    animation: btnWiggle 0.5s ease-in-out;
+}
+:is(button, a):is(.rounded-full, .rounded-xl, .rounded-2xl):is(.font-medium, .font-semibold, .font-bold):not(:disabled):hover .lucide-arrow-left {
+    translate: -4px 0;
+}
+@keyframes btnWiggle {
+    0%, 100% { rotate: 0deg; }
+    25% { rotate: -14deg; }
+    60% { rotate: 10deg; }
+}
+@media (prefers-reduced-motion: reduce) {
+    :is(button, a):is(.rounded-full, .rounded-xl, .rounded-2xl):is(.font-medium, .font-semibold, .font-bold),
+    :is(button, a):is(.rounded-full, .rounded-xl, .rounded-2xl):is(.font-medium, .font-semibold, .font-bold) svg {
+        transition: background-color 0.2s ease, color 0.2s ease;
+        translate: none !important;
+        scale: none !important;
+        animation: none !important;
+    }
+}

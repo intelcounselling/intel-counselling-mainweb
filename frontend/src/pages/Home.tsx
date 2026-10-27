@@ -44,15 +44,26 @@ const Home: React.FC = () => {
 
       {/* Inquiry section */}
       <section id="inquiry" className="relative z-30 bg-[#1F1E1B] pt-12 pb-20 md:pt-16 md:pb-28 scroll-mt-20">
-        <div className="max-w-4xl mx-auto px-5 sm:px-8">
+        <div className="max-w-6xl mx-auto px-5 sm:px-8">
           <FadeIn>
-            <blockquote className="max-w-3xl mx-auto mb-14 md:mb-20 text-center serif italic font-normal text-2xl sm:text-3xl md:text-4xl leading-snug text-[#E9DCC3]">
-              “The first step towards healing is recognising that you do not have to carry the burden alone.”
-            </blockquote>
+            <figure className="relative max-w-3xl mx-auto mb-16 md:mb-24 text-center">
+              <span className="serif block text-7xl md:text-8xl leading-none text-terracotta/40 select-none" aria-hidden="true">&ldquo;</span>
+              <blockquote className="-mt-6 md:-mt-8">
+                <p className="text-base sm:text-lg md:text-xl font-light tracking-[0.04em] leading-relaxed text-white/70">
+                  The first step towards healing is recognising that
+                </p>
+                <p className="serif italic mt-3 md:mt-4 text-3xl sm:text-4xl md:text-[3.25rem] leading-[1.25] md:leading-[1.2] text-[#F4EFE6]">
+                  you do not have to carry the <span className="text-terracotta">burden alone.</span>
+                </p>
+              </blockquote>
+              <div className="mt-8 flex items-center justify-center gap-3" aria-hidden="true">
+                <span className="h-px w-10 bg-terracotta/40" />
+                <span className="w-1.5 h-1.5 rounded-full bg-terracotta" />
+                <span className="h-px w-10 bg-terracotta/40" />
+              </div>
+            </figure>
           </FadeIn>
-          <div className="max-w-2xl mx-auto">
-            <InquiryForm />
-          </div>
+          <InquiryForm />
         </div>
       </section>
     </main>

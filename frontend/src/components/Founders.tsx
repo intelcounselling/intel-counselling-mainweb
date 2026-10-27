@@ -63,40 +63,40 @@ const Founders: React.FC = () => {
           const isOpen = open === idx;
           return (
             <FadeIn key={f.name} delay={idx * 100}>
-              <article className="bg-white rounded-[32px] border border-black/5 p-6 sm:p-8 transition-all duration-500 ease-bounce hover:-translate-y-1 hover:shadow-[0_16px_36px_rgba(26,26,26,0.08)]">
+              <article className="bg-[#1F1E1B] rounded-[32px] border border-white/10 p-6 sm:p-8 shadow-[0_12px_30px_rgba(26,26,26,0.18)] transition-all duration-500 ease-bounce hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(26,26,26,0.3)]">
                 <div className="flex items-center gap-5">
                   <div className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 p-1 bg-peach rounded-[44%_56%_52%_48%/50%_44%_56%_50%]"><div className="w-full h-full overflow-hidden rounded-[44%_56%_52%_48%/50%_44%_56%_50%]">
                     <LazyImage src={f.img} alt={f.name} className="w-full h-full object-cover" /></div>
                   </div>
                   <div className="min-w-0">
-                    <h3 className="serif text-xl sm:text-2xl text-intel-dark leading-tight">{f.name}</h3>
-                    <p className="mt-1 text-sm text-intel-dark/60">{f.title}</p>
-                    <p className="mt-2 text-xs font-semibold text-[#8a6a3f]">{f.badge}</p>
+                    <h3 className="serif text-xl sm:text-2xl text-[#F4EFE6] leading-tight">{f.name}</h3>
+                    <p className="mt-1 text-sm text-white/60">{f.title}</p>
+                    <p className="mt-2 text-xs font-semibold text-terracotta">{f.badge}</p>
                   </div>
                 </div>
 
-                <p className="mt-6 text-[15px] text-intel-dark/75 leading-relaxed">{f.desc}</p>
+                <p className="mt-6 text-[15px] text-white/70 leading-relaxed">{f.desc}</p>
 
                 <ul className="mt-5 flex flex-wrap gap-2" aria-label={f.specialtiesLabel}>
                   {f.specialties.map((s) => (
-                    <li key={s} className="text-xs font-medium text-intel-dark/70 bg-[#F7EBD3] rounded-full px-3 py-1.5">{s}</li>
+                    <li key={s} className="text-xs font-medium text-white/80 bg-white/10 rounded-full px-3 py-1.5">{s}</li>
                   ))}
                 </ul>
 
                 {isOpen && (
-                  <div className="mt-6 pt-6 border-t border-black/5 space-y-5">
-                    <p className="text-[15px] text-intel-dark/75 leading-relaxed">{f.detailedBio}</p>
-                    <blockquote className="border-l-2 border-terracotta pl-4 serif italic text-intel-dark/80 leading-relaxed">
+                  <div className="mt-6 pt-6 border-t border-white/10 space-y-5">
+                    <p className="text-[15px] text-white/70 leading-relaxed">{f.detailedBio}</p>
+                    <blockquote className="border-l-2 border-terracotta pl-4 serif italic text-white/80 leading-relaxed">
                       “{f.philosophy}”
                     </blockquote>
                   </div>
                 )}
 
-                <div className="mt-6 pt-5 border-t border-black/5 flex items-center justify-between">
+                <div className="mt-6 pt-5 border-t border-white/10 flex items-center justify-between">
                   <button
                     onClick={() => setOpen(isOpen ? null : idx)}
                     aria-expanded={isOpen}
-                    className="inline-flex items-center gap-1.5 text-sm font-semibold text-serene-green hover:text-[#24524a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-serene-green rounded"
+                    className="inline-flex items-center gap-1.5 text-sm font-semibold text-terracotta hover:text-[#d9b98d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta rounded"
                   >
                     {isOpen ? 'Show less' : 'Read full profile'}
                     <ChevronDown size={16} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
@@ -104,7 +104,7 @@ const Founders: React.FC = () => {
                   <a
                     href={CLINIC.emailHref}
                     aria-label={`Email Intel Counselling about ${f.name}`}
-                    className="inline-flex items-center gap-1.5 text-sm text-intel-dark/55 hover:text-intel-dark"
+                    className="inline-flex items-center gap-1.5 text-sm text-white/55 hover:text-white"
                   >
                     <Mail size={15} /> Contact
                   </a>

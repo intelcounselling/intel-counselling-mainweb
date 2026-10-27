@@ -1,5 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+
+// Playful touches: each tile leans a little and wears a pastel frame
+const TILTS = [-2, 1.5, -1, 2, -1.5, 1];
+const FRAMES = ['#E6DEEC', '#DCE8DC', '#F6DCC8', '#DCE6EE', '#F7EBD3'];
 import { LazyImage } from './ui/LazyImage';
 
 const Gallery: React.FC = () => {
@@ -88,11 +92,13 @@ const Gallery: React.FC = () => {
 
   return (
     <section id="gallery" className="bg-[#1A1A1A] py-12 md:py-16 scroll-mt-20 overflow-hidden select-none">
-      <div>
+      <div className="relative">
+        <div className="pointer-events-none absolute -left-24 top-1/3 w-80 h-80 rounded-full bg-[#78A083]/20 blur-3xl" aria-hidden="true" />
+        <div className="pointer-events-none absolute -right-24 bottom-0 w-96 h-96 rounded-full bg-[#C19B6C]/15 blur-3xl" aria-hidden="true" />
         {/* Header */}
-        <div className="max-w-6xl mx-auto px-5 sm:px-8 mb-10 sm:mb-12">
-          <p className="text-sm font-semibold text-terracotta mb-3">Gallery</p>
-          <h2 className="serif text-3xl md:text-[2.75rem] leading-tight text-[#F4EFE6]">Moments from our work</h2>
+        <div className="relative max-w-6xl mx-auto px-5 sm:px-8 mb-8 sm:mb-10">
+          <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-terracotta mb-3"><Sparkles size={14} /> Gallery</p>
+          <h2 className="serif text-3xl md:text-[2.75rem] leading-tight text-[#F4EFE6]">Moments from <span className="italic text-terracotta">our work</span></h2>
           <p className="mt-4 text-base md:text-lg text-white/60">Drag or scroll to browse. Select a photo to enlarge it.</p>
         </div>
 
@@ -113,10 +119,10 @@ const Gallery: React.FC = () => {
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
             onTouchEnd={stopDrag}
-            className={`flex overflow-x-auto overflow-y-hidden px-4 sm:px-8 md:px-14 pb-2
+            className={`flex items-center overflow-x-auto overflow-y-hidden px-4 sm:px-8 md:px-14
                         [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden
                         ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-            style={{ height: `${carouselH + 12}px` }}
+            style={{ height: `${carouselH + 48}px` }}
           >
             <div
               className="flex items-center"
@@ -127,32 +133,31 @@ const Gallery: React.FC = () => {
                   <div
                     key={`${img.id}-${index}`}
                     onClick={() => { if (!draggedRef.current) setSelectedImage(img); }}
-                    className="relative overflow-hidden rounded-xl sm:rounded-2xl md:rounded-3xl
-                               bg-[#2A2825] border border-white/[0.07]
-                               group/tile cursor-pointer shrink-0
-                               transition-all duration-500
-                               hover:border-white/20"
+                    className="relative overflow-hidden rounded-2xl md:rounded-[28px] p-1.5 sm:p-2
+                               group/tile cursor-pointer shrink-0 shadow-[0_10px_26px_rgba(0,0,0,0.4)]
+                               transition-transform duration-500 ease-bounce
+                               [transform:rotate(var(--r))] hover:[transform:rotate(0deg)_translateY(-6px)_scale(1.05)]"
                     style={{
                       width: `${cardW}px`,
                       minWidth: `${cardW}px`,
                       height: `${carouselH}px`,
+                      backgroundColor: FRAMES[index % FRAMES.length],
+                      ['--r' as string]: `${TILTS[index % TILTS.length]}deg`,
                     }}
                   >
                     <LazyImage
                       src={img.src}
                       alt={`Gallery ${img.id}`}
                       draggable={false}
+                      wrapperClassName="!bg-transparent rounded-xl md:rounded-[22px]"
                       className="w-full h-full object-cover pointer-events-none
                                  transition-transform duration-[2000ms] ease-out
                                  group-hover/tile:scale-[1.04]"
                     />
-                    <div className="absolute inset-0 bg-black/0 group-hover/tile:bg-black/15
-                                    transition-colors duration-400 flex items-center justify-center">
-                      <span className="opacity-0 group-hover/tile:opacity-100 transition-opacity duration-300
-                                       text-white/80 text-[11px] font-semibold tracking-widest uppercase">
-                        View
-                      </span>
-                    </div>
+                    <span className="absolute bottom-4 right-4 sm:bottom-5 sm:right-5 rounded-full bg-white/90 px-3 py-1 text-[11px] font-bold text-intel-dark
+                                     opacity-0 translate-y-1 transition-all duration-300 group-hover/tile:opacity-100 group-hover/tile:translate-y-0">
+                      View
+                    </span>
                   </div>
                 );
               })}
