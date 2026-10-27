@@ -47,8 +47,7 @@ const Home: React.FC = () => {
         <div className="max-w-6xl mx-auto px-5 sm:px-8">
           <FadeIn>
             <figure className="relative max-w-3xl mx-auto mb-16 md:mb-24 text-center">
-              <span className="serif block text-7xl md:text-8xl leading-none text-terracotta/40 select-none" aria-hidden="true">&ldquo;</span>
-              <blockquote className="-mt-6 md:-mt-8">
+              <blockquote>
                 <p className="text-base sm:text-lg md:text-xl font-light tracking-[0.04em] leading-relaxed text-white/70">
                   The first step towards healing is recognising that
                 </p>
