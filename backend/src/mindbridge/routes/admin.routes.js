@@ -28,6 +28,8 @@ router.get('/schools/:id', ...admin, validateUUID('id'), ctrl.getSchoolDetail);
 router.put('/schools/:id', ...admin, upload.single('logo'), validateUUID('id'), ctrl.updateSchool);
 router.delete('/schools/:id', ...superAdmin, validateUUID('id'), ctrl.deleteSchool);
 router.get('/schools/:id/students', ...admin, validateUUID('id'), ctrl.getSchoolStudents);
+router.get('/schools/:id/guardian-consent', ...admin, validateUUID('id'), ctrl.getGuardianConsentStatus);
+router.post('/schools/:id/guardian-consent', ...admin, validateUUID('id'), ctrl.recordGuardianConsent);
 router.post('/schools/:id/family', ...admin, validateUUID('id'), ctrl.createFamily);
 router.post('/schools/:id/generate-credentials', ...admin, validateUUID('id'), upload.single('csv'), ctrl.generateBulkCredentials);
 

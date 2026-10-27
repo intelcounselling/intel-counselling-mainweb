@@ -87,7 +87,7 @@ export default function TestList() {
           <div className="text-center md:text-left">
             <h4 className="text-xl font-bold text-[#111111] mb-2" style={{ fontFamily: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif' }}>Your Privacy Matters</h4>
             <p className="text-[#555555] leading-relaxed">
-              Your assessment results are strictly private by default. You maintain full control and can choose to share them with your school's mental health team only when you feel ready.
+              Your results are private. Your school can't see them. Our counsellor sees a result only if you choose to share it, or if your answers suggest you may need support, so we can check you're okay. Your parents can see your results.
             </p>
           </div>
         </div>

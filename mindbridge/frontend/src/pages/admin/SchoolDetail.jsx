@@ -95,6 +95,8 @@ export default function SchoolDetail() {
         )}
       />
 
+      <GuardianConsentCard schoolId={id} />
+
       {/* Stats Cards */}
       {school && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -223,5 +225,49 @@ export default function SchoolDetail() {
         </div>
       </Modal>
     </div>
+  );
+}
+
+// DPDP Act: the school confirms it holds signed parent/guardian consent forms.
+// Students without a recorded consent can't save assessments.
+function GuardianConsentCard({ schoolId }) {
+  const qc = useQueryClient();
+  const { success, error: toastError } = useToast();
+  const { data } = useQuery({
+    queryKey: ['guardian-consent', schoolId],
+    queryFn: () => api.get(`/admin/schools/${schoolId}/guardian-consent`).then((r) => r.data),
+  });
+  const record = useMutation({
+    mutationFn: () => api.post(`/admin/schools/${schoolId}/guardian-consent`, {}),
+    onSuccess: ({ data: r }) => {
+      success(`Consent recorded for ${r.recorded} student${r.recorded === 1 ? '' : 's'}.`);
+      qc.invalidateQueries({ queryKey: ['guardian-consent', schoolId] });
+    },
+    onError: () => toastError('Could not record consent. Please try again.'),
+  });
+  if (!data) return null;
+  const missing = data.total - data.consented;
+  return (
+    <Card className={missing ? 'border-amber-200 bg-amber-50/60' : ''}>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h3 className="text-base font-semibold text-surface-900">Parent / guardian consent</h3>
+          <p className="text-sm text-surface-600 mt-1">
+            {data.consented} of {data.total} students have consent on record.
+            {missing > 0 && ' The others can\u2019t save assessments until it is recorded.'}
+          </p>
+        </div>
+        {missing > 0 && (
+          <Button
+            loading={record.isPending}
+            onClick={() => {
+              if (window.confirm(`Confirm the school holds signed parent/guardian consent forms for all ${missing} remaining students. This is recorded against your account.`)) record.mutate();
+            }}
+          >
+            Record consent for {missing} student{missing === 1 ? '' : 's'}
+          </Button>
+        )}
+      </div>
+    </Card>
   );
 }

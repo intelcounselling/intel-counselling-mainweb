@@ -1,4 +1,5 @@
 const prisma = require('../prisma');
+const { STAFF_VISIBLE } = require('../utils/privacy');
 const { sendAppointmentEmail } = require('../services/email.service');
 const { parsePagination, buildPaginationMeta } = require('../utils/pagination');
 const { handleError } = require('../utils/errorHandler');
@@ -155,7 +156,7 @@ async function bookAppointment(req, res) {
 
     // Get last 3 results for the child
     const recentResults = await prisma.testResult.findMany({
-      where: { studentId: childId },
+      where: { studentId: childId, isParentPerspective: false, ...STAFF_VISIBLE },
       take: 3,
       orderBy: { takenAt: 'desc' },
     });

@@ -14,6 +14,7 @@ export const OTP_MAX_ATTEMPTS = 5;
 export const OTP_PURPOSE = {
   VERIFY_EMAIL: 'verify_email',
   RESET_PASSWORD: 'reset_password',
+  GUARDIAN_CONSENT: 'guardian_consent',
 };
 
 export function generateOtp() {
@@ -74,14 +75,19 @@ function otpBodyHtml(name, otp, minutes, purposeLabel) {
 // provider rejects/errs. When BREVO_API_KEY is absent (local dev), the code
 // is printed to the server console instead and the send is treated as success
 // so flows remain testable offline.
-export async function sendOtpEmail({ to, name, otp, purpose }) {
+export async function sendOtpEmail({ to, name, otp, purpose, childName }) {
   const minutes = Math.round(OTP_TTL_MS / 60000);
-  const subject = purpose === OTP_PURPOSE.VERIFY_EMAIL
-    ? 'Verify your email — Intel Counselling'
-    : 'Your Password Reset Code — Intel Counselling';
-  const label = purpose === OTP_PURPOSE.VERIFY_EMAIL
-    ? 'Verify Your Email'
-    : 'Password Reset Request';
+  const guardian = purpose === OTP_PURPOSE.GUARDIAN_CONSENT;
+  const subject = guardian
+    ? `Your consent is needed for ${String(childName || 'your child').slice(0, 60)} — Intel Counselling`
+    : purpose === OTP_PURPOSE.VERIFY_EMAIL
+      ? 'Verify your email — Intel Counselling'
+      : 'Your Password Reset Code — Intel Counselling';
+  const label = guardian
+    ? 'Parent / Guardian Consent'
+    : purpose === OTP_PURPOSE.VERIFY_EMAIL
+      ? 'Verify Your Email'
+      : 'Password Reset Request';
 
   const apiKey = process.env.BREVO_API_KEY;
   if (!apiKey || apiKey === 'dummy') {

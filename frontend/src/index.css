@@ -28,20 +28,18 @@ body {
     overflow-x: hidden;
     overscroll-behavior: none;
 }
-h1, h2, h3, .serif {
-    font-family: 'Playfair Display', serif;
-    font-weight: 900;
-    letter-spacing: -0.02em;
+/* In the base layer so utilities (font-normal, font-light, tracking-*) can override it */
+@layer base {
+    h1, h2, h3, .serif {
+        font-family: 'Playfair Display', serif;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+    }
 }
 
 .bg-main { background-color: var(--color-bg); }
-.text-serene-green { color: var(--color-emerald); }
-.bg-serene-green { background-color: var(--color-emerald); }
-.text-intel-dark { color: var(--color-charcoal); }
-.bg-intel-dark { background-color: var(--color-charcoal); }
-.text-terracotta { color: var(--color-brass); }
-.bg-terracotta { background-color: var(--color-brass); }
-.border-terracotta { border-color: var(--color-brass); }
+/* text-/bg-/border- intel-dark, serene-green and terracotta (with /opacity
+   variants) come from tailwind.config.js colors. */
 .scroll-mt-nav { scroll-margin-top: 5rem; }
 
 /* Premium Button Hover Sweep */
@@ -69,13 +67,16 @@ h1, h2, h3, .serif {
 /* Reverted Reveal Pacing */
 .reveal {
     opacity: 0;
-    transform: translateY(20px);
-    transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    transform: translateY(16px) scale(0.98);
+    transition: opacity 0.7s ease-out, transform 0.8s cubic-bezier(0.34, 1.4, 0.64, 1);
     will-change: opacity, transform;
 }
 .reveal.visible {
     opacity: 1;
     transform: translateY(0);
+}
+@media (prefers-reduced-motion: reduce) {
+    .reveal { opacity: 1; transform: none; transition: none; }
 }
 
 @keyframes editorialFadeUp {

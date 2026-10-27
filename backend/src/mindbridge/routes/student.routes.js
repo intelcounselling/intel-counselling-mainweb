@@ -10,6 +10,7 @@ router.get('/tests', ...student, ctrl.getTests);
 router.post('/tests/:testId/submit', ...student, ctrl.submitTest);
 router.get('/results', ...student, ctrl.getResults);
 router.get('/results/:id', ...student, ctrl.getResult);
+router.put('/results/:id/share', ...student, ctrl.setResultSharing);
 router.post('/concerns', ...student, ctrl.submitConcern);
 router.get('/concerns', ...student, ctrl.getConcerns);
 

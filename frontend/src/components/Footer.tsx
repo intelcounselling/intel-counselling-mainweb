@@ -15,7 +15,7 @@ const Footer: React.FC = () => {
           {/* Brand */}
           <div className="sm:col-span-2 md:col-span-1">
             <Link to="/" className="flex items-center gap-2 mb-5 sm:mb-8 w-fit">
-              <div className="p-1.5 bg-terracotta rounded-lg text-white">
+              <div className="p-1.5 bg-terracotta rounded-lg text-intel-dark">
                 <Heart size={18} fill="currentColor" />
               </div>
               <span className="font-bold text-xl sm:text-2xl tracking-tight">Intel Counselling</span>
@@ -27,7 +27,7 @@ const Footer: React.FC = () => {
             </p>
             <Link
               to="/booking"
-              className="inline-flex items-center justify-center bg-terracotta text-white rounded-full px-6 py-3 font-bold text-sm hover:opacity-90 transition-opacity"
+              className="inline-flex items-center justify-center bg-terracotta text-intel-dark rounded-full px-6 py-3 font-bold text-sm hover:opacity-90 transition-opacity"
             >
               Book an Appointment
             </Link>
@@ -42,7 +42,7 @@ const Footer: React.FC = () => {
               <li><Link to="/#services" className={linkClass}>Therapy Services</Link></li>
               <li><Link to="/assessments" className={linkClass}>Self-Assessment</Link></li>
               <li><Link to="/career-assessment" className={linkClass}>Career Guidance</Link></li>
-              <li><Link to="/intell-assessment" className={linkClass}>Intell Student Assessments</Link></li>
+              <li><Link to="/intell-assessment" className={linkClass}>Intel Student Assessments</Link></li>
             </ul>
           </nav>
 
@@ -88,7 +88,7 @@ const Footer: React.FC = () => {
         {/* Bottom bar */}
         <div className="border-t border-white/10 pt-8 sm:pt-12 text-xs sm:text-sm text-white/40">
           <div className="mb-6 sm:mb-8">
-            <h5 className="font-bold text-white/60 uppercase tracking-widest text-[9px] sm:text-[10px] mb-3 sm:mb-4">Disclaimer</h5>
+            <h5 className="font-bold text-white/60 uppercase tracking-widest text-[11px] sm:text-[11px] mb-3 sm:mb-4">Disclaimer</h5>
             <p className="leading-relaxed text-xs sm:text-sm">
               All assessments provided by Intel Counselling are screening and guidance tools designed to enhance self-understanding
               and developmental planning. They are not diagnostic instruments and do not replace clinical evaluation or standardized
@@ -104,6 +104,8 @@ const Footer: React.FC = () => {
             <div className="flex gap-5 sm:gap-8">
               <Link to="/privacy" className="hover:text-white transition-colors duration-300 underline underline-offset-4 decoration-white/10 hover:decoration-white">Privacy Policy</Link>
               <Link to="/terms" className="hover:text-white transition-colors duration-300 underline underline-offset-4 decoration-white/10 hover:decoration-white">Terms of Service</Link>
+              <Link to="/refunds" className="hover:text-white transition-colors duration-300 underline underline-offset-4 decoration-white/10 hover:decoration-white">Refunds</Link>
+              <Link to="/grievance" className="hover:text-white transition-colors duration-300 underline underline-offset-4 decoration-white/10 hover:decoration-white">Grievance Officer</Link>
             </div>
           </div>
         </div>

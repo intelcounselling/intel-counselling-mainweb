@@ -3,6 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { FileText, RotateCcw, ArrowRight, Loader2, Sparkles, ShieldCheck, BadgeCheck, UserRound, Pencil, HeartPulse } from 'lucide-react';
 import FadeIn from '../components/FadeIn';
 import AssessmentRegistration from '../components/AssessmentRegistration';
+import PrivacyControls from '../components/PrivacyControls';
 import { CLINICAL_CONFIGS } from '../components/ClinicalQuestions';
 import { INTELL_META, INTELL_HUB, isIntellTest, intellTestPath, IntellIcon } from '../utils/intellMeta';
 import { apiClient } from '../utils/api';
@@ -17,7 +18,7 @@ interface ResultRow {
 
 const testTitle = (testId: string) =>
   testId === 'career' ? 'Career Guidance Assessment'
-    : isIntellTest(testId) ? `Intell: ${INTELL_META[testId]?.label || 'Assessment'}`
+    : isIntellTest(testId) ? `Intel: ${INTELL_META[testId]?.label || 'Assessment'}`
     : CLINICAL_CONFIGS[testId]?.title || 'Assessment';
 
 const formatDate = (value: string) => {
@@ -94,7 +95,7 @@ const MyResultsPage: React.FC = () => {
 
   const startable = [
     { id: 'career', title: testTitle('career'), note: entitled ? 'Purchased — retake free' : 'Premium' },
-    { id: 'intell', title: 'Intell Student Assessments', note: intell?.entitled ? 'Purchased — Module A + B' : 'Premium' },
+    { id: 'intell', title: 'Intel Student Assessments', note: intell?.moduleB ? 'Purchased — Module A + B' : intell?.entitled ? 'Purchased — Module A' : 'Premium' },
     ...Object.keys(CLINICAL_CONFIGS).map((id) => ({ id, title: CLINICAL_CONFIGS[id].title, note: 'Free' })),
   ];
 
@@ -103,7 +104,7 @@ const MyResultsPage: React.FC = () => {
       <div className="max-w-4xl mx-auto">
         <FadeIn>
           <div className="text-center mb-10">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-intel-dark/5 border border-black/5 text-terracotta text-[10px] font-bold uppercase tracking-[0.2em] mb-4">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-intel-dark/5 border border-black/5 text-terracotta text-[11px] font-bold uppercase tracking-[0.1em] mb-4">
               <Sparkles size={12} /> Your Space
             </div>
             <h1 className="text-3xl md:text-4xl font-black serif text-intel-dark mb-3">Hi, {user.name.split(' ')[0]}</h1>
@@ -138,25 +139,25 @@ const MyResultsPage: React.FC = () => {
             </div>
             <button
               onClick={() => setEditing(true)}
-              className="shrink-0 px-6 py-3 bg-white text-intel-dark border border-black/10 rounded-xl font-black uppercase tracking-widest text-[10px] hover:border-terracotta hover:text-terracotta transition-colors flex items-center justify-center gap-2"
+              className="shrink-0 px-6 py-3 bg-white text-intel-dark border border-black/10 rounded-xl font-semibold text-[11px] hover:border-terracotta hover:text-terracotta transition-colors flex items-center justify-center gap-2"
             >
               <Pencil size={12} /> {profileComplete ? 'Edit details' : 'Complete intake'}
             </button>
           </section>
         </FadeIn>
 
-        {/* Intell Student Assessments: progress + profile live on their own hub */}
+        {/* Intel Student Assessments: progress + profile live on their own hub */}
         {intell?.entitled && (
           <FadeIn>
-            <button onClick={() => navigate(INTELL_HUB)} className="w-full text-left bg-intel-dark text-white p-6 md:p-7 rounded-[28px] shadow-lg mb-10 flex flex-col md:flex-row md:items-center gap-5 hover:scale-[1.01] transition-transform">
+            <button onClick={() => navigate(INTELL_HUB)} className="w-full text-left bg-intel-dark text-white p-6 md:p-7 rounded-[28px] shadow-lg mb-10 flex flex-col md:flex-row md:items-center gap-5 transition-transform">
               <div className="flex -space-x-2 shrink-0">
                 {['intell_lp', 'intell_ew', 'phq9'].map((id) => <IntellIcon key={id} id={id} size="sm" />)}
               </div>
               <div className="flex-1">
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-terracotta">Intell Student Assessments</p>
-                <p className="font-black serif text-lg">{intell.tests.filter((t: any) => t.done).length} of 7 done{intell.profile?.complete ? ' — your integrated profile is ready' : ''}</p>
+                <p className="text-[11px] font-black uppercase tracking-[0.14em] text-terracotta">Intel Student Assessments</p>
+                <p className="font-black serif text-lg">{intell.tests.filter((t: any) => t.done && (intell.moduleB || /^intell_/.test(t.id))).length} of {intell.moduleB ? 7 : 5} done{intell.profile?.complete ? ' — your profile is ready' : ''}</p>
               </div>
-              <span className="shrink-0 inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">Open profile & tests <ArrowRight size={12} /></span>
+              <span className="shrink-0 inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-widest">Open profile & tests <ArrowRight size={12} /></span>
             </button>
           </FadeIn>
         )}
@@ -181,7 +182,7 @@ const MyResultsPage: React.FC = () => {
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-bold text-intel-dark serif text-base">{testTitle(testId)}</h3>
                       {testId === 'career' && r.order_id && (
-                        <span className="inline-flex items-center gap-1 bg-serene-green/10 text-serene-green text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border border-serene-green/30">
+                        <span className="inline-flex items-center gap-1 bg-serene-green/10 text-serene-green text-[11px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border border-serene-green/30">
                           <BadgeCheck size={10} /> Purchased
                         </span>
                       )}
@@ -191,13 +192,13 @@ const MyResultsPage: React.FC = () => {
                   <div className="flex gap-2 shrink-0">
                     <button
                       onClick={() => navigate(isIntellTest(testId) ? INTELL_HUB : `/assessments/${testId}?id=${encodeURIComponent(r.id)}`)}
-                      className="flex-1 md:flex-none px-5 py-3 bg-intel-dark text-white rounded-xl font-black uppercase tracking-widest text-[10px] hover:opacity-90 flex items-center justify-center gap-2"
+                      className="flex-1 md:flex-none px-5 py-3 bg-intel-dark text-white rounded-xl font-semibold text-[11px] hover:opacity-90 flex items-center justify-center gap-2"
                     >
                       View <ArrowRight size={12} />
                     </button>
                     <button
                       onClick={() => navigate(retakePath(testId))}
-                      className="flex-1 md:flex-none px-5 py-3 bg-white text-intel-dark border border-black/10 rounded-xl font-black uppercase tracking-widest text-[10px] hover:border-terracotta hover:text-terracotta transition-colors flex items-center justify-center gap-2"
+                      className="flex-1 md:flex-none px-5 py-3 bg-white text-intel-dark border border-black/10 rounded-xl font-semibold text-[11px] hover:border-terracotta hover:text-terracotta transition-colors flex items-center justify-center gap-2"
                     >
                       <RotateCcw size={12} /> Retake
                     </button>
@@ -217,13 +218,15 @@ const MyResultsPage: React.FC = () => {
               onClick={() => navigate(t.id === 'intell' ? INTELL_HUB : retakePath(t.id))}
               className="text-left bg-white p-5 rounded-[20px] border border-black/5 hover:border-terracotta/40 hover:shadow-md transition-all"
             >
-              <span className="text-[9px] font-black uppercase tracking-widest text-terracotta">{t.note}</span>
+              <span className="text-[11px] font-black uppercase tracking-widest text-terracotta">{t.note}</span>
               <span className="block font-bold text-sm text-intel-dark mt-1">{t.title}</span>
             </button>
           ))}
         </div>
 
-        <p className="text-center text-[10px] font-bold uppercase tracking-[0.15em] text-intel-dark/30 flex items-center justify-center gap-1.5 mt-10">
+        <PrivacyControls />
+
+        <p className="text-center text-[11px] font-bold uppercase tracking-[0.08em] text-intel-dark/30 flex items-center justify-center gap-1.5 mt-10">
           <ShieldCheck size={12} /> Your details and results are encrypted and private to your account
         </p>
       </div>

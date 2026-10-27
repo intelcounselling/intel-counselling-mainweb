@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Send, CheckCircle2, MessageSquare, User, Mail, Sparkles } from 'lucide-react';
+import { Send, CheckCircle2 } from 'lucide-react';
 import { apiClient } from '../utils/api';
 
 const InquiryForm: React.FC = () => {
@@ -31,7 +31,7 @@ const InquiryForm: React.FC = () => {
 
   if (isSubmitted) {
     return (
-      <div className="bg-[#F7EBD3] rounded-2xl sm:rounded-[40px] md:rounded-[60px] p-8 sm:p-12 md:p-20 text-center shadow-2xl border border-white/10">
+      <div className="bg-[#F7EBD3] rounded-2xl sm:rounded-[28px] md:rounded-[32px] p-8 sm:p-12 md:p-20 text-center shadow-2xl border border-white/10">
         <div className="w-16 h-16 sm:w-20 sm:h-20 bg-terracotta/20 text-terracotta rounded-full flex items-center justify-center mx-auto mb-6 sm:mb-8">
           <CheckCircle2 size={32} className="sm:hidden" />
           <CheckCircle2 size={40} className="hidden sm:block" />
@@ -42,7 +42,7 @@ const InquiryForm: React.FC = () => {
         </p>
         <button
           onClick={() => setIsSubmitted(false)}
-          className="text-terracotta font-black uppercase tracking-[0.2em] text-xs hover:opacity-70 transition-opacity"
+          className="text-terracotta font-black uppercase tracking-[0.1em] text-xs hover:opacity-70 transition-opacity"
         >
           Send another message
         </button>
@@ -51,17 +51,11 @@ const InquiryForm: React.FC = () => {
   }
 
   return (
-    <div className="bg-[#F7EBD3] rounded-2xl sm:rounded-[40px] md:rounded-[50px] p-5 sm:p-8 md:p-10 text-intel-dark shadow-2xl relative z-10 border border-white/10">
+    <div className="bg-[#F7EBD3] rounded-2xl sm:rounded-[28px] md:rounded-[32px] p-5 sm:p-8 md:p-10 text-intel-dark shadow-2xl relative z-10 border border-white/10">
       {/* Form header */}
       <div className="flex flex-col gap-3 sm:gap-4 mb-7 sm:mb-10">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 rounded-full
-                           bg-intel-dark/5 border border-black/5 text-terracotta
-                           text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] mb-3">
-            <Sparkles size={10} />
-            Reach Out Today
-          </div>
-          <h3 className="text-2xl sm:text-3xl md:text-5xl font-black serif leading-tight">Begin your inquiry.</h3>
+          <h3 className="text-3xl md:text-4xl serif leading-tight">Send us a message</h3>
         </div>
         <p className="text-intel-dark/60 text-sm sm:text-base md:text-lg font-light leading-relaxed max-w-sm">
           Have questions or need guidance on where to start? We're here to listen.
@@ -72,8 +66,8 @@ const InquiryForm: React.FC = () => {
         {/* Name + Email — stack on mobile, 2-col on md+ */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
           <div className="space-y-1.5 sm:space-y-2">
-            <label className="flex items-center gap-2 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-1">
-              <User size={10} /> Full Name
+            <label className="flex items-center gap-2 text-sm font-medium text-intel-dark/70 ml-1">
+              Full name
             </label>
             <input
               required type="text" placeholder="Your name"
@@ -85,8 +79,8 @@ const InquiryForm: React.FC = () => {
             />
           </div>
           <div className="space-y-1.5 sm:space-y-2">
-            <label className="flex items-center gap-2 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-1">
-              <Mail size={10} /> Email Address
+            <label className="flex items-center gap-2 text-sm font-medium text-intel-dark/70 ml-1">
+              Email address
             </label>
             <input
               required type="email" placeholder="you@example.com"
@@ -101,8 +95,8 @@ const InquiryForm: React.FC = () => {
 
         {/* Service select */}
         <div className="space-y-1.5 sm:space-y-2">
-          <label className="flex items-center gap-2 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-1">
-            Interested Service
+          <label className="flex items-center gap-2 text-sm font-medium text-intel-dark/70 ml-1">
+            Service you're interested in
           </label>
           <select
             className="w-full bg-white border border-black/5 rounded-xl sm:rounded-2xl
@@ -121,8 +115,8 @@ const InquiryForm: React.FC = () => {
 
         {/* Message */}
         <div className="space-y-1.5 sm:space-y-2">
-          <label className="flex items-center gap-2 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-1">
-            <MessageSquare size={10} /> How can we help?
+          <label className="flex items-center gap-2 text-sm font-medium text-intel-dark/70 ml-1">
+            How can we help?
           </label>
           <textarea
             required rows={4} placeholder="Tell us a little about what you're looking for..."
@@ -143,16 +137,16 @@ const InquiryForm: React.FC = () => {
         <div className="pt-2 sm:pt-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
           <button
             type="submit" disabled={isSubmitting}
-            className="w-full sm:w-auto bg-terracotta text-white px-8 sm:px-12 py-4 sm:py-5
-                       rounded-xl sm:rounded-2xl font-black text-sm sm:text-base
-                       hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] transition-all
+            className="w-full sm:w-auto bg-terracotta text-intel-dark px-8 sm:px-10 py-4
+                       rounded-full font-semibold text-base
+                       hover:opacity-90 active:scale-[0.98] transition-all
                        shadow-xl flex items-center justify-center gap-3 group disabled:opacity-50"
           >
-            {isSubmitting ? 'Sending...' : 'Send Message'}
+            {isSubmitting ? 'Sending…' : 'Send message'}
             {!isSubmitting && <Send size={16} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />}
           </button>
-          <p className="text-[9px] sm:text-[10px] font-bold opacity-40 uppercase tracking-[0.15em] italic text-center sm:text-left">
-            Your privacy is our priority. All inquiries are strictly confidential.
+          <p className="text-sm text-intel-dark/55 text-center sm:text-left">
+            Everything you share is kept confidential.
           </p>
         </div>
       </form>

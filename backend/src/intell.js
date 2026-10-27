@@ -1,6 +1,6 @@
-// Intell Student Assessments on the main site (Module A + Module B, one payment).
+// Intel Student Assessments on the main site (Module A + Module B, one payment).
 //
-// Module A: the five Intell assessments (questions from prisma/seedTests.cjs — the
+// Module A: the five Intel assessments (questions from prisma/seedTests.cjs — the
 // same definitions Mindbridge uses). Module B adds PHQ-9 and GAD-7, which are the
 // site's existing free screenings; their saved results count towards the profile.
 //
@@ -17,7 +17,8 @@ const { calculateScore } = require('./mindbridge/utils/scoringLogic.js');
 const { buildProfile } = require('./mindbridge/services/individualProfile.js');
 const { generateDetailedStudentReport } = require('./mindbridge/services/pdf.service.js');
 
-export const INTELL_SERVICE_ID = 'intell_assessment';
+export const INTELL_SERVICE_ID = 'intell_assessment'; // Module A
+export const INTELL_MODULE_B_ID = 'intell_module_b';  // Module B (includes A)
 
 const CLINICAL_OPTIONS = [
   { label: 'Not at all', value: 0 },
@@ -84,7 +85,7 @@ const DEFS = {
 export const INTELL_TEST_IDS = Object.keys(DEFS);
 export const isIntellOnlyTest = (testId) => /^intell_/.test(String(testId || ''));
 
-// Public definitions for the five Intell tests (PHQ-9/GAD-7 run in the existing screening UI).
+// Public definitions for the five Intel tests (PHQ-9/GAD-7 run in the existing screening UI).
 // Reverse-scoring flags and thresholds stay on the server.
 export function publicDefinitions() {
   return INTELL_TEST_IDS.map((id) => {
@@ -132,10 +133,23 @@ export function scoreResult(testId, digits, takenAt, id) {
 
 // ── Entitlement & data ────────────────────────────────────────
 
-// One payment, linked to the account, unlocks both modules for good.
-export async function hasIntellAccess(userId) {
-  if (!userId) return false;
-  return (await countPaidOrders(userId, INTELL_SERVICE_ID)) > 0;
+// Two purchases, both tied to the account for good:
+//   Module A (INTELL_SERVICE_ID)   — the five Intel tests
+//   Module B (INTELL_MODULE_B_ID)  — the full 7-test battery + integrated profile (includes A)
+export async function intellAccess(userId) {
+  if (!userId) return { a: false, b: false };
+  const [a, b] = await Promise.all([countPaidOrders(userId, INTELL_SERVICE_ID), countPaidOrders(userId, INTELL_MODULE_B_ID)]);
+  return { a: a > 0 || b > 0, b: b > 0 };
+}
+
+export const hasIntellAccess = async (userId) => (await intellAccess(userId)).a;
+
+// What this buyer is charged: Module B costs only the difference once A is owned.
+export function intellPriceFor(serviceId, access, prices) {
+  if (serviceId === INTELL_MODULE_B_ID && access.a) {
+    return Math.max(1, prices[INTELL_MODULE_B_ID] - prices[INTELL_SERVICE_ID]);
+  }
+  return prices[serviceId];
 }
 
 export async function loadIntellResults(userId) {
@@ -146,33 +160,37 @@ export async function loadIntellResults(userId) {
       const digits = decrypt(row.encrypted_answers, row.iv);
       if (validAnswers(row.test_id, digits)) results.push({ testId: row.test_id, ...scoreResult(row.test_id, digits, row.created_at, row.id) });
     } catch (err) {
-      console.error('Skipping unreadable Intell result', row.id, err.message);
+      console.error('Skipping unreadable Intel result', row.id, err.message);
     }
   }
   return results;
 }
 
-export const intellProfile = (results) => buildProfile(results, 'B');
+// Module B buyers get the integrated 7-test profile; Module A the five Intel tests only.
+export const intellProfile = (results, moduleB = true) =>
+  moduleB ? buildProfile(results, 'B') : buildProfile(results.filter((r) => isIntellOnlyTest(r.testId)), 'A');
 
 // A single result that on its own calls for clinical review (PHQ-9 ≥ 15, GAD-7 ≥ 15,
 // or any answer above "not at all" on the self-harm item).
 export const isHighRisk = (result) => buildProfile([result], 'B').recommendation.level === 'referral';
 
 // The integrated report, streamed to a response (or any writable with setHeader).
-export function writeReport(res, account, results) {
+// Module A: the five Intel results and answers. Module B: plus PHQ-9/GAD-7 and the integrated profile.
+export function writeReport(res, account, results, moduleB = true) {
   const [firstName, ...rest] = String(account.name || 'Client').trim().split(/\s+/);
   const student = { firstName, lastName: rest.join(' '), email: account.email, role: 'INDIVIDUAL' };
-  return generateDetailedStudentReport(res, { student, results, profile: intellProfile(results) });
+  const shown = moduleB ? results : results.filter((r) => isIntellOnlyTest(r.testId));
+  return generateDetailedStudentReport(res, { student, results: shown, profile: moduleB ? intellProfile(shown) : null });
 }
 
 // Same report as a Buffer — attached to the counsellor's booking email.
-export async function reportBuffer(account, results) {
+export async function reportBuffer(account, results, moduleB = true) {
   const sink = new PassThrough();
   sink.setHeader = () => {}; // pdf.service sets download headers on a real response
   const chunks = [];
   sink.on('data', (c) => chunks.push(c));
   const done = new Promise((resolve, reject) => { sink.on('end', resolve); sink.on('error', reject); });
-  await writeReport(sink, account, results);
+  await writeReport(sink, account, results, moduleB);
   await done;
   return Buffer.concat(chunks);
 }

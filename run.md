@@ -14,9 +14,12 @@ Create a file named `.env.local` in the **root** directory and define the follow
 # Gemini API Key (Required for the AI features in the frontend)
 GEMINI_API_KEY=your_gemini_api_key_here
 
-# Cashfree Credentials (Required for payment processing)
-CASHFREE_APP_ID=your_cashfree_app_id_here
-CASHFREE_SECRET_KEY=your_cashfree_secret_key_here
+# Razorpay (Required for payment processing) - Dashboard > Account & Settings > API Keys
+RAZORPAY_KEY_ID=rzp_live_or_test_key_id
+RAZORPAY_KEY_SECRET=your_razorpay_key_secret
+# Dashboard > Webhooks: URL https://<backend>/api/razorpay-webhook, events payment.authorized,
+# payment.captured and order.paid, and this same secret
+RAZORPAY_WEBHOOK_SECRET=your_webhook_secret
 
 # Brevo API Key (Required for email communications)
 BREVO_API_KEY=your_brevo_api_key_here
@@ -112,7 +115,7 @@ AUTH_TOKEN_SECRET=<random>           # Main-site session signing
 JWT_ACCESS_SECRET=<random>           # Mindbridge portal access tokens
 JWT_REFRESH_SECRET=<random>          # Mindbridge portal refresh tokens
 FIREBASE_SERVICE_ACCOUNT={"type":"service_account",...}   # Optional — falls back to local JWT
-CASHFREE_APP_ID / CASHFREE_SECRET_KEY / BREVO_API_KEY       # Payments + email
+RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET / RAZORPAY_WEBHOOK_SECRET / BREVO_API_KEY   # Payments + email
 ALLOWED_ORIGINS=https://<vercel-frontend-domain>            # CORS in production
 DEMO_MODE=true|false                        # Optional — every price becomes ₹0.1 when true (see below)
 GOOGLE_CLIENT_ID=<id>.apps.googleusercontent.com   # "Sign in with Google" (must match the frontend's)
@@ -135,7 +138,7 @@ OAuth client ID (type **Web application**) and add the site's origins
 Set `DEMO_MODE=true` on the backend (Render → Environment, or root `.env.local`
 locally) and **restart/redeploy** — every service price becomes ₹1:
 
-- `create-cashfree-session` charges ₹1 for every service (the amount is
+- `create-payment-order` charges ₹1 for every service (the amount is
   derived server-side in `backend/src/pricing.js`; the client never sends one).
 - `GET /api/config` returns `{ demoMode: true, prices: { ...all 1 } }` and the
   frontend (`CareerPaymentGate`, `BookingModal`, `CareerGuidancePage`) displays
@@ -209,10 +212,43 @@ attached to the booking email. A result that on its own needs clinical review (P
 or the PHQ-9 self-harm item) emails `ADMIN_EMAIL`.
 
 ```env
-INTELL_PRICE=2499   # INR, one-time (placeholder default - set the real price)
+INTELL_PRICE_A=250   # INR, Module A (the five Intel tests)
+INTELL_PRICE_B=300   # INR, Module B (all seven + integrated profile; Module A owners pay the difference)
+FAMILY_PRICE=500     # INR, Mindbridge parent + student package (parent pays in the portal; unlocks
+                     #      Parent Perspective + Comparison Report for the whole family)
+# Remove any old INTELL_PRICE variable, it is no longer read.
 DEMO_MODE=true      # optional: every payment becomes INR 1 (all products)
 ```
 
 Database: `orders.user_id` is added automatically on startup (db.js). The Prisma schema also declares
 `users.profile`, `users.profile_iv` and the `bookings` table, so `prisma db push` no longer tries to
 drop them.
+
+---
+
+## Privacy & DPDP Act compliance
+
+What the code now does: parent/guardian consent for under-18s (website: emailed code;
+school portal: the school records it), a consent log, download-my-data and delete-my-account,
+a Grievance Officer page, a daily retention job, a one-year access log in the school portal,
+two-step sign-in for the super admin, and encryption of school-portal answers and session notes.
+
+Before deploying:
+
+1. `npm run db:push --workspace backend` — adds `AuditLog`, `User.guardianConsentAt/guardianConsentBy`,
+   `users.inactivity_warned_at` and the `consents` table. Additive only; nothing is dropped.
+2. **Record parent consent for existing school students** (school page → "Parent / guardian consent"),
+   otherwise they cannot save tests. Only do this where the school really holds signed forms.
+3. Set the environment variables below.
+
+```env
+ADMIN_EMAIL=intelcounselling@gmail.com   # clinic inbox for alerts, deletion requests
+ADMIN_MFA=on                             # super admin signs in with password + emailed code (off only for local dev)
+ENCRYPTION_KEY=...                       # already required; now also encrypts school-portal answers/notes
+RETENTION_ENABLED=false                  # the daily retention job only logs until this is "true"
+# RETENTION_ANON_DAYS=30  RETENTION_INACTIVE_DAYS=1095  RETENTION_WARNING_DAYS=30  RETENTION_SESSION_DAYS=1095
+```
+
+Not code (do these with a lawyer): data-processing agreements with Brevo, Razorpay, Google, Firebase
+and the hosts; a written breach-response plan; counsellor training on confidentiality limits and
+POCSO reporting; final review of the Privacy Policy and the DRAFT Refund policy.

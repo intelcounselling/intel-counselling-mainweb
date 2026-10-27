@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 // Client-side mirror of the backend's pricing config (GET /api/config).
 // Display-only: the charged amount is always derived server-side in
-// create-cashfree-session. Falls back to the standard price table when the
+// create-payment-order. Falls back to the standard price table when the
 // config endpoint is unreachable (e.g. offline dev without the backend).
 
 export const DEFAULT_PRICES = {
@@ -10,7 +10,8 @@ export const DEFAULT_PRICES = {
   session_inperson: 2000,
   career_assessment: 2999,
   career_assessment_plus: 4999,
-  intell_assessment: 2499,
+  intell_assessment: 250,
+  intell_module_b: 300,
 };
 
 export interface PricingConfig {

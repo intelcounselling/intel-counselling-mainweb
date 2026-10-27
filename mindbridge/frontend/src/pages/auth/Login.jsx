@@ -22,6 +22,7 @@ export default function Login() {
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [mfaToken, setMfaToken] = useState(null);
 
   const redirect = new URLSearchParams(location.search).get('redirect');
 
@@ -43,11 +44,17 @@ export default function Login() {
         userData = { user: data.user, accessToken: null }; 
       } catch (fbErr) {
         console.warn('Firebase login failed or unconfigured, falling back to local auth:', fbErr);
+        // A half-finished Firebase session must not stand in for the password + code path
+        await auth.signOut().catch(() => {});
         // Fallback to local JWT auth
         const { data } = await api.post('/auth/login', {
           email: form.email.trim().toLowerCase(),
           password: form.password,
         });
+        if (data.mfaRequired) {
+          setMfaToken(data.mfaToken);
+          return;
+        }
         userData = data;
       }
 
@@ -176,6 +183,16 @@ export default function Login() {
             </div>
           )}
 
+          {mfaToken ? (
+            <MfaStep
+              mfaToken={mfaToken}
+              onCancel={() => setMfaToken(null)}
+              onDone={(userData) => {
+                setAuth(userData);
+                navigate(userData.user.mustResetPassword ? '/reset-password' : (redirect || ROLE_DASHBOARDS[userData.user.role] || '/'), { replace: true });
+              }}
+            />
+          ) : (
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-sm font-medium text-surface-700 mb-1.5">
@@ -232,6 +249,7 @@ export default function Login() {
               Sign In
             </Button>
           </form>
+          )}
 
           <div className="mt-6 flex items-center justify-between">
             <span className="w-1/5 border-b border-surface-200 lg:w-1/4"></span>
@@ -257,5 +275,42 @@ export default function Login() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Second sign-in step for the super admin: the code emailed after the password
+function MfaStep({ mfaToken, onDone, onCancel }) {
+  const [otp, setOtp] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const submit = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    setErr('');
+    try {
+      const { data } = await api.post('/auth/login/verify', { mfaToken, otp });
+      onDone(data);
+    } catch (e2) {
+      setErr(e2.response?.data?.error || 'That code is not right. Please try again.');
+      setBusy(false);
+    }
+  };
+  return (
+    <form onSubmit={submit} className="space-y-5">
+      <p className="text-sm text-surface-600">We emailed a 6-digit code to your admin address. Enter it to finish signing in.</p>
+      {err && <p role="alert" className="text-sm text-red-600">{err}</p>}
+      <input
+        value={otp}
+        onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+        inputMode="numeric"
+        autoComplete="one-time-code"
+        placeholder="000000"
+        aria-label="Sign-in code"
+        className="form-input tracking-[0.4em] text-lg text-center"
+        required
+      />
+      <Button type="submit" variant="primary" size="lg" className="w-full" loading={busy} disabled={otp.length !== 6}>Verify and sign in</Button>
+      <button type="button" onClick={onCancel} className="w-full text-sm text-surface-500 underline">Start again</button>
+    </form>
   );
 }

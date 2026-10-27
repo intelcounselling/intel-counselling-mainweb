@@ -59,7 +59,7 @@ const AssessmentRegistration: React.FC<AssessmentRegistrationProps> = ({ testTit
 
     try {
       const { name, phone, age, gender, occupation, reason } = formData;
-      const data = await apiClient.put<any>('/api/profile', { name, phone, age, gender, occupation, reason });
+      const data = await apiClient.put<any>('/api/profile', { name, phone, age, gender, occupation, reason, consent: formData.consent });
       // Keep the cached session user (navbar name etc.) in step with the account
       setAuthSession(data.user, getAuthToken());
 
@@ -89,7 +89,7 @@ const AssessmentRegistration: React.FC<AssessmentRegistrationProps> = ({ testTit
 
   return (
     <div className="min-h-screen bg-[#F6F7F9] pt-20 md:pt-28 pb-12 px-4 flex items-center justify-center">
-      <div className="relative bg-white w-full max-w-2xl p-6 md:p-12 rounded-[40px] shadow-xl border border-black/5 animate-in fade-in duration-500">
+      <div className="relative bg-white w-full max-w-2xl p-6 md:p-12 rounded-[28px] shadow-xl border border-black/5 animate-in fade-in duration-500">
         
         {/* Back Button */}
         <button 
@@ -101,8 +101,8 @@ const AssessmentRegistration: React.FC<AssessmentRegistrationProps> = ({ testTit
 
         {/* Header Section */}
         <div className="text-center mt-6 mb-10">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-intel-dark/5 border border-black/5 text-terracotta text-[10px] font-bold uppercase tracking-[0.2em] mb-4">
-            <Sparkles size={12} className="animate-pulse" />
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-intel-dark/5 border border-black/5 text-terracotta text-[11px] font-bold uppercase tracking-[0.1em] mb-4">
+            <Sparkles size={12} />
             Basic Details
           </div>
           <h2 className="text-3xl md:text-4xl font-black serif text-intel-dark mb-4">
@@ -121,7 +121,7 @@ const AssessmentRegistration: React.FC<AssessmentRegistrationProps> = ({ testTit
             
             {/* Full Name */}
             <div className="space-y-2">
-              <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-2">
+              <label className="flex items-center gap-2 text-sm font-semibold opacity-40 ml-2">
                 <User size={12} /> Full Name
               </label>
               <input 
@@ -136,7 +136,7 @@ const AssessmentRegistration: React.FC<AssessmentRegistrationProps> = ({ testTit
 
             {/* Email Address */}
             <div className="space-y-2">
-              <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-2">
+              <label className="flex items-center gap-2 text-sm font-semibold opacity-40 ml-2">
                 <Mail size={12} /> Email Address
               </label>
               <input 
@@ -150,7 +150,7 @@ const AssessmentRegistration: React.FC<AssessmentRegistrationProps> = ({ testTit
 
             {/* Phone Number */}
             <div className="space-y-2">
-              <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-2">
+              <label className="flex items-center gap-2 text-sm font-semibold opacity-40 ml-2">
                 <Phone size={12} /> Phone Number
               </label>
               <input 
@@ -165,7 +165,7 @@ const AssessmentRegistration: React.FC<AssessmentRegistrationProps> = ({ testTit
 
             {/* Age */}
             <div className="space-y-2">
-              <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-2">
+              <label className="flex items-center gap-2 text-sm font-semibold opacity-40 ml-2">
                 <Calendar size={12} /> Age
               </label>
               <input 
@@ -182,7 +182,7 @@ const AssessmentRegistration: React.FC<AssessmentRegistrationProps> = ({ testTit
 
             {/* Gender */}
             <div className="space-y-2">
-              <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-2">
+              <label className="flex items-center gap-2 text-sm font-semibold opacity-40 ml-2">
                 Gender
               </label>
               <select 
@@ -201,7 +201,7 @@ const AssessmentRegistration: React.FC<AssessmentRegistrationProps> = ({ testTit
 
             {/* Education / Occupation */}
             <div className="space-y-2">
-              <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-2">
+              <label className="flex items-center gap-2 text-sm font-semibold opacity-40 ml-2">
                 Education / Occupation
               </label>
               <select 
@@ -222,7 +222,7 @@ const AssessmentRegistration: React.FC<AssessmentRegistrationProps> = ({ testTit
 
           {/* Reason for Assessment */}
           <div className="space-y-2">
-            <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-2">
+            <label className="flex items-center gap-2 text-sm font-semibold opacity-40 ml-2">
               <Heart size={12} /> Primary Concerns / Reason for Assessment (Optional)
             </label>
             <textarea 
@@ -245,7 +245,7 @@ const AssessmentRegistration: React.FC<AssessmentRegistrationProps> = ({ testTit
                 onChange={(e) => setFormData({...formData, consent: e.target.checked})}
               />
               <span className="text-xs text-intel-dark/70 font-semibold leading-relaxed">
-                I consent to providing this basic information for initial registration and assessment purposes. My data will remain strictly confidential and will not be shared with third parties.
+                I agree to Intel Counselling storing these details and my assessment answers (encrypted) to give me my results and reports, and to share them with my counsellor only when I choose to (for example when I book a session). Our payment, email and video-call providers process data for us under contract; we never sell it. If I am under 18, a parent or guardian will also need to agree. I can download or delete my data at any time. See the <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline">Privacy Policy</a>.
               </span>
             </label>
           </div>
@@ -262,12 +262,12 @@ const AssessmentRegistration: React.FC<AssessmentRegistrationProps> = ({ testTit
             <button 
               type="submit"
               disabled={isSubmitting}
-              className="w-full sm:flex-1 bg-terracotta text-white px-12 py-6 rounded-3xl font-black text-base uppercase tracking-widest hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl flex items-center justify-center gap-3 group disabled:opacity-50 disabled:scale-100"
+              className="w-full sm:flex-1 bg-terracotta text-intel-dark px-12 py-6 rounded-3xl font-semibold text-base hover:opacity-90 active:scale-[0.98] transition-all shadow-xl flex items-center justify-center gap-3 group disabled:opacity-50 disabled:scale-100"
             >
               {isSubmitting ? 'Saving...' : testTitle ? 'Save & Start' : 'Save Details'} 
               {!isSubmitting && <ArrowRight size={22} className="group-hover:translate-x-1 transition-transform" />}
             </button>
-            <p className="text-[10px] font-bold opacity-40 uppercase tracking-[0.15em] flex items-center gap-1.5">
+            <p className="text-[11px] font-bold opacity-40 uppercase tracking-[0.08em] flex items-center gap-1.5">
               <ShieldCheck size={14} className="text-serene-green" /> Strictly Confidential
             </p>
           </div>

@@ -2,9 +2,9 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import saveAnswersHandler from '../api/save-answers.js';
 import loadAnswersHandler from '../api/load-answers.js';
-import createCashfreeSessionHandler from '../api/create-cashfree-session.js';
+import createPaymentOrderHandler from '../api/create-payment-order.js';
 import verifyPaymentHandler from '../api/verify-payment.js';
-import cashfreeWebhookHandler from '../api/cashfree-webhook.js';
+import razorpayWebhookHandler from '../api/razorpay-webhook.js';
 import sendBookingEmailHandler from '../api/send-booking-email.js';
 import sendCareerResultsHandler from '../api/send-career-results.js';
 import sendInquiryEmailHandler from '../api/send-inquiry-email.js';
@@ -20,6 +20,8 @@ import careerAccessHandler from '../api/career-access.js';
 import forgotPasswordHandler from '../api/forgot-password.js';
 import googleLoginHandler from '../api/google-login.js';
 import profileHandler from '../api/profile.js';
+import { exportHandler as myDataHandler, deleteHandler as deleteAccountHandler } from '../api/account.js';
+import { startHandler as guardianStartHandler, verifyHandler as guardianVerifyHandler } from '../api/consent.js';
 import verifyOtpHandler from '../api/verify-otp.js';
 import { testsHandler as intellTestsHandler, statusHandler as intellStatusHandler, reportHandler as intellReportHandler } from '../api/intell.js';
 import { countUsers } from '../db.js';
@@ -59,7 +61,7 @@ router.use(generalLimiter);
 router.get('/health', (req, res) => res.status(200).send('OK'));
 
 // Public pricing/session config. The client displays these prices but never
-// charges from them — create-cashfree-session re-derives the amount here.
+// charges from them — create-payment-order re-derives the amount here.
 router.get('/config', (req, res) => {
   res.json({
     demoMode: isDemoMode(),
@@ -87,6 +89,12 @@ router.post('/register', authLimiter, registerHandler);
 router.post('/login', authLimiter, loginHandler);
 router.post('/google-login', authLimiter, googleLoginHandler);
 router.get('/profile', profileHandler);
+// Parent / guardian consent for under-18 accounts (DPDP Act)
+router.post('/guardian-consent/start', authLimiter, guardianStartHandler);
+router.post('/guardian-consent/verify', authLimiter, guardianVerifyHandler);
+// Data-subject rights (DPDP Act): download everything, delete the account
+router.get('/my-data', myDataHandler);
+router.delete('/account', deleteAccountHandler);
 router.put('/profile', profileHandler);
 router.post('/verify-email', authLimiter, verifyEmailHandler);
 router.post('/resend-verification', authLimiter, resendVerificationHandler);
@@ -96,13 +104,13 @@ router.post('/verify-otp', authLimiter, verifyOtpHandler);
 router.post('/link-result', linkResultHandler);
 router.get('/user-results', userResultsHandler);
 router.get('/career-access', careerAccessHandler);
-// Intell Student Assessments (one payment: Module A + Module B)
+// Intel Student Assessments (one payment: Module A + Module B)
 router.get('/intell/tests', intellTestsHandler);
 router.get('/intell/status', intellStatusHandler);
 router.get('/intell/report', intellReportHandler);
-router.post('/create-cashfree-session', createCashfreeSessionHandler);
+router.post('/create-payment-order', createPaymentOrderHandler);
 router.post('/verify-payment', verifyPaymentHandler);
-router.post('/cashfree-webhook', cashfreeWebhookHandler);
+router.post('/razorpay-webhook', razorpayWebhookHandler);
 router.post('/send-booking-email', emailLimiter, sendBookingEmailHandler);
 router.post('/send-career-results', emailLimiter, sendCareerResultsHandler);
 router.post('/send-inquiry-email', emailLimiter, sendInquiryEmailHandler);

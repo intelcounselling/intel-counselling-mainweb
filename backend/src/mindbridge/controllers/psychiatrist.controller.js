@@ -1,4 +1,5 @@
 const prisma = require('../prisma');
+const { STAFF_VISIBLE } = require('../utils/privacy');
 const { sendAppointmentEmail } = require('../services/email.service');
 const { parsePagination, buildPaginationMeta } = require('../utils/pagination');
 const { handleError } = require('../utils/errorHandler');
@@ -133,6 +134,7 @@ async function getSchoolStudents(req, res) {
         orderBy: { lastName: 'asc' },
         include: {
           testResults: {
+            where: STAFF_VISIBLE,
             take: 1,
             orderBy: { takenAt: 'desc' },
             include: { test: { select: { name: true } } },
@@ -349,7 +351,7 @@ async function getStudentProfile(req, res) {
         include: { school: true },
       }),
       prisma.testResult.findMany({
-        where: { studentId: id },
+        where: { studentId: id, ...STAFF_VISIBLE },
         orderBy: { takenAt: 'desc' },
         include: { test: { select: { name: true, category: true, questions: true } } },
       }),
@@ -465,7 +467,7 @@ async function getStudentProgress(req, res) {
     const { id: studentId } = req.params;
 
     const results = await prisma.testResult.findMany({
-      where: { studentId, isParentPerspective: false },
+      where: { studentId, isParentPerspective: false, ...STAFF_VISIBLE },
       orderBy: { takenAt: 'asc' },
       include: { test: { select: { name: true, category: true, thresholds: true } } },
     });

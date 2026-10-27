@@ -1,25 +1,40 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Info, Users, Calendar, Heart, Layers, LogIn, LogOut, Menu, X, Image as ImageIcon, Sparkles, UserRound } from 'lucide-react';
+import { LogIn, LogOut, Menu, X, UserRound } from 'lucide-react';
 import { clearAuthSession, authHeaders, useAuthUser } from '../utils/auth';
 import { SCHOOL_PORTAL_URL } from '../utils/site';
 
 interface NavbarProps {
   onBookClick: () => void;
-  onAssessmentClick?: () => void;
-  onLoginClick?: () => void;
-  onLogoClick?: () => void;
-  forcePill?: boolean;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ onBookClick, onAssessmentClick, onLoginClick, onLogoClick, forcePill }) => {
+// Home-page sections, plus the assessments page. The logo is the way home.
+const NAV_LINKS = [
+  { id: 'approach', label: 'Our approach' },
+  { id: 'services', label: 'Services' },
+  { id: 'assessments', label: 'Assessments' },
+  { id: 'founders', label: 'Our team' },
+  { id: 'gallery', label: 'Gallery' },
+];
+
+// One bar everywhere: same shape on every page and at every scroll position,
+// so the navigation never moves out from under the visitor.
+const Navbar: React.FC<NavbarProps> = ({ onBookClick }) => {
   const [scrolled, setScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const user = useAuthUser();
-  const isPill = forcePill || scrolled;
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // Close the mobile menu on navigation
+  useEffect(() => setIsMenuOpen(false), [location.pathname, location.hash]);
 
   const handleLogout = () => {
     // Fire-and-forget: revoke every outstanding session token server-side.
@@ -29,273 +44,170 @@ const Navbar: React.FC<NavbarProps> = ({ onBookClick, onAssessmentClick, onLogin
     navigate('/');
   };
 
-  useEffect(() => {
-    const handleScroll = () => {
-      const heroSection = document.getElementById('hero');
-      const threshold = heroSection ? heroSection.offsetHeight / 2 : 300;
-      setScrolled(window.scrollY > threshold);
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
+  const goTo = (e: React.MouseEvent, id: string) => {
     e.preventDefault();
     setIsMenuOpen(false);
-    if (id === 'assessments') {
-      navigate('/assessments');
+    if (id === 'assessments') return navigate('/assessments');
+    if (id === 'top') {
+      if (location.pathname !== '/') navigate('/');
+      else window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-    if (id === 'top') {
-      if (location.pathname !== '/') {
-        navigate('/');
-      } else {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-      onLogoClick?.();
-    } else {
-      if (location.pathname !== '/') {
-        navigate(`/#${id}`);
-      } else {
-        const el = document.getElementById(id);
-        el?.scrollIntoView({ behavior: 'smooth' });
-      }
-    }
+    if (location.pathname !== '/') navigate(`/#${id}`);
+    else document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const navLinks = [
-    { id: 'top', label: 'Home', icon: <Home size={18} /> },
-    { id: 'approach', label: 'Approach', icon: <Info size={18} /> },
-    { id: 'services', label: 'Services', icon: <Layers size={18} /> },
-    { id: 'assessments', label: 'Assessments', icon: <Sparkles size={18} /> },
-    { id: 'gallery', label: 'Gallery', icon: <ImageIcon size={18} /> },
-    { id: 'founders', label: 'Founders', icon: <Users size={18} /> },
-  ];
+  const hrefFor = (id: string) => (id === 'assessments' ? '/assessments' : `/#${id}`);
+  const accountLabel = user ? 'My results' : 'Sign in';
 
   return (
     <>
-    <nav className={`fixed z-[100] pointer-events-auto ${
-      isPill
-        ? 'top-3 sm:top-5 left-1/2 -translate-x-1/2 w-[90%] max-w-5xl rounded-full bg-zinc-900 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.6)] border border-white/10'
-        : 'top-0 left-0 right-0 w-full bg-intel-dark shadow-[0_10px_30px_rgba(0,0,0,0.1)]'
-    }`}>
-      <div 
-        className={`relative z-10 flex items-center w-full max-w-[1440px] mx-auto justify-between gap-1 sm:gap-3 ${
-          isPill
-            ? 'px-2 sm:px-6 py-1.5 sm:py-3'
-            : 'px-3 sm:px-6 lg:px-12 pt-3 pb-1 lg:pt-7 lg:pb-2'
+      <header
+        className={`fixed inset-x-0 top-0 z-[100] bg-[#1A1A1A] border-b transition-shadow ${
+          scrolled ? 'border-white/10 shadow-[0_8px_24px_rgba(0,0,0,0.18)]' : 'border-transparent'
         }`}
       >
-        {/* Brand/Logo Section */}
-        <div 
-          className="flex items-center cursor-pointer shrink-0 hover:opacity-80 transition-opacity"
-          onClick={(e) => handleNavClick(e as any, 'top')}
-        >
-          {isPill
-            ? <img src="/assets/imgs/logo_small.png" alt="Intel Counselling" className="h-7 md:h-10 w-auto object-contain" />
-            : <img src="/assets/imgs/logo_full.png" alt="Intel Counselling" className="h-10 md:h-16 lg:h-20 w-auto object-contain" />
-          }
-        </div>
-
-        {/* Center Navigation Links - Hidden on mobile, visible on md+ */}
-        <div className="hidden xl:flex items-center gap-0.5 lg:gap-2 xl:gap-6 mx-auto xl:ml-12 overflow-x-auto no-scrollbar mask-edges">
-          {navLinks.map((link) => (
-            <a 
-              key={link.id}
-              href={link.id === 'assessments' ? '/assessments' : `/#${link.id}`}
-              aria-label={link.label}
-              onClick={(e) => handleNavClick(e, link.id)}
-              className="relative flex items-center justify-center transition-all duration-300 group px-1.5 sm:px-3 py-2 rounded-full hover:bg-white/5"
-            >
-              {isPill ? (
-                <span className="text-white/70 group-hover:text-white inline-block origin-center animate-[bouncyTurn_0.6s_cubic-bezier(0.175,0.885,0.32,1.275)_both]" title={link.label}>
-                  {React.cloneElement(link.icon as React.ReactElement<any>, { size: 20 })}
-                </span>
-              ) : (
-                <>
-                  <span className="text-[11px] lg:text-sm font-bold tracking-tight whitespace-nowrap opacity-80 group-hover:text-white group-hover:opacity-100 text-white hidden md:block">
-                    {link.label}
-                  </span>
-                  <span className="text-white/70 group-hover:text-white md:hidden">
-                    {React.cloneElement(link.icon as React.ReactElement<any>, { size: 16 })}
-                  </span>
-                </>
-              )}
-            </a>
-          ))}
-        </div>
-
-        {/* Action Buttons - Hidden on mobile, visible on md+ */}
-        <div className="hidden md:flex items-center gap-1 lg:gap-3 ml-0.5 shrink-0">
-          <button 
-            onClick={onBookClick}
-            className="group relative overflow-hidden flex items-center justify-center gap-2
-                       bg-terracotta
-                       text-white rounded-full font-bold transition-all duration-300
-                       shadow-[0_0_0_1px_rgba(193,155,108,0.4),0_4px_20px_rgba(193,155,108,0.35)]
-                       active:scale-95 px-3 md:px-5 lg:px-7 py-2 md:py-2.5 lg:py-3
-                       text-[10px] lg:text-[13px] tracking-wide
-                       hover:shadow-[0_0_0_2px_rgba(193,155,108,0.5),0_6px_28px_rgba(193,155,108,0.45)] hover:-translate-y-[1px]"
-          >
-            <span className="relative z-10 whitespace-nowrap hidden sm:inline">
-              Book <span className="hidden lg:inline">Appointment</span>
-            </span>
-            <span className="relative z-10 sm:hidden">
-              <Calendar size={16} />
-            </span>
-          </button>
-          
-          <button
-            onClick={() => navigate(user ? '/my-results' : '/login')}
-            className="flex items-center justify-center bg-main text-intel-dark rounded-full transition-all duration-300 shadow-lg active:scale-95 px-3 md:px-4 lg:px-6 py-2 md:py-2.5 lg:py-3 font-black text-[9px] lg:text-[10px] uppercase tracking-widest hover:bg-white"
-          >
-            <div className="items-center gap-1.5 whitespace-nowrap hidden sm:flex">
-              {user ? <>My Results <UserRound size={13} className="hidden lg:block" /></> : <>Sign In <LogIn size={13} className="hidden lg:block" /></>}
-            </div>
-            <span className="sm:hidden">
-              <UserRound size={16} />
-            </span>
-          </button>
-          {user && (
-            <button
-              onClick={handleLogout}
-              aria-label="Log out"
-              title={`Log out (${user.name.split(' ')[0]})`}
-              className="flex items-center justify-center text-white/60 hover:text-white w-8 h-8 rounded-full hover:bg-white/10 transition-colors"
-            >
-              <LogOut size={15} />
-            </button>
-          )}
-          <a
-            href="/intell-assessment"
-            className="hidden xl:block text-white/50 hover:text-white text-[9px] font-black uppercase tracking-widest whitespace-nowrap px-1"
-          >
-            Student Assessments
+        <nav className="max-w-7xl mx-auto h-16 md:h-[72px] px-4 sm:px-6 lg:px-8 flex items-center gap-6" aria-label="Main">
+          <a href="/" onClick={(e) => goTo(e, 'top')} className="shrink-0 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta">
+            <img src="/assets/imgs/logo_full.png" alt="Intel Counselling — home" className="h-9 md:h-11 w-auto object-contain" />
           </a>
-          {/* Separate, school-issued Mindbridge login — not the site account */}
-          <a
-            href={SCHOOL_PORTAL_URL}
-            className="hidden xl:block text-white/50 hover:text-white text-[9px] font-black uppercase tracking-widest whitespace-nowrap px-1"
-          >
-            School Portal
-          </a>
-        </div>
 
-        <button 
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className="xl:hidden flex items-center justify-center text-white/70 w-7 h-7 mx-0.5 shrink-0 hover:text-white"
-        >
-          <Menu size={18} />
-        </button>
-      </div>
+          <ul className="hidden xl:flex items-center gap-1 mx-auto">
+            {NAV_LINKS.map((link) => (
+              <li key={link.id}>
+                <a
+                  href={hrefFor(link.id)}
+                  onClick={(e) => goTo(e, link.id)}
+                  className="px-3 py-2 rounded-lg text-[15px] font-medium text-white/75 hover:text-white hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta"
+                >
+                  {link.label}
+                </a>
+              </li>
+            ))}
+          </ul>
 
-      {/* Animated Wavy Bottom Edge */}
-      {!isPill && (
-        <div className="absolute left-0 right-0 bottom-[-24px] h-[25px] w-full overflow-hidden pointer-events-none">
-          <div 
-            className="absolute bottom-0 w-[200%] h-full flex"
-            style={{ animation: 'navWave 14s linear infinite' }}
-          >
-            {/* Tile 1 */}
-            <svg className="w-1/2 h-full" preserveAspectRatio="none" viewBox="0 0 1440 30" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M0,0 L0,15 C360,-10 360,40 720,15 C1080,-10 1080,40 1440,15 L1440,0 Z" fill="#1A1A1A"/>
-            </svg>
-            {/* Tile 2 */}
-            <svg className="w-1/2 h-full" preserveAspectRatio="none" viewBox="0 0 1440 30" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M0,0 L0,15 C360,-10 360,40 720,15 C1080,-10 1080,40 1440,15 L1440,0 Z" fill="#1A1A1A"/>
-            </svg>
-          </div>
-        </div>
-      )}
-
-      <style>{`
-        @keyframes navWave {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        @keyframes bouncyTurn {
-          0% { transform: scale(0.5) rotate(-180deg); opacity: 0; }
-          60% { transform: scale(1.1) rotate(15deg); opacity: 1; }
-          100% { transform: scale(1) rotate(0deg); opacity: 1; }
-        }
-      `}</style>
-    </nav>
-
-    {/* Mobile Menu Overlay */}
-    {isMenuOpen && (
-      <div className="fixed inset-0 bg-intel-dark z-[110] flex flex-col p-8 animate-in fade-in slide-in-from-top-4 duration-500 pointer-events-auto">
-        <div className="flex justify-between items-center mb-10">
-          <div className="flex items-center">
-            <img src="/assets/imgs/logo_full.png" alt="Intel Counselling" className="h-10 w-auto object-contain" />
-          </div>
-          <button onClick={() => setIsMenuOpen(false)} className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-full text-white">
-            <X size={24} />
-          </button>
-        </div>
-        
-        <div className="flex flex-col gap-6 overflow-y-auto">
-          {navLinks.map((link) => (
-             <a 
-              key={link.id} 
-              href={`#${link.id}`} 
-              onClick={(e) => handleNavClick(e, link.id)}
-              className="text-3xl font-black text-white serif border-b border-white/5 pb-5 flex items-center justify-between group"
+          <div className="ml-auto xl:ml-0 flex items-center gap-1 sm:gap-2">
+            {/* Separate, school-issued Mindbridge login — not the site account */}
+            <a
+              href={SCHOOL_PORTAL_URL}
+              className="hidden lg:inline-flex px-3 py-2 rounded-lg text-sm font-medium text-white/60 hover:text-white transition-colors"
             >
-              <div className="flex items-center gap-4">
-                <span className="text-white/40 group-hover:text-white transition-colors">{link.icon}</span>
-                {link.label}
-              </div>
-              <ArrowRight size={20} className="opacity-20" />
+              School portal
             </a>
-          ))}
-          
-          <div className="flex flex-col gap-4 mt-8">
-            <button 
-              onClick={() => { onBookClick(); setIsMenuOpen(false); }}
-              className="group relative overflow-hidden w-full py-5 rounded-2xl font-bold text-base
-                         bg-terracotta text-white
-                         shadow-[0_0_0_1px_rgba(193,155,108,0.4),0_6px_24px_rgba(193,155,108,0.4)]"
-            >
-              <span className="relative z-10">Book Appointment</span>
-            </button>
             <button
-              onClick={() => { navigate(user ? '/my-results' : '/login'); setIsMenuOpen(false); }}
-              className="w-full py-5 bg-main text-intel-dark rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg flex items-center justify-center gap-2"
+              onClick={() => navigate(user ? '/my-results' : '/login')}
+              className="hidden md:inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-white/85 hover:text-white hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta"
             >
-              {user ? <>My Results <UserRound size={18} /></> : <>Sign In <LogIn size={18} /></>}
+              {user ? <UserRound size={16} /> : <LogIn size={16} />} {accountLabel}
             </button>
             {user && (
               <button
-                onClick={() => { handleLogout(); setIsMenuOpen(false); }}
-                className="w-full py-4 text-white/70 rounded-2xl font-black text-xs uppercase tracking-[0.2em] border border-white/10 flex items-center justify-center gap-2"
+                onClick={handleLogout}
+                aria-label={`Log out (${user.name.split(' ')[0]})`}
+                title="Log out"
+                className="hidden md:inline-flex items-center justify-center w-9 h-9 rounded-lg text-white/55 hover:text-white hover:bg-white/5 transition-colors"
               >
-                Log out ({user.name.split(' ')[0]}) <LogOut size={16} />
+                <LogOut size={16} />
               </button>
             )}
-            <a
-              href="/intell-assessment"
-              className="w-full py-3 text-white/50 text-[10px] font-black uppercase tracking-[0.2em] text-center"
+            <button
+              onClick={onBookClick}
+              className="ml-1 inline-flex items-center px-4 md:px-5 h-10 rounded-full bg-terracotta text-intel-dark text-sm font-semibold hover:bg-[#cfac80] hover:scale-[1.04] transition-all duration-300 ease-bounce focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
             >
-              Intell Student Assessments
-            </a>
-            <a
-              href={SCHOOL_PORTAL_URL}
-              className="w-full py-3 text-white/50 text-[10px] font-black uppercase tracking-[0.2em] text-center"
+              Book<span className="hidden sm:inline">&nbsp;appointment</span>
+            </button>
+            <button
+              onClick={() => setIsMenuOpen(true)}
+              aria-label="Open menu"
+              className="xl:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg text-white/80 hover:text-white hover:bg-white/5"
             >
-              School Portal (Mindbridge)
-            </a>
+              <Menu size={20} />
+            </button>
+          </div>
+        </nav>
+
+        {/* Animated wavy bottom edge, shown while at the top of the page */}
+        <div
+          className={`absolute left-0 right-0 -bottom-[24px] h-[25px] overflow-hidden pointer-events-none transition-opacity duration-300 ${scrolled ? 'opacity-0' : 'opacity-100'}`}
+          aria-hidden="true"
+        >
+          <div className="nav-wave absolute bottom-0 w-[200%] h-full flex">
+            {[0, 1].map((i) => (
+              <svg key={i} className={`w-1/2 h-full shrink-0 ${i ? '-ml-px' : ''}`} preserveAspectRatio="none" viewBox="0 0 1440 30" xmlns="http://www.w3.org/2000/svg">
+                <path d="M0,0 L0,15 C360,-10 360,40 720,15 C1080,-10 1080,40 1440,15 L1440,0 Z" fill="#1A1A1A" />
+              </svg>
+            ))}
           </div>
         </div>
-      </div>
-    )}
+        <style>{`
+          @keyframes navWave { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+          .nav-wave { animation: navWave 14s linear infinite; }
+          @media (prefers-reduced-motion: reduce) { .nav-wave { animation: none; } }
+        `}</style>
+      </header>
+
+      {/* Mobile / tablet menu */}
+      {isMenuOpen && (
+        <div className="fixed inset-0 z-[110] bg-[#1A1A1A] flex flex-col" role="dialog" aria-modal="true" aria-label="Menu">
+          <div className="h-16 px-4 sm:px-6 flex items-center justify-between border-b border-white/10">
+            <img src="/assets/imgs/logo_full.png" alt="Intel Counselling" className="h-9 w-auto object-contain" />
+            <button
+              onClick={() => setIsMenuOpen(false)}
+              aria-label="Close menu"
+              className="w-10 h-10 inline-flex items-center justify-center rounded-lg text-white hover:bg-white/10"
+            >
+              <X size={22} />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 flex flex-col">
+            <ul className="divide-y divide-white/10">
+              {NAV_LINKS.map((link) => (
+                <li key={link.id}>
+                  <a
+                    href={hrefFor(link.id)}
+                    onClick={(e) => goTo(e, link.id)}
+                    className="block py-4 text-xl font-semibold text-white serif"
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+              <li>
+                <a href="/intell-assessment" className="block py-4 text-xl font-semibold text-white serif">Student assessments</a>
+              </li>
+            </ul>
+
+            <div className="mt-8 flex flex-col gap-3">
+              <button
+                onClick={() => { onBookClick(); setIsMenuOpen(false); }}
+                className="w-full h-12 rounded-full bg-terracotta text-intel-dark font-semibold"
+              >
+                Book appointment
+              </button>
+              <button
+                onClick={() => { navigate(user ? '/my-results' : '/login'); setIsMenuOpen(false); }}
+                className="w-full h-12 rounded-full border border-white/20 text-white font-semibold inline-flex items-center justify-center gap-2"
+              >
+                {user ? <UserRound size={18} /> : <LogIn size={18} />} {accountLabel}
+              </button>
+              {user && (
+                <button
+                  onClick={() => { handleLogout(); setIsMenuOpen(false); }}
+                  className="w-full h-12 rounded-full text-white/70 font-medium inline-flex items-center justify-center gap-2"
+                >
+                  <LogOut size={16} /> Log out ({user.name.split(' ')[0]})
+                </button>
+              )}
+              <a href={SCHOOL_PORTAL_URL} className="mt-2 text-center text-sm text-white/55 py-2">
+                School portal (Mindbridge)
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
-
-const ArrowRight = ({ size, className }: { size: number, className?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
-  </svg>
-);
 
 export default Navbar;

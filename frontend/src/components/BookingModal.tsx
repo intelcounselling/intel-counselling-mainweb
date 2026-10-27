@@ -6,6 +6,7 @@ import { CLINICAL_CONFIGS } from './ClinicalQuestions';
 import { apiClient } from '../utils/api';
 import { useAuthUser } from '../utils/auth';
 import { usePricing } from '../utils/pricing';
+import { payWithRazorpay, PaymentCancelledError } from '../utils/payments';
 
 const ALL_QUESTIONS = [...MI_QUESTIONS, ...INTEREST_QUESTIONS, ...PERSONALITY_QUESTIONS];
 
@@ -17,28 +18,7 @@ interface BookingModalProps {
   onClose: () => void;
 }
 
-const loadCashfreeScript = () => {
-  return new Promise((resolve) => {
-    const src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
-    if ((window as any).Cashfree) {
-      resolve(true);
-      return;
-    }
-    const existing = document.querySelector(`script[src="${src}"]`) as HTMLScriptElement | null;
-    if (existing) {
-      existing.addEventListener('load', () => resolve(true));
-      existing.addEventListener('error', () => resolve(false));
-      return;
-    }
-    const script = document.createElement('script');
-    script.src = src;
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
-};
-
-const CashfreePaymentStep: React.FC<{
+const PaymentStep: React.FC<{
   bookingDetails: any,
   onSuccess: (gmeetLink: string, orderId?: string) => void,
   onBack: () => void
@@ -46,70 +26,20 @@ const CashfreePaymentStep: React.FC<{
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleCashfreePayment = async () => {
+  const handlePayment = async () => {
     setIsProcessing(true);
     setError(null);
-    const isLoaded = await loadCashfreeScript();
-    if (!isLoaded) {
-      setError("Failed to load Cashfree. Please check your internet connection.");
-      setIsProcessing(false);
-      return;
-    }
-
     try {
-      const data = await apiClient.post<any>('/api/create-cashfree-session', {
+      // Resolves only after the server has verified the payment with Razorpay
+      const orderId = await payWithRazorpay({
         serviceId: bookingDetails.service.id,
         serviceName: bookingDetails.service.name,
-        customerName: bookingDetails.name,
-        customerEmail: bookingDetails.email,
-        customerPhone: bookingDetails.phone || '9999999999'
+        customer: { name: bookingDetails.name, email: bookingDetails.email, phone: bookingDetails.phone },
       });
-
-      const cashfree = await (window as any).Cashfree({
-        mode: "production",
-      });
-
-      let checkoutOptions = {
-        paymentSessionId: data.paymentSessionId,
-        redirectTarget: "_modal",
-      };
-
-      const orderId = data.orderId;
-
-      cashfree.checkout(checkoutOptions).then(async (result: any) => {
-        if (result.error) {
-          setError(result.error.message || "Payment has failed or was cancelled.");
-          setIsProcessing(false);
-          return;
-        }
-
-        if (result.redirect) {
-          console.log("Payment will be redirected");
-        }
-
-        // Never trust the client-side checkout result alone — confirm the
-        // order status with the server before confirming the booking.
-        try {
-          const verifyData = await apiClient.post<any>('/api/verify-payment', { orderId });
-
-          if (verifyData.paid === true) {
-            setIsProcessing(false);
-            onSuccess('', orderId);
-          } else {
-            setIsProcessing(false);
-            setError("Payment was not completed or is pending verification. Please try again or contact us if you were charged.");
-          }
-        } catch (verifyErr) {
-          console.error("Payment verification failed:", verifyErr);
-          setIsProcessing(false);
-          setError("Payment was not completed or is pending verification. Please try again or contact us if you were charged.");
-        }
-      }).catch((err: any) => {
-        setError(err.message || "Payment encountered an error.");
-        setIsProcessing(false);
-      });
+      onSuccess('', orderId);
     } catch (err: any) {
-      setError(err.message || "Failed to start Cashfree checkout.");
+      if (!(err instanceof PaymentCancelledError)) setError(err?.message || 'The payment could not be completed.');
+    } finally {
       setIsProcessing(false);
     }
   };
@@ -126,7 +56,7 @@ const CashfreePaymentStep: React.FC<{
             <ShieldCheck size={32} />
           </div>
           <div>
-            <h4 className="font-bold text-lg text-white mb-1">Secure Checkout via Cashfree</h4>
+            <h4 className="font-bold text-lg text-white mb-1">Secure checkout via Razorpay</h4>
             <p className="text-xs text-white/50 mx-auto max-w-[200px]">Standard industry-grade encryption applies to your transaction.</p>
           </div>
         </div>
@@ -134,7 +64,7 @@ const CashfreePaymentStep: React.FC<{
       {error && <div className="text-red-500 text-sm bg-red-50 p-3 rounded-lg border border-red-100">{error}</div>}
       <div className="flex gap-4">
         <button type="button" onClick={onBack} className="px-6 py-4 rounded-xl font-bold text-white border border-white/10 flex items-center gap-2"><ArrowLeft size={16} /> Back</button>
-        <button onClick={handleCashfreePayment} disabled={isProcessing} className="flex-1 bg-serene-green text-white py-4 rounded-xl font-bold transition-all disabled:opacity-50">
+        <button onClick={handlePayment} disabled={isProcessing} className="flex-1 bg-serene-green text-white py-4 rounded-xl font-bold transition-all disabled:opacity-50">
           {isProcessing ? "Processing..." : "Pay & Book"}
         </button>
       </div>
@@ -180,7 +110,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
   });
 
   const [careerResult, setCareerResult] = useState<any | null>(null);
-  // Intell Student Assessments buyer with at least one result: offer to share the report
+  // Intel Student Assessments buyer with at least one result: offer to share the report
   const [intellReady, setIntellReady] = useState(false);
   const [shareIntell, setShareIntell] = useState(true);
 
@@ -477,7 +407,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
   };
 
   return (
-    <div className="w-full max-w-2xl bg-[#1F1E1B] rounded-3xl md:rounded-[40px] shadow-2xl overflow-hidden border border-white/20 animate-in fade-in slide-in-from-bottom-8 duration-500 max-h-[90vh] flex flex-col">
+    <div className="w-full max-w-2xl bg-[#1F1E1B] rounded-3xl md:rounded-[28px] shadow-2xl overflow-hidden border border-white/20 animate-in fade-in slide-in-from-bottom-8 duration-500 max-h-[90vh] flex flex-col">
       <div className="relative p-6 md:p-12 overflow-y-auto overflow-x-hidden flex-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {step < 10 && (
           <button
@@ -520,23 +450,23 @@ const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
               <h4 className="text-xl font-black text-white uppercase flex items-center gap-2"><span className="w-4 h-4 bg-serene-green rounded-sm block"></span> Basic Details</h4>
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-white opacity-60 uppercase tracking-wider">Full Name</label>
+                  <label className="text-sm font-bold text-white opacity-60">Full Name</label>
                   <input required type="text" value={details.name} onChange={e => setDetails({ ...details, name: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 text-white placeholder:text-white/30 outline-none focus:border-serene-green" />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-white opacity-60 uppercase tracking-wider">Age</label>
+                  <label className="text-sm font-bold text-white opacity-60">Age</label>
                   <input required type="number" min="12" max="100" value={details.age} onChange={e => setDetails({ ...details, age: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 text-white placeholder:text-white/30 outline-none focus:border-serene-green" />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-white opacity-60 uppercase tracking-wider">Phone Number</label>
+                  <label className="text-sm font-bold text-white opacity-60">Phone Number</label>
                   <input required type="tel" value={details.phone} onChange={e => setDetails({ ...details, phone: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 text-white placeholder:text-white/30 outline-none focus:border-serene-green" />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-white opacity-60 uppercase tracking-wider">Email</label>
+                  <label className="text-sm font-bold text-white opacity-60">Email</label>
                   <input required type="email" value={details.email} onChange={e => setDetails({ ...details, email: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 text-white placeholder:text-white/30 outline-none focus:border-serene-green" />
                 </div>
                 <div className="space-y-1.5 md:col-span-2">
-                  <label className="text-[10px] font-bold text-white opacity-60 uppercase tracking-wider">Gender</label>
+                  <label className="text-sm font-bold text-white opacity-60">Gender</label>
                   <select required value={details.gender} onChange={e => setDetails({ ...details, gender: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 text-white placeholder:text-white/30 outline-none focus:border-serene-green">
                     <option className="text-black" value="">Select gender...</option>
                     <option className="text-black" value="Male">Male</option>
@@ -654,7 +584,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
                 {intellReady && (
                   <label className="flex items-center gap-3 cursor-pointer p-4 bg-serene-green/5 rounded-xl border border-serene-green/20 mt-4">
                     <input type="checkbox" checked={shareIntell} onChange={e => setShareIntell(e.target.checked)} className="w-6 h-6 rounded border-white/20 text-serene-green focus:ring-serene-green flex-shrink-0" />
-                    <span className="text-sm font-bold text-white">Share my Intell Student Assessment report (all tests, profile and answers) with the counsellor.</span>
+                    <span className="text-sm font-bold text-white">Share my Intel Student Assessment report (all tests, profile and answers) with the counsellor.</span>
                   </label>
                 )}
               </div>
@@ -666,20 +596,20 @@ const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
               <h4 className="text-xl font-black text-white uppercase flex items-center gap-2"><span className="w-4 h-4 bg-serene-green rounded-sm block"></span> Schedule Session</h4>
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-white opacity-60 uppercase tracking-wider text-white">Session Format</label>
+                  <label className="text-sm font-bold text-white opacity-60 text-white">Session Format</label>
                   <div className="grid grid-cols-2 gap-3">
                     <button type="button" onClick={() => setDetails({ ...details, sessionMode: 'online' })} className={`flex flex-col items-center gap-2 p-5 rounded-2xl border-2 transition-all font-bold text-sm ${details.sessionMode === 'online' ? 'border-serene-green bg-serene-green text-white shadow-lg' : 'border-white/10 bg-white/5 text-white hover:border-white/20'}`}>
                       <Monitor size={24} /> 
                       <div className="flex flex-col items-center">
                         <span>Online</span>
-                        <span className="text-[10px] opacity-60 font-normal">₹{sessionPrices.online}</span>
+                        <span className="text-[11px] opacity-60 font-normal">₹{sessionPrices.online}</span>
                       </div>
                     </button>
                     <button type="button" onClick={() => setDetails({ ...details, sessionMode: 'inperson' })} className={`flex flex-col items-center gap-2 p-5 rounded-2xl border-2 transition-all font-bold text-sm ${details.sessionMode === 'inperson' ? 'border-serene-green bg-serene-green text-white shadow-lg' : 'border-white/10 bg-white/5 text-white hover:border-white/20'}`}>
                       <MapPin size={24} />
                       <div className="flex flex-col items-center">
                         <span>In-Person</span>
-                        <span className="text-[10px] opacity-60 font-normal">₹{sessionPrices.inperson}</span>
+                        <span className="text-[11px] opacity-60 font-normal">₹{sessionPrices.inperson}</span>
                       </div>
                     </button>
                   </div>
@@ -706,11 +636,11 @@ const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
 
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-white opacity-60 uppercase tracking-wider">Date</label>
+                    <label className="text-sm font-bold text-white opacity-60">Date</label>
                     <input required type="date" min={today} value={details.date} onChange={e => setDetails({ ...details, date: e.target.value })} className="w-full bg-[#F4EFE6] border border-[#F4EFE6]/50 rounded-xl px-4 py-3.5 text-[#1A1A1A] placeholder:text-black/50 outline-none focus:border-serene-green" />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-white opacity-60 uppercase tracking-wider">Preferred Time</label>
+                    <label className="text-sm font-bold text-white opacity-60">Preferred Time</label>
                     <select required disabled={!details.date} value={details.time} onChange={e => setDetails({ ...details, time: e.target.value })} className="w-full bg-[#F4EFE6] border border-[#F4EFE6]/50 rounded-xl px-4 py-3.5 text-[#1A1A1A] outline-none focus:border-serene-green disabled:opacity-50">
                       <option className="text-black" value="">Select a slot</option>
                       {availableSlots.map(t => <option className="text-black" key={t} value={t}>{t}</option>)}
@@ -781,7 +711,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
         )}
 
         {step === 9 && !isFreeBooking && !paidConfirm && (
-          <CashfreePaymentStep
+          <PaymentStep
             bookingDetails={{
               ...details,
               service: {

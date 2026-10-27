@@ -1,5 +1,5 @@
 /**
- * INTELL Student Success Assessment™ — Scoring Logic
+ * INTEL Student Success Assessment™ — Scoring Logic
  *
  * Scale: 1–5 (Strongly Disagree → Strongly Agree)
  * Reverse scoring: reversed = 6 - value  (1→5, 2→4, 3→3, 4→2, 5→1)
@@ -30,7 +30,7 @@ const bandColorFor = (score) => (score >= 48 ? 'Green' : score >= 36 ? 'Yellow' 
 const preferenceFor = (score) => (score >= 16 ? 'Strong Preference' : score >= 11 ? 'Moderate Preference' : 'Low Preference');
 
 // ≥ 80% of the answers are the maximum value (5) → self-presentation bias flag.
-// Only meaningful for the 1–5 INTELL scales; the 0–3 clinical screenings never score 5.
+// Only meaningful for the 1–5 INTEL scales; the 0–3 clinical screenings never score 5.
 const hasValidityWarning = (answers, category) => {
   if (category !== 'LearningPattern' && !INTELL_DOMAINS.includes(category)) return false;
   const values = Object.values(answers || {}).filter((v) => typeof v === 'number');
@@ -141,7 +141,7 @@ const calculateScore = (answers, questions, thresholds, category) => {
       if (score < 36 && (category === 'EmotionalWellness' || category === 'InternetUsage')) {
         requiresCounselling = true;
       }
-      // Below 36 is the Orange/Red band for the scored INTELL domains. Clinical
+      // Below 36 is the Orange/Red band for the scored INTEL domains. Clinical
       // scales (PHQ-9/GAD-7/PSS-10) score the other way and max out at 21–40, so
       // this rule must not touch them — their risk comes from the threshold ranges.
       if (score < 36) isLow = true;

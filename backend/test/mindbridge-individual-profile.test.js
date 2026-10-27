@@ -17,7 +17,7 @@ const allGood = () => [
 ];
 const swap = (cat, patch) => allGood().map((x) => (x.test.category === cat ? { ...x, ...patch } : x));
 
-test('one access covers both modules: A is the 5 Intell tests, B adds PHQ-9 and GAD-7', () => {
+test('one access covers both modules: A is the 5 Intel tests, B adds PHQ-9 and GAD-7', () => {
   assert.equal(MODULES.A.categories.length, 5);
   assert.equal(MODULES.B.categories.length, 7);
   assert.ok(MODULES.A.categories.every((c) => ALL_CATEGORIES.includes(c)));

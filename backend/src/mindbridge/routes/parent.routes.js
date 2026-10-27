@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { verifyToken, requireRole } = require('../middleware/auth.middleware');
 const ctrl = require('../controllers/parent.controller');
+const family = require('../controllers/family.controller');
 
 const parent = [verifyToken, requireRole('PARENT')];
 
@@ -12,9 +13,15 @@ router.get('/children/:childId/results/:resultId', ...parent, ctrl.getChildResul
 router.post('/appointments', ...parent, ctrl.bookAppointment);
 router.get('/appointments', ...parent, ctrl.getAppointments);
 
-// Package 2: Parent Perspective & Comparison Report
-router.post('/perspective', ...parent, ctrl.submitParentPerspective);
-router.get('/children/:childId/perspective-tests', ...parent, ctrl.getPerspectiveTests);
-router.get('/children/:childId/comparison', ...parent, ctrl.getComparisonReport);
+// Parent + student family package (paid once per family, Razorpay)
+router.get('/family-package', ...parent, family.getStatus);
+router.post('/family-package/order', ...parent, family.createOrder);
+router.post('/family-package/verify', ...parent, family.verifyPayment);
+
+// Package 2: Parent Perspective & Comparison Report — need the family package
+const paid = [...parent, family.requireFamilyPackage];
+router.post('/perspective', ...paid, ctrl.submitParentPerspective);
+router.get('/children/:childId/perspective-tests', ...paid, ctrl.getPerspectiveTests);
+router.get('/children/:childId/comparison', ...paid, ctrl.getComparisonReport);
 
 module.exports = router;

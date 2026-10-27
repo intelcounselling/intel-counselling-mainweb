@@ -3,13 +3,18 @@ import { getAccountById } from '../db.js';
 import { getPrices } from '../pricing.js';
 import { escapeHtml } from '../escape.js';
 import {
-  INTELL_TEST_IDS, INTELL_SERVICE_ID, publicDefinitions, hasIntellAccess, loadIntellResults, intellProfile, writeReport,
+  INTELL_TEST_IDS, INTELL_SERVICE_ID, INTELL_MODULE_B_ID, publicDefinitions, intellAccess, intellPriceFor, loadIntellResults, intellProfile, writeReport,
 } from '../intell.js';
 
+const priceList = (access) => {
+  const p = getPrices();
+  return { a: p[INTELL_SERVICE_ID], b: p[INTELL_MODULE_B_ID], upgrade: access?.a && !access.b ? intellPriceFor(INTELL_MODULE_B_ID, access, p) : null };
+};
+
 // GET /api/intell/tests — public: what the assessments are, plus the questions of the
-// five Intell tests (PHQ-9 / GAD-7 run in the site's existing screening flow).
+// five Intel tests (PHQ-9 / GAD-7 run in the site's existing screening flow).
 export function testsHandler(req, res) {
-  res.json({ tests: publicDefinitions(), price: getPrices()[INTELL_SERVICE_ID] });
+  res.json({ tests: publicDefinitions(), prices: priceList(null) });
 }
 
 // GET /api/intell/status — the signed-in user's access, progress and integrated profile.
@@ -18,13 +23,15 @@ export async function statusHandler(req, res) {
     const userId = await authenticateRequest(req);
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-    const [entitled, results] = await Promise.all([hasIntellAccess(userId), loadIntellResults(userId)]);
+    const [access, results] = await Promise.all([intellAccess(userId), loadIntellResults(userId)]);
+    const entitled = access.a;
     const latest = {};
     for (const r of results) if (!latest[r.testId]) latest[r.testId] = r;
 
     res.json({
-      entitled,
-      price: getPrices()[INTELL_SERVICE_ID],
+      entitled,          // Module A (the five Intel tests)
+      moduleB: access.b, // the full battery + integrated profile
+      prices: priceList(access),
       tests: INTELL_TEST_IDS.map((id) => ({
         id,
         done: !!latest[id],
@@ -32,8 +39,8 @@ export async function statusHandler(req, res) {
         lastResultId: latest[id]?.id || null,
         severity: latest[id]?.severity || null,
       })),
-      // Only buyers get the integrated profile (PHQ-9/GAD-7 alone stay free screenings)
-      profile: entitled && results.length ? intellProfile(results) : null,
+      // Buyers only. Module A: the five Intel tests; Module B: all 7 + recommendations.
+      profile: entitled && results.length ? intellProfile(results, access.b) : null,
     });
   } catch (err) {
     console.error('intell status failed:', err);
@@ -46,10 +53,11 @@ export async function reportHandler(req, res) {
   try {
     const userId = await authenticateRequest(req);
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
-    if (!(await hasIntellAccess(userId))) return res.status(402).json({ error: 'Payment required' });
+    const access = await intellAccess(userId);
+    if (!access.a) return res.status(402).json({ error: 'Payment required' });
     const results = await loadIntellResults(userId);
-    if (!results.length) return res.status(404).json({ error: 'Take an assessment first' });
-    await writeReport(res, await getAccountById(userId), results);
+    if (!results.some((r) => access.b || /^intell_/.test(r.testId))) return res.status(404).json({ error: 'Take an assessment first' });
+    await writeReport(res, await getAccountById(userId), results, access.b);
   } catch (err) {
     console.error('intell report failed:', err);
     if (!res.headersSent) res.status(500).json({ error: 'Internal Server Error' });
@@ -71,7 +79,7 @@ export async function notifyHighRisk(account, testName) {
     body: JSON.stringify({
       to: [{ email: admin, name: 'Intel Counselling' }],
       sender: { email: process.env.SENDER_EMAIL || admin, name: 'Intel Counselling Alerts' },
-      subject: `Priority review: Intell assessment result (${testName})`,
+      subject: `Priority review: Intel assessment result (${testName})`,
       htmlContent: `<p>A client's <strong>${escapeHtml(testName)}</strong> result needs clinical review (high score or the self-harm item).</p>
         <p>Client: <strong>${escapeHtml(account?.name || '')}</strong> &lt;${escapeHtml(account?.email || '')}&gt;${account?.phone ? `, ${escapeHtml(account.phone)}` : ''}</p>
         <p>Please reach out to them. Their full report is attached to any session they book, and they can share it from My Results.</p>`,

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, ArrowRight, Sparkles, CheckCircle2, Lock, Clock, RotateCcw, Download, CalendarPlus, Brain, Layers,
+  ArrowLeft, ArrowRight, Sparkles, CheckCircle2, Lock, Clock, RotateCcw, Download, CalendarPlus, Brain,
   ShieldCheck, Star, ShieldAlert, Target, PartyPopper, Loader2, KeyRound, Info,
 } from 'lucide-react';
 import FadeIn from '../components/FadeIn';
@@ -9,17 +9,8 @@ import SpotlightCard from '../components/SpotlightCard';
 import { apiClient } from '../utils/api';
 import { authHeaders, useAuthUser } from '../utils/auth';
 import { usePricing, formatPrice } from '../utils/pricing';
+import { payWithRazorpay, PaymentCancelledError } from '../utils/payments';
 import { INTELL_META, INTELL_ORDER, IntellIcon, LEVEL_STYLE, capitalise, intellTestPath } from '../utils/intellMeta';
-
-const loadCashfree = () =>
-  new Promise<boolean>((resolve) => {
-    if ((window as any).Cashfree) return resolve(true);
-    const s = document.createElement('script');
-    s.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
-    s.onload = () => resolve(true);
-    s.onerror = () => resolve(false);
-    document.body.appendChild(s);
-  });
 
 const REC_STYLE: Record<string, string> = {
   none: 'bg-green-50 border-green-200 text-green-900',
@@ -28,17 +19,18 @@ const REC_STYLE: Record<string, string> = {
   referral: 'bg-red-50 border-red-200 text-red-900',
 };
 
-// Intell Student Assessments: landing page for visitors, the client's hub after purchase.
+// Intel Student Assessments: landing page for visitors, the client's hub after purchase.
 const IntellAssessmentPage: React.FC = () => {
   const navigate = useNavigate();
   const user = useAuthUser();
   const { prices, demoMode } = usePricing();
-  const price = prices.intell_assessment ?? 2499;
+  const priceA = prices.intell_assessment ?? 250;   // Module A: the five Intel tests
+  const priceB = prices.intell_module_b ?? 300;     // Module B: all seven + integrated profile
 
   const [defs, setDefs] = useState<any[]>([]);
   const [status, setStatus] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
-  const [paying, setPaying] = useState(false);
+  const [paying, setPaying] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,29 +44,22 @@ const IntellAssessmentPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-  const buy = async () => {
+  const buy = async (serviceId: 'intell_assessment' | 'intell_module_b') => {
     if (!user) return navigate('/login?next=/intell-assessment');
-    setPaying(true);
+    setPaying(serviceId);
     setError(null);
     try {
-      if (!(await loadCashfree())) throw new Error('Could not load the payment window. Please check your connection.');
-      const order = await apiClient.post<any>('/api/create-cashfree-session', {
-        serviceId: 'intell_assessment',
-        serviceName: 'Intell Student Assessments (Module A + Module B)',
-        customerName: user.name,
-        customerEmail: user.email,
-        customerPhone: (user as any).phone || '9999999999',
+      // Resolves only after the server has verified the payment with Razorpay
+      await payWithRazorpay({
+        serviceId,
+        serviceName: serviceId === 'intell_module_b' ? 'Intel Student Assessments: Module B (full battery)' : 'Intel Student Assessments: Module A',
+        customer: { name: user.name, email: user.email, phone: (user as any).phone },
       });
-      const cashfree = await (window as any).Cashfree({ mode: 'production' });
-      const result = await cashfree.checkout({ paymentSessionId: order.paymentSessionId, redirectTarget: '_modal' });
-      if (result?.error) throw new Error(result.error.message || 'The payment was not completed.');
-      const verified = await apiClient.post<any>('/api/verify-payment', { orderId: order.orderId });
-      if (!verified.paid) throw new Error('We have not received the payment yet. If you were charged, please contact us.');
       await loadStatus();
     } catch (e: any) {
-      setError(e?.data?.error || e?.message || 'Something went wrong with the payment.');
+      if (!(e instanceof PaymentCancelledError)) setError(e?.data?.error || e?.message || 'Something went wrong with the payment.');
     } finally {
-      setPaying(false);
+      setPaying(null);
     }
   };
 
@@ -96,14 +81,18 @@ const IntellAssessmentPage: React.FC = () => {
     }
   };
 
-  const entitled = !!status?.entitled;
+  const entitled = !!status?.entitled;   // Module A (or B, which includes it)
+  const moduleB = !!status?.moduleB;
+  const upgrade = status?.prices?.upgrade ?? Math.max(1, priceB - priceA);
+  const owns = (id: string) => (INTELL_META[id].module === 'A' ? entitled : moduleB);
+  const total = moduleB ? 7 : 5;
   const tests = INTELL_ORDER.map((id) => ({
     id,
     def: defs.find((d) => d.id === id),
     st: status?.tests?.find((t: any) => t.id === id),
   }));
-  const done = tests.filter((t) => t.st?.done).length;
-  const nextTest = tests.find((t) => !t.st?.done);
+  const done = tests.filter((t) => owns(t.id) && t.st?.done).length;
+  const nextTest = tests.find((t) => owns(t.id) && !t.st?.done);
   const profile = status?.profile;
 
   if (loading) {
@@ -114,36 +103,52 @@ const IntellAssessmentPage: React.FC = () => {
     );
   }
 
+  // Locked cards are plain descriptions (what you get); bought cards are buttons.
+  // The lock is stated once per section header instead of on every card.
   const testCard = (t: (typeof tests)[number]) => {
     const m = INTELL_META[t.id];
     const isDone = !!t.st?.done;
-    return (
-      <button
-        key={t.id}
-        disabled={!entitled}
-        onClick={() => navigate(intellTestPath(t.id))}
-        className={`group text-left bg-white rounded-[28px] p-6 border transition-all flex flex-col h-full ${entitled ? 'border-black/5 hover:-translate-y-1 hover:shadow-xl hover:border-terracotta/40' : 'border-black/5 opacity-80 cursor-default'}`}
-      >
+    const formalName = t.def?.name && !m.label.includes(t.def.name) ? t.def.name : null;
+    const body = (
+      <>
         <div className="flex items-start justify-between gap-3">
           <IntellIcon id={t.id} />
-          {isDone ? (
-            <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-serene-green bg-serene-green/10 border border-serene-green/30 rounded-full px-2.5 py-1"><CheckCircle2 size={12} /> Done</span>
-          ) : !entitled ? <Lock size={16} className="text-intel-dark/30" /> : null}
+          {isDone && (
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-serene-green bg-serene-green/10 rounded-full px-2.5 py-1"><CheckCircle2 size={13} /> Done</span>
+          )}
         </div>
-        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-terracotta mt-5">{m.label}</span>
-        <h3 className="font-black serif text-intel-dark text-lg leading-snug mt-1">{t.def?.name || m.label}</h3>
-        <p className="text-sm text-intel-dark/60 font-light mt-2 flex-1">{m.blurb}</p>
-        <div className="mt-5 flex items-center justify-between text-xs">
-          <span className="inline-flex items-center gap-1 text-intel-dark/50"><Clock size={13} /> ~{t.def?.estimatedMinutes || 5} min</span>
-          {entitled && (
-            <span className="inline-flex items-center gap-1 font-black uppercase tracking-widest text-[10px] text-intel-dark group-hover:text-terracotta transition-colors">
+        <h3 className="font-black serif text-intel-dark text-xl leading-snug mt-5">{m.label}</h3>
+        {formalName && <p className="text-xs text-intel-dark/45 mt-1">{formalName}</p>}
+        <p className="text-sm text-intel-dark/65 font-light leading-relaxed mt-3 flex-1">{m.blurb}</p>
+        <div className="mt-5 pt-4 border-t border-black/5 flex items-center justify-between text-xs">
+          <span className="inline-flex items-center gap-1.5 text-intel-dark/50"><Clock size={13} /> About {t.def?.estimatedMinutes || 5} min</span>
+          {owns(t.id) && (
+            <span className="inline-flex items-center gap-1 font-bold text-intel-dark group-hover:text-serene-green transition-colors">
               {isDone ? <><RotateCcw size={12} /> Retake</> : <>Start <ArrowRight size={12} /></>}
             </span>
           )}
         </div>
+      </>
+    );
+    const base = 'text-left bg-white rounded-[28px] p-6 border border-black/5 flex flex-col h-full';
+    return owns(t.id) ? (
+      <button
+        key={t.id}
+        onClick={() => navigate(intellTestPath(t.id))}
+        className={`group ${base} transition-[transform,box-shadow,border-color] hover:-translate-y-0.5 hover:shadow-lg hover:border-serene-green/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-serene-green`}
+      >
+        {body}
       </button>
+    ) : (
+      <article key={t.id} className={base}>{body}</article>
     );
   };
+
+  const lockNote = (text: string) => (
+    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-intel-dark/50 whitespace-nowrap">
+      <Lock size={13} /> {text}
+    </span>
+  );
 
   return (
     <div className="relative min-h-screen pt-24 pb-16 md:pt-32 md:pb-24 px-4 md:px-6 bg-[#F7EBD3]">
@@ -155,26 +160,24 @@ const IntellAssessmentPage: React.FC = () => {
       <div className="max-w-6xl mx-auto relative z-10">
         <button
           onClick={() => navigate('/assessments')}
-          className="group flex items-center gap-3 text-white font-black transition-all mb-12 uppercase tracking-[0.2em] text-xs bg-serene-green hover:bg-[#2D6A4F] px-5 py-3 rounded-full shadow-sm w-fit"
+          className="group inline-flex items-center gap-2 mb-10 text-sm font-semibold text-intel-dark/70 hover:text-intel-dark transition-colors"
         >
-          <span className="w-7 h-7 rounded-full bg-white/20 group-hover:bg-white/30 flex items-center justify-center"><ArrowLeft size={14} /></span>
+          <ArrowLeft size={16} className="transition-transform group-hover:-translate-x-0.5" />
           All assessments
         </button>
 
         <FadeIn>
-          <div className="text-center mb-12 md:mb-16">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-intel-dark border border-white/10 text-white text-[10px] font-bold uppercase tracking-[0.3em] mb-6 shadow-xl">
-              <Sparkles size={14} className="animate-pulse" /> Intell Student Success Assessment™
-            </div>
-            <h1 className="text-4xl md:text-6xl font-black text-intel-dark serif mb-6 leading-tight">
-              {entitled ? <>Hi {user?.name?.split(' ')[0]}, let's keep <span className="italic text-serene-green">growing.</span></> : <>Know yourself. <br className="hidden md:block" /><span className="italic text-serene-green">Grow</span> with confidence.</>}
+          <header className="max-w-2xl mb-10 md:mb-12">
+            <p className="text-sm font-semibold text-[#8a6a3f] mb-3">Intel Student Success Assessment™</p>
+            <h1 className="serif text-4xl md:text-5xl leading-tight text-intel-dark">
+              {entitled ? <>Welcome back, {user?.name?.split(' ')[0]}</> : <>Know yourself. Grow with confidence.</>}
             </h1>
-            <p className="text-intel-dark/60 max-w-2xl mx-auto text-base md:text-lg font-light leading-relaxed">
+            <p className="mt-4 text-base md:text-lg text-intel-dark/70 leading-relaxed">
               {entitled
-                ? (done === 7 ? "You've completed every assessment — your full profile is below." : `You've finished ${done} of 7. Pick up wherever you like — there are no right or wrong answers.`)
+                ? (done === total ? "You've completed every assessment — your profile is below." : `You've finished ${done} of ${total}. Pick up wherever you like — there are no right or wrong answers.`)
                 : 'How you learn, how you study, how you feel, your screen habits and your personality — plus two standard wellbeing screenings, brought together in one profile.'}
             </p>
-          </div>
+          </header>
         </FadeIn>
 
         {error && (
@@ -184,14 +187,14 @@ const IntellAssessmentPage: React.FC = () => {
         {/* ── Purchase card (not yet bought) ── */}
         {!entitled && (
           <FadeIn delay={150}>
-            <SpotlightCard className="bg-[#1C1F22] border-2 border-terracotta/20 p-8 md:p-14 rounded-[40px] md:rounded-[60px] shadow-2xl mb-14 text-left">
+            <SpotlightCard className="bg-[#1C1F22] border-2 border-terracotta/20 p-8 md:p-14 rounded-[28px] md:rounded-[32px] shadow-2xl mb-14 text-left">
               <div className="grid md:grid-cols-2 gap-8 mb-10">
                 {[
-                  { tag: 'Module A', title: 'Intell Student Development Assessments', text: 'Five Intell-developed assessments with colour-banded interpretation and your learning style.', ids: INTELL_ORDER.filter((id) => INTELL_META[id].module === 'A') },
-                  { tag: 'Module B', title: 'Intell Student Psychological Assessment Battery™', text: 'All five plus PHQ-9 and GAD-7, combined into an integrated profile with risk identification and counselling recommendations.', ids: INTELL_ORDER.filter((id) => INTELL_META[id].module === 'B') },
+                  { tag: 'Module A', title: 'Intel Student Development Assessments', text: 'Five Intel-developed assessments with colour-banded interpretation and your learning style.', ids: INTELL_ORDER.filter((id) => INTELL_META[id].module === 'A') },
+                  { tag: 'Module B', title: 'Intel Student Psychological Assessment Battery™', text: 'All five plus PHQ-9 and GAD-7, combined into an integrated profile with risk identification and counselling recommendations.', ids: INTELL_ORDER.filter((id) => INTELL_META[id].module === 'B') },
                 ].map((m) => (
                   <div key={m.tag} className="bg-white/5 border border-white/10 rounded-[32px] p-6">
-                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-terracotta">{m.tag}</span>
+                    <span className="text-[11px] font-black uppercase tracking-[0.14em] text-terracotta">{m.tag}</span>
                     <h3 className="text-xl md:text-2xl font-black text-white serif mt-2 mb-3">{m.title}</h3>
                     <p className="text-white/60 text-sm font-light mb-5">{m.text}</p>
                     <div className="flex flex-wrap gap-2">
@@ -210,27 +213,35 @@ const IntellAssessmentPage: React.FC = () => {
               </div>
 
               <div className="flex flex-wrap gap-2.5 mb-10">
-                {['One payment — both modules', 'Retake anytime', 'Downloadable PDF report', 'Shared with your counsellor when you book'].map((t) => (
+                {['Module B includes everything in A', 'Retake anytime', 'Downloadable PDF report', 'Shared with your counsellor when you book'].map((t) => (
                   <span key={t} className="inline-flex items-center gap-1.5 bg-serene-green/20 border border-serene-green/40 rounded-full px-3.5 py-1.5 text-xs font-bold text-white"><CheckCircle2 size={13} /> {t}</span>
                 ))}
               </div>
 
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-8 border-t border-white/10">
-                <div>
-                  <span className="text-xs font-bold text-white/40 block mb-1 uppercase tracking-wider">One-time · both modules</span>
-                  <span className="text-4xl md:text-5xl font-black text-white serif">₹{formatPrice(price)}</span>
-                  {demoMode && <span className="ml-3 align-middle bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full">Demo Mode</span>}
-                </div>
-                <button
-                  onClick={buy}
-                  disabled={paying}
-                  className="w-full sm:w-auto px-10 py-5 bg-terracotta hover:bg-terracotta/90 disabled:opacity-60 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all text-xs flex items-center justify-center gap-3"
-                >
-                  {paying ? <Loader2 size={16} className="animate-spin" /> : <KeyRound size={16} />}
-                  {user ? 'Unlock both modules' : 'Sign in to get access'}
-                </button>
+              <div className="grid sm:grid-cols-2 gap-4 pt-8 border-t border-white/10">
+                {[
+                  { id: 'intell_assessment' as const, tag: 'Module A', price: priceA, note: 'The five Intel tests', highlight: false },
+                  { id: 'intell_module_b' as const, tag: 'Module B', price: priceB, note: 'All seven tests + integrated profile', highlight: true },
+                ].map((o) => (
+                  <div key={o.id} className={`rounded-[24px] p-5 flex flex-col gap-4 ${o.highlight ? 'bg-white/10 border-2 border-terracotta/60' : 'bg-white/5 border border-white/10'}`}>
+                    <div>
+                      <span className="text-[11px] font-black uppercase tracking-[0.14em] text-terracotta">{o.tag}{o.highlight && ' · best value'}</span>
+                      <p className="text-4xl font-black text-white serif mt-1">₹{formatPrice(o.price)}</p>
+                      <p className="text-xs text-white/50 mt-1">{o.note} · one-time</p>
+                    </div>
+                    <button
+                      onClick={() => buy(o.id)}
+                      disabled={!!paying}
+                      className={`w-full px-6 py-4 rounded-2xl font-semibold text-xs flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-60 ${o.highlight ? 'bg-terracotta text-intel-dark hover:bg-terracotta/90 shadow-xl' : 'bg-white/10 text-white hover:bg-white/20'}`}
+                    >
+                      {paying === o.id ? <Loader2 size={16} className="animate-spin" /> : <KeyRound size={16} />}
+                      {user ? `Unlock ${o.tag}` : 'Sign in to get access'}
+                    </button>
+                  </div>
+                ))}
               </div>
-              <p className="mt-6 text-center text-[11px] text-white/40 flex items-center justify-center gap-1.5"><ShieldCheck size={13} /> Secure payment via Cashfree · your answers stay private to your account</p>
+              {demoMode && <p className="mt-4 text-center"><span className="bg-amber-100 text-amber-700 text-[11px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full">Demo Mode</span></p>}
+              <p className="mt-6 text-center text-[11px] text-white/40 flex items-center justify-center gap-1.5"><ShieldCheck size={13} /> Secure payment via Razorpay · your answers stay private to your account</p>
             </SpotlightCard>
           </FadeIn>
         )}
@@ -238,26 +249,26 @@ const IntellAssessmentPage: React.FC = () => {
         {/* ── Progress + next step (bought) ── */}
         {entitled && (
           <FadeIn>
-            <div className="bg-intel-dark text-white rounded-[40px] p-6 md:p-10 mb-12 relative overflow-hidden shadow-2xl">
+            <div className="bg-intel-dark text-white rounded-[28px] p-6 md:p-10 mb-12 relative overflow-hidden shadow-2xl">
               <div className="absolute -right-16 -top-16 w-64 h-64 bg-terracotta/20 rounded-full blur-3xl" />
               <div className="relative flex flex-col md:flex-row md:items-center gap-6">
                 <div className="flex-1">
-                  <p className="text-terracotta text-[10px] font-black uppercase tracking-[0.3em] mb-2">Your progress</p>
-                  <p className="text-3xl font-black serif mb-4">{done} of 7 assessments done</p>
+                  <p className="text-terracotta text-[11px] font-black uppercase tracking-[0.14em] mb-2">Your progress</p>
+                  <p className="text-3xl font-black serif mb-4">{done} of {total} assessments done</p>
                   <div className="h-3 rounded-full bg-white/10 overflow-hidden">
-                    <div className="h-full bg-terracotta rounded-full transition-all duration-700" style={{ width: `${(done / 7) * 100}%` }} />
+                    <div className="h-full bg-terracotta rounded-full transition-all duration-700" style={{ width: `${(done / total) * 100}%` }} />
                   </div>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3">
                   {nextTest ? (
-                    <button onClick={() => navigate(intellTestPath(nextTest.id))} className="px-7 py-4 bg-terracotta text-white rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2">
+                    <button onClick={() => navigate(intellTestPath(nextTest.id))} className="px-7 py-4 bg-terracotta text-intel-dark rounded-2xl font-semibold text-[11px] shadow-xl transition-all flex items-center justify-center gap-2">
                       {done ? 'Continue' : 'Start'}: {INTELL_META[nextTest.id].label} <ArrowRight size={14} />
                     </button>
                   ) : (
-                    <span className="inline-flex items-center gap-2 px-6 py-4 bg-white/10 rounded-2xl font-black uppercase tracking-widest text-[11px]"><PartyPopper size={16} className="text-terracotta" /> All done!</span>
+                    <span className="inline-flex items-center gap-2 px-6 py-4 bg-white/10 rounded-2xl font-semibold text-[11px]"><PartyPopper size={16} className="text-terracotta" /> All done!</span>
                   )}
                   {done > 0 && (
-                    <button onClick={downloadReport} disabled={downloading} className="px-7 py-4 bg-white/10 border border-white/20 rounded-2xl font-black uppercase tracking-widest text-[11px] hover:bg-white/20 transition-all flex items-center justify-center gap-2">
+                    <button onClick={downloadReport} disabled={downloading} className="px-7 py-4 bg-white/10 border border-white/20 rounded-2xl font-semibold text-[11px] hover:bg-white/20 transition-all flex items-center justify-center gap-2">
                       {downloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} PDF report
                     </button>
                   )}
@@ -269,12 +280,14 @@ const IntellAssessmentPage: React.FC = () => {
 
         {/* ── Tests ── */}
         <section className="mb-14">
-          <div className="flex items-end justify-between gap-3 mb-6 border-b border-black/5 pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 sm:gap-3 mb-6 border-b border-black/5 pb-4">
             <div>
-              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-terracotta">Module A</span>
+              <span className="text-[11px] font-black uppercase tracking-[0.14em] text-terracotta">Module A</span>
               <h2 className="text-2xl md:text-3xl font-black serif text-intel-dark">Student Development Assessments</h2>
             </div>
-            {entitled && <span className="text-xs font-bold text-intel-dark/40">{tests.filter((t) => INTELL_META[t.id].module === 'A' && t.st?.done).length}/5</span>}
+            {entitled
+              ? <span className="text-xs font-bold text-intel-dark/50">{tests.filter((t) => INTELL_META[t.id].module === 'A' && t.st?.done).length} of 5 done</span>
+              : lockNote(`Module A · ₹${formatPrice(priceA)}`)}
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {tests.filter((t) => INTELL_META[t.id].module === 'A').map(testCard)}
@@ -282,38 +295,82 @@ const IntellAssessmentPage: React.FC = () => {
         </section>
 
         <section className="mb-14">
-          <div className="flex items-end justify-between gap-3 mb-6 border-b border-black/5 pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 sm:gap-3 mb-6 border-b border-black/5 pb-4">
             <div>
-              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-terracotta">Module B</span>
+              <span className="text-[11px] font-black uppercase tracking-[0.14em] text-terracotta">Module B</span>
               <h2 className="text-2xl md:text-3xl font-black serif text-intel-dark">Psychological Assessment Battery™</h2>
-              <p className="text-sm text-intel-dark/50 font-light mt-1">Module A plus two standard screenings, combined into your integrated profile.</p>
+              <p className="text-sm text-intel-dark/55 font-light mt-1">The five above plus two standard screenings, brought together in one profile.</p>
             </div>
-            {entitled && <span className="text-xs font-bold text-intel-dark/40">{done}/7</span>}
+            {moduleB ? <span className="text-xs font-bold text-intel-dark/50">{done} of 7 done</span>
+              : entitled ? (
+                <button onClick={() => buy('intell_module_b')} disabled={!!paying} className="inline-flex items-center gap-2 px-5 py-2.5 bg-terracotta text-intel-dark rounded-xl font-semibold text-xs shadow-lg hover:bg-terracotta/90 disabled:opacity-60 whitespace-nowrap">
+                  {paying === 'intell_module_b' ? <Loader2 size={14} className="animate-spin" /> : <KeyRound size={14} />} Add Module B for ₹{formatPrice(upgrade)}
+                </button>
+              ) : lockNote(`Module B · ₹${formatPrice(priceB)}, includes A`)}
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {tests.filter((t) => INTELL_META[t.id].module === 'B').map(testCard)}
-            <div className="rounded-[28px] p-6 border-2 border-dashed border-serene-green/30 bg-serene-green/5 flex flex-col">
-              <span className="w-12 h-12 rounded-2xl bg-serene-green text-white flex items-center justify-center shadow-lg"><Layers size={22} /></span>
-              <h3 className="font-black serif text-intel-dark text-lg mt-5">Integrated profile</h3>
-              <p className="text-sm text-intel-dark/60 font-light mt-2">Strengths, risks, areas for support and counselling recommendations — built from all 7 results.</p>
+
+            {/* The profile is the sum of all seven — show them, lit as each is done */}
+            <div className="sm:col-span-2 lg:col-span-1 rounded-[28px] p-6 bg-serene-green text-white flex flex-col">
+              <h3 className="font-black serif text-xl leading-snug">{moduleB ? 'Your integrated profile' : 'Integrated profile'}</h3>
+              <p className="text-sm text-white/70 font-light leading-relaxed mt-3 flex-1">
+                Your strengths, any risks, areas for support and what we recommend next, built from all seven results.
+              </p>
+              <div
+                className="mt-5 flex flex-wrap gap-1.5"
+                role="img"
+                aria-label={moduleB ? `${done} of 7 assessments done` : 'Built from all seven assessments'}
+              >
+                {tests.map((t) => {
+                  const Icon = INTELL_META[t.id].icon;
+                  const lit = owns(t.id) && t.st?.done;
+                  return (
+                    <span
+                      key={t.id}
+                      title={INTELL_META[t.id].label}
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center ${lit ? `${INTELL_META[t.id].color} text-white` : 'bg-white/10 text-white/45'}`}
+                    >
+                      <Icon size={15} />
+                    </span>
+                  );
+                })}
+              </div>
+              <div className="mt-5 pt-4 border-t border-white/15 flex items-center justify-between text-xs">
+                {moduleB ? (
+                  <>
+                    <span className="text-white/70">{done === 7 ? 'All 7 done' : `${done} of 7 done`}</span>
+                    {profile && (
+                      <button
+                        onClick={() => document.getElementById('profile')?.scrollIntoView({ behavior: 'smooth' })}
+                        className="inline-flex items-center gap-1 font-bold text-white hover:text-terracotta transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white rounded"
+                      >
+                        See your profile <ArrowRight size={12} />
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-white/60">{entitled ? 'Part of Module B' : "Ready once you've taken all seven"}</span>
+                )}
+              </div>
             </div>
           </div>
         </section>
 
         {/* ── Integrated profile ── */}
         {entitled && profile && (
-          <section className="mb-14">
+          <section id="profile" className="mb-14 scroll-mt-nav">
             <div className="flex items-center gap-3 mb-6">
               <span className="w-12 h-12 rounded-2xl bg-intel-dark text-terracotta flex items-center justify-center"><Brain size={22} /></span>
               <div>
-                <h2 className="text-2xl md:text-3xl font-black serif text-intel-dark">Your integrated profile</h2>
+                <h2 className="text-2xl md:text-3xl font-black serif text-intel-dark">{moduleB ? 'Your integrated profile' : 'Your results summary'}</h2>
                 <p className="text-sm text-intel-dark/50">{profile.summary}</p>
               </div>
             </div>
 
             {!profile.complete && (
               <div className="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 mb-5">
-                <Info size={16} className="mt-0.5 shrink-0" /> Still to do: {profile.missingNames.join(', ')}. The profile is complete once all 7 are done.
+                <Info size={16} className="mt-0.5 shrink-0" /> Still to do: {profile.missingNames.join(', ')}. The profile is complete once all {profile.total} are done.
               </div>
             )}
 
@@ -368,20 +425,37 @@ const IntellAssessmentPage: React.FC = () => {
           </section>
         )}
 
-        {/* ── Talk it through ── */}
-        <div className="p-8 md:p-14 bg-intel-dark rounded-[50px] md:rounded-[70px] text-white text-center relative overflow-hidden shadow-2xl">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-bl-[120px] -mr-32 -mt-32" />
-          <div className="relative z-10">
-            <span className="mx-auto mb-5 w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center"><CalendarPlus size={26} className="text-terracotta" /></span>
-            <h3 className="text-2xl md:text-4xl font-black serif mb-4">Talk it through with a counsellor</h3>
-            <p className="text-white/60 text-sm md:text-lg font-light max-w-xl mx-auto mb-8">
-              When you book, tick "share my Intell report" and your counsellor receives your full report before the session.
+        {/* ── Talk it through: a real sequence, so the steps are numbered ── */}
+        <section className="bg-intel-dark text-white rounded-[28px] md:rounded-[32px] p-8 md:p-12 grid md:grid-cols-[1fr_1.15fr] gap-10 md:gap-14 items-center">
+          <div>
+            <span className="mb-6 w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center"><CalendarPlus size={22} className="text-terracotta" /></span>
+            <h3 className="text-3xl md:text-4xl font-black serif leading-tight mb-4">Talk it through with a counsellor</h3>
+            <p className="text-white/65 font-light leading-relaxed mb-8 max-w-md">
+              Results make more sense with someone who can explain them. Share your report when you book, and your counsellor reads it before you meet.
             </p>
-            <button onClick={() => navigate('/booking')} className="bg-terracotta text-white px-10 py-4 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all">
+            <button
+              onClick={() => navigate('/booking')}
+              className="bg-terracotta text-intel-dark px-8 py-4 rounded-2xl font-bold text-sm shadow-xl hover:bg-[#cfac80] active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            >
               Book a session
             </button>
           </div>
-        </div>
+          <ol className="space-y-3">
+            {[
+              ['Book a session', 'Choose online or in person, and a time that suits you.'],
+              ['Tick "Share my Intel Student Assessment report"', "It's on the booking form once you've taken at least one assessment."],
+              ['Your counsellor reads it first', 'They see each result, your profile and your answers before the session.'],
+            ].map(([title, text], i) => (
+              <li key={title} className="flex gap-4 rounded-2xl bg-white/5 border border-white/10 p-5">
+                <span className="w-8 h-8 shrink-0 rounded-full bg-terracotta text-intel-dark font-black text-sm flex items-center justify-center" aria-hidden="true">{i + 1}</span>
+                <div>
+                  <p className="font-bold text-sm leading-snug">{title}</p>
+                  <p className="text-white/55 text-sm font-light mt-1">{text}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
       </div>
     </div>
   );

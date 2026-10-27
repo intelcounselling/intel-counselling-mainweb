@@ -17,6 +17,8 @@ const ClinicalAssessment: React.FC<ClinicalAssessmentProps> = ({ config, onClose
   const [step, setStep] = useState(-1); // -1 is the intro page
   const [answers, setAnswers] = useState<number[]>([]);
   const [result, setResult] = useState<any | null>(null);
+  // Signed-out visitors confirm their age; under-18s sign in so a parent can consent (DPDP Act)
+  const [adultConfirmed, setAdultConfirmed] = useState(false);
 
   useEffect(() => {
     const resultId = searchParams.get('id');
@@ -108,7 +110,7 @@ const ClinicalAssessment: React.FC<ClinicalAssessmentProps> = ({ config, onClose
   if (step === -1) {
     return (
       <div className="min-h-screen bg-[#F6F7F9] pt-24 pb-12 px-4 flex items-center justify-center">
-        <div className="relative bg-white w-full max-w-2xl p-8 md:p-16 rounded-[40px] shadow-xl animate-in fade-in duration-500">
+        <div className="relative bg-white w-full max-w-2xl p-8 md:p-16 rounded-[28px] shadow-xl animate-in fade-in duration-500">
           <button onClick={onClose} className="absolute left-6 top-6 md:left-8 md:top-8 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-black/40 hover:text-black/80 transition-colors">
             <ArrowLeft size={16} /> Back
           </button>
@@ -116,7 +118,7 @@ const ClinicalAssessment: React.FC<ClinicalAssessmentProps> = ({ config, onClose
           <div className={`w-20 h-20 ${config.color} text-white rounded-3xl flex items-center justify-center mb-8 shadow-xl mt-4`}>
              <HeartPulse size={40} />
           </div>
-          <span className="text-terracotta font-black text-xs uppercase tracking-[0.3em] mb-4 block">Self-Assessment Tool</span>
+          <span className="text-terracotta font-black text-xs uppercase tracking-[0.14em] mb-4 block">Self-Assessment Tool</span>
           <h2 className="text-3xl md:text-4xl font-black serif text-intel-dark mb-6">{config.title}</h2>
           
           <div className="space-y-4 text-intel-dark/70 mb-10 text-sm md:text-base leading-relaxed">
@@ -126,9 +128,18 @@ const ClinicalAssessment: React.FC<ClinicalAssessmentProps> = ({ config, onClose
             <p className="flex gap-2 items-start text-terracotta font-medium"><Shield size={18} className="shrink-0 mt-0.5" /> <span><strong>Not a Diagnosis:</strong> This is an awareness tool and DOES NOT replace professional medical or psychiatric diagnosis.</span></p>
           </div>
           
+          {!user && (
+            <div className="mb-6 rounded-2xl bg-black/[0.03] p-4 text-sm text-intel-dark/80">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" checked={adultConfirmed} onChange={(e) => setAdultConfirmed(e.target.checked)} className="mt-1 h-4 w-4" />
+                <span>I am 18 or older. <span className="text-intel-dark/60">Under 18? <a href="/login?next=/assessments" className="underline">Sign in</a> so a parent or guardian can give consent first.</span></span>
+              </label>
+            </div>
+          )}
           <button 
+            disabled={!user && !adultConfirmed}
             onClick={handleStart}
-            className="w-full bg-terracotta text-white py-5 rounded-2xl font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-lg"
+            className="w-full bg-terracotta text-intel-dark py-5 rounded-2xl font-semibold active:scale-95 transition-all shadow-lg"
           >
             Start Assessment
           </button>
@@ -139,7 +150,7 @@ const ClinicalAssessment: React.FC<ClinicalAssessmentProps> = ({ config, onClose
 
   return (
     <div className="min-h-screen bg-[#F6F7F9] pt-20 md:pt-28 pb-12 px-4 flex items-start justify-center">
-      <div className={`relative bg-white w-full max-w-3xl md:rounded-[40px] shadow-xl flex flex-col overflow-hidden min-h-[60vh] border border-black/5`}>
+      <div className={`relative bg-white w-full max-w-3xl md:rounded-[28px] shadow-xl flex flex-col overflow-hidden min-h-[60vh] border border-black/5`}>
         
         {/* Navigation / Progress Header */}
         <div className="bg-white/80 backdrop-blur-md px-6 py-4 border-b border-black/5 flex items-center justify-between z-50 shrink-0">
@@ -154,7 +165,7 @@ const ClinicalAssessment: React.FC<ClinicalAssessmentProps> = ({ config, onClose
               </button>
             )}
             
-            <div className={`px-3 py-1 rounded-full ${config.color} text-white text-[10px] font-black uppercase tracking-widest`}>
+            <div className={`px-3 py-1 rounded-full ${config.color} text-white text-[11px] font-black uppercase tracking-widest`}>
               {config.title}
             </div>
             
@@ -163,7 +174,7 @@ const ClinicalAssessment: React.FC<ClinicalAssessmentProps> = ({ config, onClose
                 <div className="h-1.5 w-24 md:w-48 bg-black/5 rounded-full overflow-hidden">
                    <div className={`h-full ${config.color} transition-all duration-300`} style={{ width: `${((step + 1) / config.questions.length) * 100}%` }}></div>
                 </div>
-                <span className="text-[10px] font-bold text-black/40 uppercase tracking-widest whitespace-nowrap">{step + 1} / {config.questions.length}</span>
+                <span className="text-[11px] font-bold text-black/40 uppercase tracking-widest whitespace-nowrap">{step + 1} / {config.questions.length}</span>
               </>
             )}
           </div>
@@ -213,7 +224,7 @@ const ClinicalAssessment: React.FC<ClinicalAssessmentProps> = ({ config, onClose
                        try { localStorage.setItem(PENDING_RESULT_KEY, searchParams.get('id') || ''); } catch (e) { /* storage unavailable */ }
                        navigate('/login?next=/my-results');
                      }}
-                     className="shrink-0 bg-serene-green text-white px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] hover:opacity-90"
+                     className="shrink-0 bg-serene-green text-white px-6 py-3 rounded-xl font-semibold text-[11px] hover:opacity-90"
                    >
                      Save to my account
                    </button>
@@ -225,7 +236,7 @@ const ClinicalAssessment: React.FC<ClinicalAssessmentProps> = ({ config, onClose
                
                <h2 className="text-4xl md:text-5xl font-black serif text-intel-dark mb-4">{result.band.label}</h2>
                
-               <div className="bg-black/5 rounded-[40px] p-8 md:p-12 mb-10">
+               <div className="bg-black/5 rounded-[28px] p-8 md:p-12 mb-10">
                  <p className="text-intel-dark/80 text-lg md:text-xl leading-relaxed">
                    {result.band.desc}
                  </p>
@@ -269,14 +280,14 @@ const ClinicalAssessment: React.FC<ClinicalAssessmentProps> = ({ config, onClose
                        : window.location.href;
                      navigate('/booking?assessmentRef=' + encodeURIComponent(ref));
                    }}
-                   className={`w-full md:w-auto px-10 py-5 ${config.color} text-white rounded-2xl font-black uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all md:mb-8`}
+                   className={`w-full md:w-auto px-10 py-5 ${config.color} text-white rounded-2xl font-semibold shadow-xl active:scale-95 transition-all md:mb-8`}
                  >
                    {result.band.ctaText || "Book a Consultation"}
                  </button>
                  
                  <button
                    onClick={() => navigate(user ? '/my-results' : '/assessments')}
-                   className="flex items-center justify-center gap-3 w-full md:w-auto px-6 py-5 bg-white text-intel-dark border-2 border-black/10 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-black/5 transition-all shadow-sm md:mb-8"
+                   className="flex items-center justify-center gap-3 w-full md:w-auto px-6 py-5 bg-white text-intel-dark border-2 border-black/10 rounded-2xl font-semibold text-xs hover:bg-black/5 transition-all shadow-sm md:mb-8"
                  >
                    {user ? 'My Results' : 'Other Assessments'}
                  </button>

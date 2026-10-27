@@ -1,4 +1,4 @@
-// INTELL Student Success Assessment™ — checks the seeded questions AND the scoring
+// INTEL Student Success Assessment™ — checks the seeded questions AND the scoring
 // logic against the published specification.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

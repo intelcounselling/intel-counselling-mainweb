@@ -266,7 +266,7 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
   if (loadError) {
     return (
       <div className="min-h-screen bg-[#F6F7F9] pt-24 pb-12 px-4 flex items-center justify-center">
-        <div className="relative bg-white w-full max-w-2xl p-8 md:p-16 rounded-[40px] shadow-xl text-center animate-in fade-in duration-500">
+        <div className="relative bg-white w-full max-w-2xl p-8 md:p-16 rounded-[28px] shadow-xl text-center animate-in fade-in duration-500">
           <div className="w-20 h-20 bg-intel-dark text-white rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-xl">
             <X size={40} />
           </div>
@@ -274,7 +274,7 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
           <p className="text-intel-dark/60 leading-relaxed mb-10">{loadError} The link may be invalid or the saved result is no longer available.</p>
           <button
             onClick={onClose}
-            className="w-full bg-terracotta text-white py-5 rounded-2xl font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-lg"
+            className="w-full bg-terracotta text-intel-dark py-5 rounded-2xl font-semibold active:scale-95 transition-all shadow-lg"
           >
             Go Back
           </button>
@@ -286,19 +286,19 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
   if (showSectionIntro && !result && !loading) {
     return (
       <div className="min-h-screen bg-[#F6F7F9] pt-24 pb-12 px-4 flex items-center justify-center">
-        <div className="relative bg-white w-full max-w-2xl p-8 md:p-16 rounded-[40px] shadow-xl text-center animate-in fade-in duration-500">
+        <div className="relative bg-white w-full max-w-2xl p-8 md:p-16 rounded-[28px] shadow-xl text-center animate-in fade-in duration-500">
           <button onClick={onClose} className="absolute left-6 top-6 md:left-8 md:top-8 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-black/40 hover:text-black/80 transition-colors">
             <ArrowLeft size={16} /> Back
           </button>
           <div className="w-20 h-20 bg-intel-dark text-white rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-xl">
              {currentPart === 1 ? <Brain size={40} /> : currentPart === 2 ? <Target size={40} /> : <UserCheck size={40} />}
           </div>
-          <span className="text-terracotta font-black text-xs uppercase tracking-[0.3em] mb-4 block">Part {currentPart} of 3</span>
+          <span className="text-terracotta font-black text-xs uppercase tracking-[0.14em] mb-4 block">Part {currentPart} of 3</span>
           <h2 className="text-3xl md:text-4xl font-black serif text-intel-dark mb-6">{getSectionTitle(currentPart)}</h2>
           <p className="text-intel-dark/60 leading-relaxed mb-10">{getSectionDesc(currentPart)}</p>
           <button 
             onClick={() => setShowSectionIntro(false)}
-            className="w-full bg-terracotta text-white py-5 rounded-2xl font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-lg"
+            className="w-full bg-terracotta text-intel-dark py-5 rounded-2xl font-semibold active:scale-95 transition-all shadow-lg"
           >
             Begin Section
           </button>
@@ -317,7 +317,7 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
 
   return (
     <div className="min-h-screen bg-[#F6F7F9] pt-20 md:pt-28 pb-12 px-4 flex items-start justify-center">
-      <div className={`relative bg-white w-full ${result ? 'max-w-4xl' : 'max-w-3xl'} md:rounded-[40px] shadow-xl flex flex-col overflow-hidden min-h-[60vh] border border-black/5 print:shadow-none print:max-h-none print:overflow-visible`}>
+      <div className={`relative bg-white w-full ${result ? 'max-w-4xl' : 'max-w-3xl'} md:rounded-[28px] shadow-xl flex flex-col overflow-hidden min-h-[60vh] border border-black/5 print:shadow-none print:max-h-none print:overflow-visible`}>
         
         {/* Navigation / Progress Header */}
         <div className="sticky top-0 bg-white/80 backdrop-blur-md px-6 py-4 border-b border-black/5 flex items-center justify-between z-50 print:hidden">
@@ -329,13 +329,13 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
             >
               <ArrowLeft size={20} />
             </button>
-            <div className="px-3 py-1 rounded-full bg-intel-dark text-white text-[10px] font-black uppercase tracking-widest">
+            <div className="px-3 py-1 rounded-full bg-intel-dark text-white text-[11px] font-black uppercase tracking-widest">
               Part {currentPart}
             </div>
             <div className="h-1.5 w-32 md:w-48 bg-black/5 rounded-full overflow-hidden">
                <div className="h-full bg-terracotta transition-all duration-300" style={{ width: `${(sectionProg.current / sectionProg.total) * 100}%` }}></div>
             </div>
-            <span className="text-[10px] font-bold text-black/40 uppercase tracking-widest whitespace-nowrap">{sectionProg.current} / {sectionProg.total}</span>
+            <span className="text-[11px] font-bold text-black/40 uppercase tracking-widest whitespace-nowrap">{sectionProg.current} / {sectionProg.total}</span>
             <button 
               onClick={goToNext}
               disabled={step >= answers.length || step === ALL_QUESTIONS.length - 1}
@@ -353,7 +353,7 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
           {!result && !loading ? (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="mb-12">
-                <p className="text-terracotta font-black text-xs uppercase tracking-[0.3em] mb-4">{currentQuestion?.category}</p>
+                <p className="text-terracotta font-black text-xs uppercase tracking-[0.14em] mb-4">{currentQuestion?.category}</p>
                 <h3 className="text-2xl md:text-4xl font-black text-intel-dark serif leading-tight">
                   {currentQuestion?.text}
                 </h3>
@@ -392,12 +392,12 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12 print:mb-8">
                  <div>
                    <h2 className="text-3xl md:text-5xl font-black serif text-intel-dark mb-2">Assessment Report</h2>
-                   <p className="text-terracotta font-bold uppercase tracking-[0.2em] text-xs">Internal Reference: INTEL-CAREER-2024</p>
+                   <p className="text-terracotta font-bold uppercase tracking-[0.1em] text-xs">Internal Reference: INTEL-CAREER-2024</p>
                  </div>
                   <div className="flex gap-3 print:hidden">
                     <button 
                       onClick={handlePrint}
-                      className="flex items-center gap-3 px-6 py-3 bg-intel-dark text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:opacity-90 transition-all shadow-lg"
+                      className="flex items-center gap-3 px-6 py-3 bg-intel-dark text-white rounded-2xl font-semibold text-xs hover:opacity-90 transition-all shadow-lg"
                     >
                       <Download size={16} /> Download Form
                     </button>
@@ -412,7 +412,7 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
                     <div className="space-y-4">
                       {Object.entries(result.mi).map(([cat, score]: [any, any]) => (
                         <div key={cat}>
-                          <div className="flex justify-between text-[10px] font-black uppercase tracking-widest mb-1.5 px-1">
+                          <div className="flex justify-between text-[11px] font-black uppercase tracking-widest mb-1.5 px-1">
                             <span>{cat}</span>
                             <span>{Math.round((score / 20) * 100)}%</span>
                           </div>
@@ -431,7 +431,7 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
                     <div className="space-y-4">
                       {Object.entries(result.interests).map(([cat, score]: [any, any]) => (
                         <div key={cat}>
-                          <div className="flex justify-between text-[10px] font-black uppercase tracking-widest mb-1.5 px-1">
+                          <div className="flex justify-between text-[11px] font-black uppercase tracking-widest mb-1.5 px-1">
                             <span>{cat}</span>
                             <span>{Math.round((score / 40) * 100)}%</span>
                           </div>
@@ -450,7 +450,7 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
                     <div className="space-y-4">
                       {Object.entries(result.personality).map(([cat, score]: [any, any]) => (
                         <div key={cat}>
-                          <div className="flex justify-between text-[10px] font-black uppercase tracking-widest mb-1.5 px-1">
+                          <div className="flex justify-between text-[11px] font-black uppercase tracking-widest mb-1.5 px-1">
                             <span>{cat}</span>
                             <span>{Math.round((score / 40) * 100)}%</span>
                           </div>
@@ -463,7 +463,7 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
                   </div>
                 </div>
 
-                <div className="p-8 md:p-12 bg-intel-dark rounded-[50px] text-white mb-12">
+                <div className="p-8 md:p-12 bg-intel-dark rounded-[32px] text-white mb-12">
                   <div className="flex items-center gap-3 mb-8">
                     <div className="w-10 h-10 bg-terracotta rounded-xl flex items-center justify-center">
                       <Sparkles size={20} className="text-white" />
@@ -479,7 +479,7 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
                   </p>
                 </div>
 
-                <div className="text-center p-12 bg-[#F7EBD3] rounded-[60px] border-2 border-dashed border-black/10 print:hidden flex flex-col items-center">
+                <div className="text-center p-12 bg-[#F7EBD3] rounded-[32px] border-2 border-dashed border-black/10 print:hidden flex flex-col items-center">
                   <h3 className="text-2xl font-black serif text-intel-dark mb-3">Assessment Completed Successfully</h3>
                   {type === 'career' ? (
                     <>
@@ -497,7 +497,7 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
                             const assessmentUrl = window.location.origin + '/assessments/career?id=' + currentId;
                             navigate(`/booking?freeBooking=true&assessmentRef=${encodeURIComponent(assessmentUrl)}`);
                           }}
-                          className="px-8 py-5 bg-serene-green text-white rounded-2xl font-black uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all text-xs"
+                          className="px-8 py-5 bg-serene-green text-white rounded-2xl font-semibold shadow-xl active:scale-95 transition-all text-xs"
                         >
                           Schedule Free Session
                         </button>}
@@ -506,7 +506,7 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
                             setSearchParams({}, { replace: true });
                             window.location.reload();
                           }}
-                          className="px-8 py-5 bg-intel-dark text-white rounded-2xl font-black uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all text-xs"
+                          className="px-8 py-5 bg-intel-dark text-white rounded-2xl font-semibold shadow-xl active:scale-95 transition-all text-xs"
                         >
                           Retake Assessment
                         </button>
@@ -518,7 +518,7 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
                       <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                         <button 
                           onClick={onClose}
-                          className="px-8 py-5 bg-terracotta text-white rounded-2xl font-black uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all text-xs"
+                          className="px-8 py-5 bg-terracotta text-intel-dark rounded-2xl font-semibold shadow-xl active:scale-95 transition-all text-xs"
                         >
                           Finish & Close
                         </button>
@@ -527,7 +527,7 @@ const Assessment: React.FC<AssessmentProps> = ({ type, onClose }) => {
                             setSearchParams({}, { replace: true });
                             window.location.reload();
                           }}
-                          className="px-8 py-5 bg-intel-dark text-white rounded-2xl font-black uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all text-xs"
+                          className="px-8 py-5 bg-intel-dark text-white rounded-2xl font-semibold shadow-xl active:scale-95 transition-all text-xs"
                         >
                           Retake Assessment
                         </button>

@@ -116,7 +116,7 @@ export function downloadCSV(rows, filename = 'export.csv') {
   URL.revokeObjectURL(url);
 }
 
-// ── INTELL Student Success Assessment helpers ─────────────────────
+// ── INTEL Student Success Assessment helpers ─────────────────────
 
 export const VALIDITY_MESSAGE = 'Please answer based on real experience for better understanding.';
 
@@ -129,7 +129,7 @@ export const cleanSeverity = (severity) => String(severity ?? '').replace(/^\[Va
 export const getLearningPreference = (score) =>
   score >= 16 ? 'Strong Preference' : score >= 11 ? 'Moderate Preference' : 'Low Preference';
 
-// 80%+ of the answers are "5" on a 1–5 INTELL scale → possible self-presentation bias.
+// 80%+ of the answers are "5" on a 1–5 INTEL scale → possible self-presentation bias.
 // Works for new results and for older rows (derived from the saved answers).
 export function hasValidityFlag(result) {
   if (!result) return false;
@@ -141,7 +141,7 @@ export function hasValidityFlag(result) {
   return values.length > 0 && values.filter((v) => v >= 5).length / values.length >= 0.8;
 }
 
-// Green 48–60 · Yellow 36–47 · Orange 24–35 · Red 12–23 for the four scored INTELL domains.
+// Green 48–60 · Yellow 36–47 · Orange 24–35 · Red 12–23 for the four scored INTEL domains.
 export function getIntellTone(result) {
   if (!result || !INTELL_SCORED.includes(result.test?.category) || typeof result.score !== 'number') return null;
   return result.score >= 48 ? 'green' : result.score >= 36 ? 'yellow' : result.score >= 24 ? 'orange' : 'red';

@@ -1,6 +1,10 @@
 const winston = require('winston');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
+const prisma = require('../prisma');
+
+// Reads of a student's personal data by staff or parents are logged too (DPDP Rules)
+const SENSITIVE_READ = /\/(psychiatrist|admin\/students|admin\/schools\/[^/]+\/students|admin\/appointment-students|appointments\/[^/]+\/report|parent\/children)/;
 
 // Dedicated logger for audit trails
 const auditLogger = winston.createLogger({
@@ -25,8 +29,8 @@ const auditLogger = winston.createLogger({
  * Provides an audit trail for compliance.
  */
 function auditLog(req, res, next) {
-  // Only audit mutations
-  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+  const mutation = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
+  if (mutation || (req.method === 'GET' && SENSITIVE_READ.test(req.originalUrl))) {
     // Capture response completion to get status code
     res.on('finish', () => {
       const auditEntry = {
@@ -41,6 +45,17 @@ function auditLog(req, res, next) {
       };
       
       auditLogger.info('AUDIT', auditEntry);
+      // Durable copy (the console log is not kept in production)
+      prisma.auditLog.create({
+        data: {
+          userId: req.user?.id || null,
+          role: req.user?.role || null,
+          method: req.method,
+          path: String(req.originalUrl).split('?')[0].slice(0, 300),
+          statusCode: res.statusCode,
+          ip: auditEntry.ip ? String(auditEntry.ip).slice(0, 64) : null,
+        },
+      }).catch(() => {}); // never break a request over logging
     });
   }
   next();

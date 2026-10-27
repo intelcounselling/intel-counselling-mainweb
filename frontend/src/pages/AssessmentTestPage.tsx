@@ -5,6 +5,7 @@ import ClinicalAssessment from '../components/ClinicalAssessment';
 import AssessmentRegistration from '../components/AssessmentRegistration';
 import CareerPaymentGate from '../components/CareerPaymentGate';
 import IntellAssessment from '../components/IntellAssessment';
+import GuardianConsent from '../components/GuardianConsent';
 import { isIntellTest, INTELL_HUB } from '../utils/intellMeta';
 import { CLINICAL_CONFIGS } from '../components/ClinicalQuestions';
 import { apiClient } from '../utils/api';
@@ -23,9 +24,11 @@ const AssessmentTestPage: React.FC = () => {
   const isRetake = searchParams.get('retake') === '1';
   const user = useAuthUser();
   const [profileComplete, setProfileComplete] = useState<boolean | null>(null);
+  // Under 18 with no parent consent yet (DPDP Act): nothing can be saved until a parent confirms
+  const [guardianRequired, setGuardianRequired] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
   const [paidChecked, setPaidChecked] = useState(false);
-  // Intell assessments: one purchase on the account unlocks all of them
+  // Intel assessments: one purchase on the account unlocks all of them
   const [intellAccess, setIntellAccess] = useState<boolean | null>(null);
   const isIntell = isIntellTest(testId);
   const fromIntell = searchParams.get('from') === 'intell';
@@ -47,7 +50,7 @@ const AssessmentTestPage: React.FC = () => {
     }
     let alive = true;
     apiClient.get<any>('/api/profile')
-      .then((d) => alive && setProfileComplete(!!d.complete))
+      .then((d) => { if (alive) { setProfileComplete(!!d.complete); setGuardianRequired(!!d.guardianRequired); } })
       .catch(() => alive && setProfileComplete(false));
     return () => { alive = false; };
   }, [user?.id]);
@@ -75,7 +78,7 @@ const AssessmentTestPage: React.FC = () => {
   // Leaving a test: signed-in users go back to their dashboard
   const exit = () => navigate(isIntell || fromIntell ? INTELL_HUB : user ? '/my-results' : '/assessments');
   const isCareer = testId === 'career';
-  const testTitle = isCareer ? 'Career Guidance Assessment' : isIntell ? 'Intell Student Assessments' : CLINICAL_CONFIGS[testId].title;
+  const testTitle = isCareer ? 'Career Guidance Assessment' : isIntell ? 'Intel Student Assessments' : CLINICAL_CONFIGS[testId].title;
 
   // Step 1: account — required for the paid career test
   if ((isCareer || isIntell) && !user) {
@@ -90,7 +93,7 @@ const AssessmentTestPage: React.FC = () => {
 
   if (user && (profileComplete === null || (isCareer && !paidChecked) || (isIntell && intellAccess === null))) return spinner;
 
-  // Not bought yet: the Intell hub explains the assessments and takes the payment
+  // Not bought yet: the Intel hub explains the assessments and takes the payment
   if (isIntell && !intellAccess) return <Navigate to={INTELL_HUB} replace />;
 
   // Step 2: intake, once per account (not needed to view a saved result)
@@ -98,10 +101,15 @@ const AssessmentTestPage: React.FC = () => {
     return (
       <AssessmentRegistration
         testTitle={testTitle}
-        onComplete={() => setProfileComplete(true)}
+        onComplete={() => apiClient.get<any>('/api/profile').then((d) => { setGuardianRequired(!!d.guardianRequired); setProfileComplete(true); }).catch(() => setProfileComplete(true))}
         onClose={exit}
       />
     );
+  }
+
+  // Step 2b: a parent confirms consent for under-18 accounts
+  if (user && guardianRequired && !resultId) {
+    return <GuardianConsent onVerified={() => setGuardianRequired(false)} onClose={exit} />;
   }
 
   // Step 3: payment (career only)
@@ -122,7 +130,7 @@ const AssessmentTestPage: React.FC = () => {
   return (
     <div className="relative min-h-screen">
       {user && (
-        <div className="fixed bottom-4 left-4 z-[999] hidden md:flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-intel-dark/60 bg-white/95 backdrop-blur-md px-4 py-2.5 rounded-full border border-black/5 shadow-md print:hidden">
+        <div className="fixed bottom-4 left-4 z-[999] hidden md:flex items-center gap-2 text-[11px] font-black uppercase tracking-wider text-intel-dark/60 bg-white/95 backdrop-blur-md px-4 py-2.5 rounded-full border border-black/5 shadow-md print:hidden">
           <span>Signed in as <strong className="text-intel-dark">{user.name}</strong></span>
           <span className="opacity-40">|</span>
           <Link to="/my-results" className="text-terracotta hover:opacity-75 transition-opacity">My Results</Link>

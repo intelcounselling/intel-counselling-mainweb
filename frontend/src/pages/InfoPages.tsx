@@ -11,11 +11,11 @@ const Shell: React.FC<{ eyebrow: string; title: string; children: React.ReactNod
   }, []);
   return (
     <div className="min-h-screen bg-[#F7EBD3] pt-24 md:pt-32 pb-16 px-4">
-      <article className="max-w-3xl mx-auto bg-white rounded-[28px] md:rounded-[40px] shadow-xl border border-black/5 p-6 sm:p-10 md:p-14">
+      <article className="max-w-3xl mx-auto bg-white rounded-[28px] md:rounded-[28px] shadow-xl border border-black/5 p-6 sm:p-10 md:p-14">
         <Link to="/" className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-intel-dark/50 hover:text-intel-dark mb-8">
           <ArrowLeft size={14} /> Home
         </Link>
-        <span className="block text-terracotta font-black text-[10px] uppercase tracking-[0.25em] mb-3">{eyebrow}</span>
+        <span className="block text-terracotta font-black text-[11px] uppercase tracking-[0.1em] mb-3">{eyebrow}</span>
         <h1 className="text-3xl md:text-5xl font-black serif text-intel-dark mb-8 leading-tight">{title}</h1>
         <div className="space-y-6 text-intel-dark/75 text-sm sm:text-base leading-relaxed [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-intel-dark [&_h2]:serif [&_h2]:mt-8 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-2 [&_a]:text-serene-green [&_a]:underline">
           {children}
@@ -56,7 +56,7 @@ export const CrisisSupportPage: React.FC = () => (
 );
 
 export const PrivacyPage: React.FC = () => (
-  <Shell eyebrow="Last updated 2 October 2026" title="Privacy Policy">
+  <Shell eyebrow="Last updated 27 October 2026" title="Privacy Policy">
     <p>
       This policy explains what Intel Counselling collects through this website, how it is protected and how it is used.
     </p>
@@ -66,7 +66,7 @@ export const PrivacyPage: React.FC = () => (
       <li><strong>Intake details:</strong> phone, age, gender, occupation and, optionally, your reason for seeking support.</li>
       <li><strong>Assessment answers and results</strong> for the screenings and career assessment you take.</li>
       <li><strong>Booking details</strong> you enter when requesting a session.</li>
-      <li><strong>Payment status</strong> of your orders. Card and bank details are handled by our payment provider, Cashfree, and never reach our servers.</li>
+      <li><strong>Payment status</strong> of your orders. Card and bank details are handled by our payment provider, Razorpay, and never reach our servers.</li>
     </ul>
     <h2>How we protect it</h2>
     <p>
@@ -80,15 +80,88 @@ export const PrivacyPage: React.FC = () => (
       <li>To contact you about your bookings and enquiries.</li>
     </ul>
     <p>
-      We use service providers only to run these features: Cashfree (payments), Brevo (email delivery) and Google
-      (sign-in and Meet). We do not sell your data.
+      We use service providers only to run these features, under contract: Razorpay (payments), Brevo (email delivery),
+      Google (sign-in, Calendar and Meet) and our hosting providers. We do not sell your data or use it for advertising.
     </p>
-    <h2>Your choices</h2>
+    <h2>Who sees your results</h2>
+    <ul>
+      <li><strong>You.</strong> Results linked to your account can only be opened by you.</li>
+      <li><strong>Your counsellor</strong>, only when you choose to share, for example by ticking "share my report" when you book a session.</li>
+      <li><strong>Safety exception:</strong> if a result suggests you may be at risk (for example the self-harm question on the PHQ-9), our team is alerted so we can reach out. Confidentiality can also be set aside when the law requires it, such as a court order or a mandatory report under the POCSO Act.</li>
+    </ul>
+    <h2>Children (under 18)</h2>
     <p>
-      You can update your intake details at any time from <Link to="/my-results">My Results</Link>. To request a copy or
-      deletion of your data, contact us.
+      Under India's Digital Personal Data Protection Act, 2023, we need a parent or guardian's consent before we store a
+      child's answers. If you tell us you are under 18, we email a code to your parent or guardian and save nothing until they
+      confirm. We do not track children's behaviour or show them advertising.
+    </p>
+    <h2>How long we keep it</h2>
+    <ul>
+      <li>Free screenings taken without an account are deleted after 30 days.</li>
+      <li>Accounts with no activity for 3 years are deleted, after we email you a 30-day warning.</li>
+      <li>Payment records are kept as long as tax law requires, with your name removed if you delete your account.</li>
+    </ul>
+    <h2>Your rights</h2>
+    <p>
+      You can update your details, <strong>download a copy of all your data</strong> and <strong>delete your account</strong>
+      at any time from <Link to="/my-results">My Results</Link>. You can withdraw your consent at any time by deleting
+      your account. If you have a concern about how we handle your data, contact our{' '}
+      <Link to="/grievance">Grievance Officer</Link>. You may also complain to the Data Protection Board of India.
+    </p>
+    <h2>Data breaches</h2>
+    <p>
+      If a breach affects your data, we will tell you and the Data Protection Board of India as the law requires.
     </p>
     <ContactBlock />
+  </Shell>
+);
+
+export const GrievancePage: React.FC = () => (
+  <Shell eyebrow="Privacy & complaints" title="Grievance Officer">
+    <p>
+      If you have a complaint about how we handle your personal data, a payment, or our services, contact our Grievance
+      Officer. We acknowledge every complaint within 48 hours and aim to resolve it within 30 days.
+    </p>
+    <h2>Contact</h2>
+    <ul>
+      <li><strong>Grievance Officer:</strong> Intel Counselling</li>
+      <li><strong>Email:</strong> <a href={CLINIC.emailHref}>{CLINIC.email}</a> (subject: "Grievance")</li>
+      <li><strong>Phone:</strong> <a href={CLINIC.phoneHref}>{CLINIC.phone}</a></li>
+      <li><strong>Address:</strong> {CLINIC.addressLines.join(' ')}</li>
+    </ul>
+    <h2>What to include</h2>
+    <p>Your name, the email on your account, and what happened. Please do not email your assessment answers.</p>
+    <h2>Your data rights</h2>
+    <p>
+      You can download or delete your data yourself from <Link to="/my-results">My Results</Link>. If you are not satisfied
+      with our response, you may complain to the Data Protection Board of India.
+    </p>
+  </Shell>
+);
+
+// DRAFT — review with the clinic before publishing
+export const RefundPage: React.FC = () => (
+  <Shell eyebrow="Payments" title="Refund & Cancellation Policy">
+    <p>All prices are in Indian Rupees and inclusive of all taxes.</p>
+    <h2>Counselling sessions</h2>
+    <ul>
+      <li>Cancel or reschedule at least 24 hours before your session for a full refund or a free reschedule.</li>
+      <li>Cancellations within 24 hours, or missed sessions, are not refunded.</li>
+      <li>If we have to cancel, you get a full refund or a new time, whichever you prefer.</li>
+    </ul>
+    <h2>Assessments</h2>
+    <ul>
+      <li>Request a refund within 7 days of purchase if you have not started any of the paid assessments.</li>
+      <li>Once you have started a paid assessment, the purchase is not refundable. You can still retake it as often as you like.</li>
+    </ul>
+    <h2>How refunds work</h2>
+    <p>
+      Email <a href={CLINIC.emailHref}>{CLINIC.email}</a> with your order ID. Approved refunds go back to your original
+      payment method through Razorpay, usually within 5–7 working days.
+    </p>
+    <p>
+      Problems with a payment? Contact our <Link to="/grievance">Grievance Officer</Link>.
+    </p>
   </Shell>
 );
 
@@ -110,8 +183,8 @@ export const TermsPage: React.FC = () => (
     </p>
     <h2>Payments and sessions</h2>
     <p>
-      Prices are shown in Indian Rupees before you pay and are processed securely by Cashfree. To reschedule a session,
-      reply to your confirmation email at least 24 hours in advance. For cancellations or refunds, please contact us.
+      Prices are shown in Indian Rupees before you pay and are processed securely by Razorpay. To reschedule a session,
+      reply to your confirmation email at least 24 hours in advance. Cancellations and refunds follow our <Link to="/refunds">Refund &amp; Cancellation Policy</Link>.
     </p>
     <ContactBlock />
   </Shell>
@@ -126,8 +199,8 @@ export const NotFoundPage: React.FC = () => (
       <h1 className="text-2xl sm:text-3xl font-black serif text-intel-dark mb-2">Page not found</h1>
       <p className="text-sm text-intel-dark/60 mb-8">The page you're looking for doesn't exist or has moved.</p>
       <div className="flex flex-col sm:flex-row gap-3">
-        <Link to="/" className="flex-1 bg-intel-dark text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs">Go home</Link>
-        <Link to="/assessments" className="flex-1 bg-white text-intel-dark border border-black/10 py-4 rounded-2xl font-black uppercase tracking-widest text-xs">Assessments</Link>
+        <Link to="/" className="flex-1 bg-intel-dark text-white py-4 rounded-2xl font-semibold text-xs">Go home</Link>
+        <Link to="/assessments" className="flex-1 bg-white text-intel-dark border border-black/10 py-4 rounded-2xl font-semibold text-xs">Assessments</Link>
       </div>
       <p className="text-xs text-intel-dark/50 mt-6 flex items-center justify-center gap-4">
         <a href={CLINIC.phoneHref} className="inline-flex items-center gap-1 hover:text-intel-dark"><Phone size={12} /> Call us</a>

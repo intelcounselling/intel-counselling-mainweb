@@ -2,7 +2,7 @@
 //
 // DEMO MODE: set the DEMO_MODE environment variable to "true" (or "1"/"yes")
 // and every service price collapses to ₹1 so payment flows can be
-// demonstrated end-to-end (Cashfree sandbox / tiny live charge) without
+// demonstrated end-to-end (Razorpay test mode / tiny live charge) without
 // touching real prices. Unset it (or set anything else) and normal pricing
 // returns — no code change needed, just a backend restart/redeploy.
 //
@@ -16,8 +16,12 @@ const BASE_PRICES = {
   session_inperson: Number(process.env.SESSION_PRICE_INPERSON || 2000),
   career_assessment: Number(process.env.CAREER_PRICE_ASSESSMENT || 2999),
   career_assessment_plus: Number(process.env.CAREER_PRICE_PLUS || 4999),
-  // Intell Student Assessments: one payment unlocks Module A + Module B (placeholder default)
-  intell_assessment: Number(process.env.INTELL_PRICE || 2499),
+  // Intel Student Assessments: Module A = the five Intel tests; Module B = the full
+  // 7-test battery with the integrated profile (includes A — owners of A pay the difference)
+  intell_assessment: Number(process.env.INTELL_PRICE_A || 250),
+  intell_module_b: Number(process.env.INTELL_PRICE_B || 300),
+  // Mindbridge parent + student package, paid by the parent in the portal
+  family_package: Number(process.env.FAMILY_PRICE || 500),
 };
 
 export function isDemoMode() {

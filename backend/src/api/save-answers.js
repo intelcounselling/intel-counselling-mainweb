@@ -4,8 +4,9 @@ import { insertResult, getOrder, linkOrderToResult, saveResultRegistration, getP
 import { authenticateRequest } from '../token.js';
 import { registrationFor } from '../profile.js';
 import { getAccountById } from '../db.js';
-import { INTELL_TEST_IDS, isIntellOnlyTest, validAnswers, hasIntellAccess, scoreResult, isHighRisk } from '../intell.js';
+import { INTELL_TEST_IDS, isIntellOnlyTest, validAnswers, intellAccess, scoreResult, isHighRisk } from '../intell.js';
 import { notifyHighRisk } from './intell.js';
+import { needsGuardianConsent } from './consent.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -90,11 +91,17 @@ export default async function handler(req, res) {
       }
     }
 
-    // Intell assessments are paid (one purchase per account) and fully validated:
+    // Intel assessments are paid (one purchase per account) and fully validated:
     // a missing or out-of-range answer would silently skew the score.
-    const intellBuyer = userId ? await hasIntellAccess(userId) : false;
+    // Under-18 accounts: nothing is stored until a parent has confirmed consent
+    if (userId && (await needsGuardianConsent(userId))) {
+      return res.status(403).json({ error: 'A parent or guardian needs to confirm consent first.', code: 'GUARDIAN_CONSENT_REQUIRED' });
+    }
+
+    const access = await intellAccess(userId);
+    const intellBuyer = access.a;
     if (isIntellOnlyTest(resolvedTestId)) {
-      if (!intellBuyer) return res.status(402).json({ error: 'Payment required for the Intell assessments' });
+      if (!intellBuyer) return res.status(402).json({ error: 'Payment required for the Intel assessments' });
       if (!validAnswers(resolvedTestId, answers)) return res.status(400).json({ error: 'Please answer every question' });
     }
 
@@ -116,9 +123,9 @@ export default async function handler(req, res) {
       }
     }
 
-    // Buyers' PHQ-9 / GAD-7 / Intell results feed their profile; one that on its own
+    // Buyers' PHQ-9 / GAD-7 / Intel results feed their profile; one that on its own
     // needs clinical review alerts the team (fire-and-forget: never blocks the save).
-    if (intellBuyer && INTELL_TEST_IDS.includes(resolvedTestId) && validAnswers(resolvedTestId, answers)) {
+    if (access.b && INTELL_TEST_IDS.includes(resolvedTestId) && validAnswers(resolvedTestId, answers)) {
       const scored = scoreResult(resolvedTestId, answers, new Date(), id);
       if (isHighRisk(scored)) {
         getAccountById(userId).then((acct) => notifyHighRisk(acct, scored.test.name)).catch((e) => console.error('High-risk alert failed:', e));

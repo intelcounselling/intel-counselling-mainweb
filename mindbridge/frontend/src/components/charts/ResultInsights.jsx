@@ -7,7 +7,7 @@ const PREF_BAR = {
 };
 
 /**
- * Extra context for an INTELL result:
+ * Extra context for an INTEL result:
  *  - Learning Pattern: Visual / Auditory / Kinesthetic scores (each 4–20) with
  *    their preference level — the 12-item total means nothing on its own.
  *  - Validity: 80%+ answers marked "5" → possible self-presentation bias.

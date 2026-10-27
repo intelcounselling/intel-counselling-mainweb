@@ -4,6 +4,7 @@ import { Compass } from 'lucide-react';
 import ProtectedRoute from './utils/roleGuard';
 import { ROLE_DASHBOARDS } from './utils/roleGuard';
 import AppShell from './components/layout/AppShell';
+import FamilyPackageGate from './components/FamilyPackageGate';
 import useAuthStore from './store/authStore';
 
 // ── Auth ──────────────────────────────────────────────────────
@@ -183,8 +184,9 @@ const router = createBrowserRouter([
       { index: true, element: <ParentDashboard /> },
       { path: 'children', element: <ParentDashboard /> },
       { path: 'children/:childId/results', element: <ChildResults /> },
-      { path: 'children/:childId/comparison', element: <ComparisonReport /> },
-      { path: 'children/:childId/perspective', element: <ParentPerspective /> },
+      // Family package (paid once per family) unlocks these two
+      { path: 'children/:childId/comparison', element: <FamilyPackageGate><ComparisonReport /></FamilyPackageGate> },
+      { path: 'children/:childId/perspective', element: <FamilyPackageGate><ParentPerspective /></FamilyPackageGate> },
       { path: 'appointments', element: <AppointmentList /> },
       { path: 'settings', element: <Settings /> },
     ],

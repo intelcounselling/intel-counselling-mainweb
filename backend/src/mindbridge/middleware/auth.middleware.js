@@ -60,6 +60,11 @@ async function verifyToken(req, res, next) {
       return res.status(401).json({ error: 'User not found or inactive' });
     }
 
+    // The super admin must use password + emailed code (two-step), never Google sign-in
+    if (emailFromFirebase && user.role === 'SUPER_ADMIN' && String(process.env.ADMIN_MFA || 'on').toLowerCase() !== 'off') {
+      return res.status(401).json({ error: 'Admins sign in with email, password and a code. Google sign-in is not available for this account.', code: 'ADMIN_PASSWORD_REQUIRED' });
+    }
+
     // If they authenticated via Firebase (e.g., Google) and still have mustResetPassword flagged,
     // clear it because they are using an external provider.
     if (emailFromFirebase && user.mustResetPassword) {

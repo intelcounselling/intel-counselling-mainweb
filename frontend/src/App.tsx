@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -44,6 +44,8 @@ const SignInPage = staleSafeLazy(() => import('./pages/SignInPage'));
 const CrisisSupportPage = staleSafeLazy(() => import('./pages/InfoPages').then((m) => ({ default: m.CrisisSupportPage })));
 const PrivacyPage = staleSafeLazy(() => import('./pages/InfoPages').then((m) => ({ default: m.PrivacyPage })));
 const TermsPage = staleSafeLazy(() => import('./pages/InfoPages').then((m) => ({ default: m.TermsPage })));
+const GrievancePage = staleSafeLazy(() => import('./pages/InfoPages').then((m) => ({ default: m.GrievancePage })));
+const RefundPage = staleSafeLazy(() => import('./pages/InfoPages').then((m) => ({ default: m.RefundPage })));
 const NotFoundPage = staleSafeLazy(() => import('./pages/InfoPages').then((m) => ({ default: m.NotFoundPage })));
 
 // Minimal centered spinner shown briefly while a route chunk loads
@@ -80,39 +82,14 @@ const ScrollToTop = () => {
 };
 
 const AppContent: React.FC = () => {
-  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
-  const location = useLocation();
-  const navigate = useNavigate(); // Added useNavigate
-
-  useEffect(() => {
-    
-    const handleResize = () => setWindowWidth(window.innerWidth);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  const isMobile = windowWidth < 768;
-  const sparkRadius = isMobile ? 10 : 20;
-  const sparkSize = isMobile ? 6 : 12;
-
-  const isHome = location.pathname === '/';
+  const navigate = useNavigate();
 
   return (
-    <div className={`relative min-h-screen selection:bg-terracotta/40 selection:text-[#2A2825] overflow-x-hidden ${isHome ? 'bg-[#F7EBD3]' : 'bg-[#F7EBD3]'}`}>
+    <div className="relative min-h-screen selection:bg-terracotta/40 selection:text-[#2A2825] overflow-x-hidden bg-[#F7EBD3]">
       <ScrollToTop />
-      <InteractiveBackground />
-      
-      <ClickSpark 
-        sparkColor="#2A2825" 
-        sparkCount={isMobile ? 6 : 10} 
-        sparkSize={sparkSize} 
-        sparkRadius={sparkRadius} 
-        duration={500} 
-      />
-      
-      <Navbar 
-        onBookClick={() => navigate('/services/personal')}
-        forcePill={!isHome}
+
+      <Navbar
+        onBookClick={() => navigate('/services/personal')}
       />
       
       <Suspense fallback={<RouteFallback />}>
@@ -128,6 +105,8 @@ const AppContent: React.FC = () => {
           <Route path="/crisis-support" element={<CrisisSupportPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/terms" element={<TermsPage />} />
+          <Route path="/grievance" element={<GrievancePage />} />
+          <Route path="/refunds" element={<RefundPage />} />
           <Route path="*" element={<NotFoundPage />} />
           <Route path="/booking" element={<BookingPage />} />
         </Routes>

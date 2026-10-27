@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
@@ -102,8 +103,26 @@ async function initPg() {
   // Intake profile (encrypted JSON) — added after launch, so ALTER for existing tables
   await pgPool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS profile TEXT');
   await pgPool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_iv TEXT');
-  // Buyer of account-level purchases (Intell assessments) — keep in sync with prisma/schema.prisma
+  // Buyer of account-level purchases (Intel assessments) — keep in sync with prisma/schema.prisma
   await pgPool.query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS user_id TEXT');
+  // Retention: when an inactive account was warned before deletion — keep in sync with prisma/schema.prisma
+  await pgPool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS inactivity_warned_at TIMESTAMPTZ');
+  // Consent log (DPDP Act): every consent given, append-only — keep in sync with prisma/schema.prisma
+  await pgPool.query(`
+    CREATE TABLE IF NOT EXISTS consents (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      version TEXT NOT NULL,
+      meta TEXT,
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await pgPool.query('CREATE INDEX IF NOT EXISTS idx_consents_user ON consents(user_id)');
+
+  // Payment gateway (Razorpay) order id — also declared in prisma/schema.prisma
+  await pgPool.query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS gateway_order_id TEXT');
+  await pgPool.query('CREATE INDEX IF NOT EXISTS idx_orders_gateway ON orders(gateway_order_id)');
   await pgPool.query('CREATE INDEX IF NOT EXISTS idx_results_user ON assessment_results(user_id)');
   await pgPool.query('CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at)');
   console.log('Connected to PostgreSQL database (persistent — survives redeploys)');
@@ -198,6 +217,11 @@ async function initSqlite() {
   await addColumn('users', 'profile', 'TEXT');
   await addColumn('users', 'profile_iv', 'TEXT');
   await addColumn('orders', 'user_id', 'TEXT');
+  await addColumn('users', 'inactivity_warned_at', 'DATETIME');
+  await runSqlite('CREATE TABLE IF NOT EXISTS consents (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, kind TEXT NOT NULL, version TEXT NOT NULL, meta TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)');
+  await runSqlite('CREATE INDEX IF NOT EXISTS idx_consents_user ON consents(user_id)');
+  await addColumn('orders', 'gateway_order_id', 'TEXT');
+  await runSqlite('CREATE INDEX IF NOT EXISTS idx_orders_gateway ON orders(gateway_order_id)');
 }
 
 function ready() {
@@ -327,7 +351,7 @@ export async function getPaidCareerResultCount(userId) {
   return row ? Number(row.n) : 0;
 }
 
-// Account-level purchases (Intell assessments): paid orders this user bought.
+// Account-level purchases (Intel assessments): paid orders this user bought.
 export async function countPaidOrders(userId, serviceId) {
   const row = await get(
     "SELECT COUNT(*) AS n FROM orders WHERE user_id = ? AND service_id = ? AND status IN ('PAID', 'USED')",
@@ -343,6 +367,61 @@ export async function getUserResultsByTests(userId, testIds) {
     `SELECT id, test_id, encrypted_answers, iv, created_at FROM assessment_results WHERE user_id = ? AND test_id IN (${testIds.map(() => '?').join(', ')}) ORDER BY created_at DESC`,
     [userId, ...testIds]
   );
+}
+
+// ── Data-subject rights (DPDP Act): export and erasure ──
+
+export async function exportUserData(userId, email) {
+  const [results, orders, bookings, consents] = await Promise.all([
+    all('SELECT id, test_id, encrypted_answers, iv, created_at FROM assessment_results WHERE user_id = ? ORDER BY created_at', [userId]),
+    all('SELECT order_id, service_id, amount, status, created_at FROM orders WHERE user_id = ? ORDER BY created_at', [userId]),
+    all('SELECT service_name, session_mode, appointment_date, appointment_time, created_at FROM bookings WHERE email = ? ORDER BY created_at', [email]),
+    all('SELECT kind, version, created_at FROM consents WHERE user_id = ? ORDER BY created_at', [userId]),
+  ]);
+  return { results, orders, bookings, consents };
+}
+
+// Deletes the account and its results. Payment records stay for tax law (unlinked
+// from the person); booking rows lose name/email; the consent log is kept as proof of
+// consent, keyed only by the now-deleted account id.
+export async function eraseUser(userId, email) {
+  await run('DELETE FROM assessment_results WHERE user_id = ?', [userId]);
+  await run('UPDATE orders SET user_id = NULL WHERE user_id = ?', [userId]);
+  await run("UPDATE bookings SET name = 'Deleted user', email = 'deleted' WHERE email = ?", [email]);
+  await run('DELETE FROM users WHERE id = ?', [userId]);
+}
+
+// ── Retention (see src/retention.js) ──
+
+// Free screenings never claimed by an account, older than the cutoff
+export async function countOrDeleteAnonymousResults(cutoffIso, apply) {
+  const where = 'user_id IS NULL AND created_at < ?';
+  if (!apply) return Number((await get(`SELECT COUNT(*) AS n FROM assessment_results WHERE ${where}`, [cutoffIso]))?.n || 0);
+  return run(`DELETE FROM assessment_results WHERE ${where}`, [cutoffIso]);
+}
+
+// Accounts with no activity (sign-up, results, purchases) since the cutoff
+export async function findInactiveUsers(cutoffIso) {
+  return all(
+    `SELECT u.id, u.name, u.email, u.inactivity_warned_at FROM users u
+     WHERE u.created_at < ?
+       AND NOT EXISTS (SELECT 1 FROM assessment_results r WHERE r.user_id = u.id AND r.created_at >= ?)
+       AND NOT EXISTS (SELECT 1 FROM orders o WHERE o.user_id = u.id AND o.created_at >= ?)`,
+    [cutoffIso, cutoffIso, cutoffIso]
+  );
+}
+
+export async function markInactivityWarned(userId) {
+  await run('UPDATE users SET inactivity_warned_at = CURRENT_TIMESTAMP WHERE id = ?', [userId]);
+}
+
+// Consent log (append-only): who agreed to what, which notice version, when.
+export async function recordConsent(userId, kind, version, meta = null) {
+  await run('INSERT INTO consents (id, user_id, kind, version, meta) VALUES (?, ?, ?, ?, ?)', [crypto.randomUUID(), userId, kind, version, meta ? JSON.stringify(meta) : null]);
+}
+
+export async function getConsents(userId) {
+  return all('SELECT kind, version, meta, created_at FROM consents WHERE user_id = ? ORDER BY created_at', [userId]);
 }
 
 // Total registered accounts — diagnostic for the ephemeral-disk wipe issue.
@@ -429,6 +508,19 @@ export async function createOrder(orderId, serviceId, amount, userId = null) {
 
 export async function getOrder(orderId) {
   return get('SELECT * FROM orders WHERE order_id = ?', [orderId]);
+}
+
+// Links our order to the payment gateway's order (Razorpay order_…), once.
+export async function setOrderGatewayId(orderId, gatewayOrderId) {
+  const changes = await run(
+    'UPDATE orders SET gateway_order_id = ? WHERE order_id = ? AND gateway_order_id IS NULL',
+    [gatewayOrderId, orderId]
+  );
+  return changes > 0;
+}
+
+export async function getOrderByGatewayId(gatewayOrderId) {
+  return get('SELECT * FROM orders WHERE gateway_order_id = ?', [gatewayOrderId]);
 }
 
 // Only CREATED → PAID. Re-verifying an already consumed (USED) order must not

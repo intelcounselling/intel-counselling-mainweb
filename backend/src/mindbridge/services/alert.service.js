@@ -82,10 +82,10 @@ async function createAlertAndNotify({ studentId, resultId, severity, testName, s
     }
   }
 
-  // 6. Notify admin (intelconselling@gmail.com)
+  // 6. Notify the clinic inbox (ADMIN_EMAIL)
   try {
     await emailService.sendAlertEmail({
-      to: 'intelconselling@gmail.com',
+      to: process.env.ADMIN_EMAIL || 'intelcounselling@gmail.com',
       psychiatristName: 'Admin',
       studentName: `${student.firstName} ${student.lastName}`,
       testName,
@@ -95,7 +95,7 @@ async function createAlertAndNotify({ studentId, resultId, severity, testName, s
       schoolName: student.school?.name || 'Unknown School',
     });
   } catch (err) {
-    logger.error('Failed to email admin intelconselling@gmail.com:', err);
+    logger.error('Failed to email the clinic admin inbox:', err);
   }
 
   return alert;

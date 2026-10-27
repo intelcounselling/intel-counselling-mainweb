@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Hero from '../components/Hero';
 import Features from '../components/Features';
@@ -6,83 +6,20 @@ import Founders from '../components/Founders';
 import Services from '../components/Services';
 import Gallery from '../components/Gallery';
 import InquiryForm from '../components/InquiryForm';
+import FadeIn from '../components/FadeIn';
+import WaveDivider from '../components/WaveDivider';
 import { Layer, ApproachLayer } from '../components/Layers';
 
-const ReadingQuote: React.FC = () => {
-  const [isVisible, setIsVisible] = useState(false);
-  const quoteRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) setIsVisible(true); },
-      { threshold: 0.3 }
-    );
-    if (quoteRef.current) observer.observe(quoteRef.current);
-    return () => observer.disconnect();
-  }, []);
-
-  const words = [
-    "The", "first", "step", "towards", "healing", "is", "recognizing",
-    "that", "you", "do not", "have", "to", "carry", "the", "burden", "alone."
-  ];
-
-  return (
-    <>
-      <style>{`
-        @keyframes softRise {
-          0%   { opacity: 0; transform: translateY(10px); }
-          100% { opacity: 1; transform: translateY(0); }
-        }
-        .animate-elegant-read { animation: softRise 1.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-      `}</style>
-      <div
-        ref={quoteRef}
-        className="mb-10 sm:mb-16 md:mb-24 relative z-10
-                   text-center px-4 max-w-4xl mx-auto
-                   flex flex-wrap justify-center items-end
-                   gap-x-2 sm:gap-x-3 md:gap-x-4 gap-y-1 sm:gap-y-2 md:gap-y-3"
-      >
-        {words.map((word, i) => {
-          const cleanWord = word.replace(/["\.]/g, '').toLowerCase();
-          const isEmphasized = ["first", "step", "healing", "recognizing", "alone"].includes(cleanWord);
-          return (
-            <span
-              key={i}
-              className={`inline-block opacity-0 ${isVisible ? 'animate-elegant-read' : ''}
-                ${isEmphasized
-                  ? 'font-serif italic text-2xl sm:text-4xl md:text-6xl font-light lowercase tracking-tight'
-                  : 'text-lg sm:text-2xl md:text-4xl tracking-wide font-light'
-                }`}
-              style={{
-                animationDelay: isVisible ? `${i * 130}ms` : '0ms',
-                fontFamily: isEmphasized ? "'Playfair Display', serif" : "'Cormorant Garamond', serif",
-                color: isEmphasized ? '#C19B6C' : '#D4C5A9',
-                fontWeight: isEmphasized ? 300 : 400,
-              }}
-            >
-              {word}
-            </span>
-          );
-        })}
-      </div>
-    </>
-  );
-};
-
 const Home: React.FC = () => {
-  const [isFounderExpanded, setIsFounderExpanded] = useState(false);
   const navigate = useNavigate();
 
   return (
     <main className="relative">
-      <Layer zIndex={0} className="bg-transparent" id="top">
+      <Layer zIndex={0} id="top">
         <Hero
           onStartTest={() => navigate('/assessments')}
           onStartCareerTest={() => navigate('/career-assessment')}
-          onLearnMore={() => {
-            const el = document.getElementById('approach');
-            if (el) el.scrollIntoView({ behavior: 'smooth' });
-          }}
+          onLearnMore={() => document.getElementById('approach')?.scrollIntoView({ behavior: 'smooth' })}
         />
       </Layer>
 
@@ -90,36 +27,31 @@ const Home: React.FC = () => {
         <Features />
       </ApproachLayer>
 
-      <section id="services" className="relative z-[15] bg-[#F7EBD3] py-12 sm:py-20 md:py-32 scroll-mt-20">
+      <WaveDivider from="#1F1E1B" to="#F7EBD3" />
+      <section id="services" className="relative z-[15] bg-[#F7EBD3] pt-12 pb-16 md:pt-16 md:pb-24 scroll-mt-20">
         <Services onSelectService={(view) => navigate(`/services/${view}`)} />
       </section>
 
+      <WaveDivider from="#F7EBD3" to="#1A1A1A" flip />
       <Gallery />
 
-      <Layer
-        id="founders"
-        zIndex={20}
-        className="bg-[#F7EBD3] shadow-[0_-50px_100px_rgba(0,0,0,0.1)]"
-        noFade={isFounderExpanded}
-        scrollAnimateIn={true}
-      >
-        <Founders onExpandChange={setIsFounderExpanded} />
+      <WaveDivider from="#1A1A1A" to="#F7EBD3" />
+      <Layer id="founders" zIndex={20} className="bg-[#F7EBD3]">
+        <Founders />
       </Layer>
 
+      <WaveDivider from="#F7EBD3" to="#1F1E1B" flip />
+
       {/* Inquiry section */}
-      <section
-        id="inquiry"
-        className="relative z-30 bg-[#1F1E1B]
-                   shadow-[0_-20px_50px_rgba(0,0,0,0.3)]
-                   min-h-screen flex items-center justify-center
-                   py-14 sm:py-20 md:py-32 scroll-mt-20"
-      >
-        <div className="w-full">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6">
-            <ReadingQuote />
-            <div className="max-w-2xl mx-auto">
-              <InquiryForm />
-            </div>
+      <section id="inquiry" className="relative z-30 bg-[#1F1E1B] pt-12 pb-20 md:pt-16 md:pb-28 scroll-mt-20">
+        <div className="max-w-4xl mx-auto px-5 sm:px-8">
+          <FadeIn>
+            <blockquote className="max-w-3xl mx-auto mb-14 md:mb-20 text-center serif italic font-normal text-2xl sm:text-3xl md:text-4xl leading-snug text-[#E9DCC3]">
+              “The first step towards healing is recognising that you do not have to carry the burden alone.”
+            </blockquote>
+          </FadeIn>
+          <div className="max-w-2xl mx-auto">
+            <InquiryForm />
           </div>
         </div>
       </section>

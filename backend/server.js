@@ -45,7 +45,7 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
   .filter(Boolean);
 app.use(cors(allowedOrigins.length ? { origin: allowedOrigins } : {}));
 
-// Keep the raw request bytes alongside the parsed body — Cashfree webhook
+// Keep the raw request bytes alongside the parsed body — Razorpay webhook
 // signature verification must run over the exact raw payload.
 app.use(express.json({
   limit: '1mb',
@@ -61,6 +61,10 @@ app.use('/api', apiRouter);
 app.use('/api/portal', mindbridgeApp);
 
 const PORT = process.env.PORT || 3001;
+// Daily data-retention job (dry-run unless RETENTION_ENABLED=true) — see src/retention.js
+const { scheduleRetention } = await import('./src/retention.js');
+scheduleRetention();
+
 app.listen(PORT, () => {
   console.log(`Unified Backend API Server running on port ${PORT}`);
 });

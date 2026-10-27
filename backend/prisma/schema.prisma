@@ -121,6 +121,9 @@ model User {
   dateOfBirth       DateTime?
   isActive          Boolean  @default(true)
   mustResetPassword Boolean  @default(true)
+  // DPDP Act: when the school confirmed it holds signed parent/guardian consent (students)
+  guardianConsentAt DateTime?
+  guardianConsentBy String?   // admin user id who recorded it
   otpCode           String?
   otpExpiresAt      DateTime?
   createdAt         DateTime @default(now())
@@ -247,6 +250,22 @@ model Concern {
   createdAt DateTime      @default(now())
 }
 
+// Who did or viewed what (DPDP Rules: keep access logs for at least a year).
+// Pruned after 365 days by src/retention.js.
+model AuditLog {
+  id         String   @id @default(uuid())
+  at         DateTime @default(now())
+  userId     String?
+  role       String?
+  method     String
+  path       String
+  statusCode Int
+  ip         String?
+
+  @@index([at])
+  @@index([userId])
+}
+
 model RefreshToken {
   id        String   @id @default(uuid())
   userId    String
@@ -281,6 +300,7 @@ model CareerUser {
   emailVerified Int?      @map("email_verified")
   profile       String?   @db.Text // encrypted intake (ALTER TABLE in db.js)
   profileIv     String?   @map("profile_iv") @db.Text
+  inactivityWarnedAt DateTime? @map("inactivity_warned_at") @db.Timestamptz(6) // retention warning sent
 
   @@map("users")
 }
@@ -307,12 +327,26 @@ model CareerOrder {
   amount    Float
   status    String    @default("CREATED") @db.Text
   resultId  String?   @map("result_id") @db.Text
-  userId    String?   @map("user_id") @db.Text // buyer, for account-level purchases (Intell assessments)
+  userId    String?   @map("user_id") @db.Text // buyer, for account-level purchases (Intel assessments)
+  gatewayOrderId String? @map("gateway_order_id") @db.Text // Razorpay order id (order_…)
   createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime? @map("updated_at") @db.Timestamptz(6)
 
   @@index([createdAt], map: "idx_orders_created")
+  @@index([gatewayOrderId], map: "idx_orders_gateway")
   @@map("orders")
+}
+
+model CareerConsent {
+  id        String    @id @db.Text
+  userId    String    @map("user_id") @db.Text
+  kind      String    @db.Text
+  version   String    @db.Text
+  meta      String?   @db.Text
+  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([userId], map: "idx_consents_user")
+  @@map("consents")
 }
 
 model CareerBooking {

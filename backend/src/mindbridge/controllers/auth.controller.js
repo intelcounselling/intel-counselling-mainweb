@@ -15,6 +15,15 @@ async function login(req, res) {
   }
 }
 
+// POST /auth/login/verify { mfaToken, otp } — second step for the super admin
+async function verifyLogin(req, res) {
+  try {
+    res.json(await authService.verifyMfa(req.body?.mfaToken, req.body?.otp));
+  } catch (err) {
+    handleError(res, err, 'verifyLogin');
+  }
+}
+
 async function refresh(req, res) {
   try {
     const { refreshToken } = req.body;
@@ -112,4 +121,49 @@ async function getMe(req, res) {
   }
 }
 
-module.exports = { login, refresh, logout, resetPassword, changePassword, updateProfile, forgotPassword, verifyOTP, getMe };
+// ── Data-subject rights (DPDP Act) ─────────────────────────────
+
+// GET /auth/my-data — the signed-in user's own data as a JSON download
+async function getMyData(req, res) {
+  try {
+    const prisma = require('../prisma');
+    const id = req.user.id;
+    const [user, results, concerns, appointments] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id },
+        select: { email: true, firstName: true, lastName: true, phone: true, role: true, grade: true, dateOfBirth: true, createdAt: true, school: { select: { name: true } } },
+      }),
+      prisma.testResult.findMany({
+        where: { OR: [{ studentId: id }, { parentId: id }] },
+        orderBy: { takenAt: 'asc' },
+        select: { takenAt: true, score: true, maxScore: true, severity: true, subScores: true, answers: true, sharedWithTherapist: true, isParentPerspective: true, test: { select: { name: true } } },
+      }),
+      prisma.concern.findMany({ where: { studentId: id }, select: { message: true, status: true, createdAt: true } }),
+      prisma.appointment.findMany({ where: { patientId: id }, select: { slot: true, status: true, createdAt: true } }),
+    ]);
+    res.setHeader('Content-Disposition', 'attachment; filename="intel-counselling-my-data.json"');
+    res.json({ exportedAt: new Date().toISOString(), account: user, results, concerns, appointments });
+  } catch (err) {
+    handleError(res, err, 'getMyData');
+  }
+}
+
+// POST /auth/deletion-request — school accounts are deleted by the clinic, so the
+// request is sent to the clinic inbox (to be actioned within the legal deadline).
+async function requestDeletion(req, res) {
+  try {
+    const { sendEmail } = require('../services/email.service');
+    const u = req.user;
+    await sendEmail({
+      to: process.env.ADMIN_EMAIL || 'intelcounselling@gmail.com',
+      subject: 'Data deletion request — school portal',
+      text: `${u.firstName} ${u.lastName} <${u.email}> (${u.role}, user id ${u.id}) has asked for their account and data to be deleted. Delete the user from User Management and reply to confirm.`,
+    });
+    logger.info(`Deletion requested by user ${u.id}`);
+    res.json({ requested: true });
+  } catch (err) {
+    handleError(res, err, 'requestDeletion');
+  }
+}
+
+module.exports = { verifyLogin, getMyData, requestDeletion, login, refresh, logout, resetPassword, changePassword, updateProfile, forgotPassword, verifyOTP, getMe };

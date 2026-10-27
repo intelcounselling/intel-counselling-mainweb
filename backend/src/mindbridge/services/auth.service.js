@@ -17,6 +17,61 @@ function generateRefreshToken(userId) {
   return jwt.sign({ userId, jti: uuidv4() }, process.env.JWT_REFRESH_SECRET, { expiresIn: REFRESH_EXPIRY });
 }
 
+// ── Two-step sign-in for the super admin (sees every student) ──
+// After a correct password a 6-digit code is emailed; tokens are issued only after it.
+// ADMIN_MFA=off disables it (e.g. local development).
+const mfaEnabled = () => String(process.env.ADMIN_MFA || 'on').toLowerCase() !== 'off';
+
+async function startMfa(user) {
+  const otp = crypto.randomInt(100000, 1000000).toString();
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { otpCode: crypto.createHash('sha256').update(otp).digest('hex'), otpExpiresAt: new Date(Date.now() + 10 * 60 * 1000) },
+  });
+  const { sendEmail } = require('./email.service');
+  await sendEmail({
+    to: user.email,
+    subject: 'Your Intel Counselling sign-in code',
+    text: 'Your sign-in code is ' + otp + '. It expires in 10 minutes. If you did not just sign in, change your password now.',
+  });
+  const mfaToken = jwt.sign({ userId: user.id, purpose: 'admin-mfa' }, process.env.JWT_ACCESS_SECRET, { expiresIn: '10m' });
+  return { mfaRequired: true, mfaToken };
+}
+
+async function verifyMfa(mfaToken, otp) {
+  let payload;
+  try {
+    payload = jwt.verify(String(mfaToken || ''), process.env.JWT_ACCESS_SECRET);
+  } catch {
+    throw Object.assign(new Error('Your sign-in expired. Please sign in again.'), { status: 401 });
+  }
+  if (payload.purpose !== 'admin-mfa') throw Object.assign(new Error('Invalid sign-in'), { status: 401 });
+
+  const user = await prisma.user.findUnique({ where: { id: payload.userId } });
+  const hash = crypto.createHash('sha256').update(String(otp || '').trim()).digest('hex');
+  const ok = user && user.isActive && user.otpCode && user.otpExpiresAt > new Date()
+    && Buffer.from(hash).length === Buffer.from(user.otpCode).length
+    && crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(user.otpCode));
+  if (!ok) throw Object.assign(new Error('That code is not right or has expired'), { status: 400 });
+
+  await prisma.user.update({ where: { id: user.id }, data: { otpCode: null, otpExpiresAt: null } });
+  return issueTokens(user);
+}
+
+async function issueTokens(user) {
+  const accessToken = generateAccessToken(user.id, user.role);
+  const refreshToken = generateRefreshToken(user.id);
+  await prisma.refreshToken.create({
+    data: {
+      userId: user.id,
+      token: crypto.createHash('sha256').update(refreshToken).digest('hex'),
+      expiresAt: new Date(Date.now() + REFRESH_EXPIRY_MS),
+    },
+  });
+  const { passwordHash, otpCode, otpExpiresAt, ...safeUser } = user;
+  return { accessToken, refreshToken, user: safeUser };
+}
+
 async function login(email, password) {
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user || !user.isActive) {
@@ -27,6 +82,8 @@ async function login(email, password) {
   if (!valid) {
     throw Object.assign(new Error('Invalid credentials'), { status: 401 });
   }
+
+  if (user.role === 'SUPER_ADMIN' && mfaEnabled()) return startMfa(user);
 
   const accessToken = generateAccessToken(user.id, user.role);
   const refreshToken = generateRefreshToken(user.id);
@@ -196,4 +253,4 @@ async function verifyOTPAndResetPassword(email, otp, newPassword) {
   return true;
 }
 
-module.exports = { login, refresh, logout, resetPassword, changePassword, updateProfile, requestOTP, verifyOTPAndResetPassword };
+module.exports = { verifyMfa, login, refresh, logout, resetPassword, changePassword, updateProfile, requestOTP, verifyOTPAndResetPassword };

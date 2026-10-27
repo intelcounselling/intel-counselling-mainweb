@@ -1,7 +1,7 @@
 import { clsx } from 'clsx';
 import { getSeverityBg, cleanSeverity, TONE_BADGE } from '../../utils/formatters';
 
-// `tone` (green/yellow/orange/red) colours INTELL results, whose labels
+// `tone` (green/yellow/orange/red) colours INTEL results, whose labels
 // ("Emotionally Stable", "Moderate Digital Overuse"…) aren't clinical words.
 export default function SeverityBadge({ severity, size = 'sm', tone }) {
   const text = cleanSeverity(severity);

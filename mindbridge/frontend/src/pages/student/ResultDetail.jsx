@@ -5,6 +5,7 @@ import { ChevronDown, ChevronUp, LineChart, Activity, FileCheck, ArrowRight } fr
 import { Card, Spinner, EmptyState, Button } from '../../components/ui';
 import SeverityBadge from '../../components/charts/SeverityBadge';
 import ResultInsights from '../../components/charts/ResultInsights';
+import ShareToggle from '../../components/ShareToggle';
 import ScoreHistoryChart from '../../components/charts/ScoreHistoryChart';
 import RadarChart from '../../components/charts/RadarChart';
 import api from '../../lib/axios';
@@ -68,6 +69,7 @@ function ExpandableRow({ result, isOpen, toggle }) {
           <td colSpan={6} className="p-0 border-b border-[#f0eee9]">
             <div className="bg-[#faf8f5] p-6 md:p-8 animate-slide-down border-t border-[#f0eee9]">
               <div className="mb-6 empty:hidden"><ResultInsights result={result} /></div>
+              <div className="mb-6"><ShareToggle result={result} /></div>
               <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
                 <div className="space-y-4">
                   <div className="flex items-center gap-3 mb-6">

@@ -71,6 +71,14 @@ async function submitTest(req, res) {
     const studentId = req.user.id;
     console.log(`[submitTest] Processing submission for test: ${testId}, student: ${studentId}`);
 
+    // DPDP Act: school students need a parent/guardian consent on record before anything is saved
+    if (req.user.role === 'STUDENT') {
+      const me = await prisma.user.findUnique({ where: { id: studentId }, select: { guardianConsentAt: true } });
+      if (!me?.guardianConsentAt) {
+        return res.status(403).json({ error: "Your school hasn't recorded your parent's consent yet, so we can't save this test. Please ask your school.", code: 'GUARDIAN_CONSENT_REQUIRED' });
+      }
+    }
+
     const test = await prisma.test.findUnique({ where: { id: testId } });
     if (!test) return res.status(404).json({ error: 'Test not found' });
 
@@ -135,7 +143,7 @@ async function submitTest(req, res) {
     } = calculateScore(answersMap, questions, thresholds, test.category);
 
     // ── Does this submission need the counsellor? ───────────────
-    // Scored INTELL domains: the recommendation is rule-based across ALL of the
+    // Scored INTEL domains: the recommendation is rule-based across ALL of the
     // student's domains (EW < 36, IU < 36, or any two domains < 36), judged on
     // the latest result in each. Learning Pattern is descriptive — never flagged.
     // Clinical screenings flag from their own severity bands (and PHQ-9 item 9).
@@ -278,4 +286,20 @@ async function getConcerns(req, res) {
   }
 }
 
-module.exports = { getDashboard, getTests, submitTest, getResults, getResult, submitConcern, getConcerns };
+// PUT /student/results/:id/share — { shared: boolean }
+// A risk-flagged result stays visible to the counsellor whatever this says (safety exception).
+async function setResultSharing(req, res) {
+  try {
+    const shared = req.body?.shared === true;
+    const updated = await prisma.testResult.updateMany({
+      where: { id: req.params.id, studentId: req.user.id },
+      data: { sharedWithTherapist: shared },
+    });
+    if (!updated.count) return res.status(404).json({ error: 'Result not found' });
+    res.json({ shared });
+  } catch (err) {
+    handleError(res, err, 'setResultSharing');
+  }
+}
+
+module.exports = { setResultSharing, getDashboard, getTests, submitTest, getResults, getResult, submitConcern, getConcerns };

@@ -5,7 +5,7 @@ import { getOrder, markOrderUsed, releaseOrder, getResultFull, createBooking } f
 import { createMeetLink } from '../meet.js';
 import { authenticateRequest } from '../token.js';
 import { getAccountById } from '../db.js';
-import { hasIntellAccess, loadIntellResults, reportBuffer } from '../intell.js';
+import { intellAccess, loadIntellResults, reportBuffer } from '../intell.js';
 
 function createCareerPdfBufferBase64(registration, appointment, result) {
   return new Promise((resolve, reject) => {
@@ -526,20 +526,21 @@ export default async function handler(req, res) {
         }
       }
 
-      // Intell Student Assessments: a signed-in buyer who shares their results gets
+      // Intel Student Assessments: a signed-in buyer who shares their results gets
       // the full report (all tests, profile, answers) attached for the counsellor.
       let intellPdfBase64 = null;
       if (req.body?.shareIntellReport === true) {
         try {
           const bookerId = await authenticateRequest(req);
-          if (bookerId && (await hasIntellAccess(bookerId))) {
-            const intellResults = await loadIntellResults(bookerId);
+          const access = bookerId ? await intellAccess(bookerId) : { a: false };
+          if (access.a) {
+            const intellResults = (await loadIntellResults(bookerId)).filter((r) => access.b || /^intell_/.test(r.testId));
             if (intellResults.length) {
-              intellPdfBase64 = (await reportBuffer(await getAccountById(bookerId), intellResults)).toString('base64');
+              intellPdfBase64 = (await reportBuffer(await getAccountById(bookerId), intellResults, access.b)).toString('base64');
             }
           }
         } catch (intellErr) {
-          console.error('Failed to generate Intell assessment PDF:', intellErr);
+          console.error('Failed to generate Intel assessment PDF:', intellErr);
         }
       }
 

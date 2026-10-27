@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Sparkles, Brain, Activity, HeartPulse, Moon, ArrowRight, History, Smartphone, Compass, Layers } from 'lucide-react';
-import SpotlightCard from './SpotlightCard';
+import { ArrowLeft, Brain, Activity, HeartPulse, Moon, ArrowRight, History, Smartphone, Compass, Layers } from 'lucide-react';
 import FadeIn from './FadeIn';
 import { useAuthUser } from '../utils/auth';
 
@@ -24,15 +23,15 @@ const TestOptions: React.FC<TestOptionsProps> = ({ onBack, onSelectTest }) => {
       title: 'Depression Screening',
       shortTitle: 'PHQ-9',
       desc: 'A brief self-check to understand your emotional well-being and depressive symptoms.',
-      icon: <HeartPulse size={28} />,
-      color: 'bg-terracotta'
+      icon: <HeartPulse size={22} />,
+      color: 'bg-[#9C5B47]'
     },
     {
       id: 'gad7',
       title: 'Anxiety Screening',
       shortTitle: 'GAD-7',
       desc: 'Measure your feelings of anxiety, worry, and tension.',
-      icon: <Activity size={28} />,
+      icon: <Activity size={22} />,
       color: 'bg-[#2D6A4F]'
     },
     {
@@ -40,7 +39,7 @@ const TestOptions: React.FC<TestOptionsProps> = ({ onBack, onSelectTest }) => {
       title: 'Stress Self-Check',
       shortTitle: 'PSS-10',
       desc: 'Understand how stressful you have found your life during the past month.',
-      icon: <Brain size={28} />,
+      icon: <Brain size={22} />,
       color: 'bg-[#B08968]'
     },
     {
@@ -48,7 +47,7 @@ const TestOptions: React.FC<TestOptionsProps> = ({ onBack, onSelectTest }) => {
       title: 'Sleep Hygiene Check',
       shortTitle: 'InterSleek',
       desc: 'Reflect on your sleep habits and bedtime routines to improve rest quality.',
-      icon: <Moon size={28} />,
+      icon: <Moon size={22} />,
       color: 'bg-[#4A4E69]'
     },
     {
@@ -56,150 +55,118 @@ const TestOptions: React.FC<TestOptionsProps> = ({ onBack, onSelectTest }) => {
       title: 'Smartphone Addiction',
       shortTitle: 'SAS',
       desc: 'Assess your smartphone usage and digital habits to find a healthy balance.',
-      icon: <Smartphone size={28} />,
-      color: 'bg-[#4361EE]'
+      icon: <Smartphone size={22} />,
+      color: 'bg-[#3E5C76]'
     }
   ];
 
+  const premium = [
+    { path: '/career-assessment', icon: <Compass size={22} />, tile: 'bg-white/10 text-white', tag: 'Career mapping', title: 'Career Guidance Assessment', desc: 'Multiple intelligences, vocational interests and career personality, with a detailed PDF report.', cta: 'Explore the career test' },
+    { path: '/intell-assessment', icon: <Layers size={22} />, tile: 'bg-terracotta text-intel-dark', tag: 'Module A + Module B', title: 'Intel Student Assessments', desc: 'How you learn, study habits, feelings, screen time and personality, plus PHQ-9 and GAD-7, in one integrated profile.', cta: 'Explore Intel assessments' },
+  ];
+
   return (
-    <div className="relative min-h-screen pt-24 pb-12 md:pt-32 md:pb-24 px-6">
+    <div className="relative min-h-screen pt-24 md:pt-28 pb-16 md:pb-24 px-5 sm:px-8">
       <div className="max-w-6xl mx-auto">
-        <button 
+        <button
           onClick={onBack}
-          className="group flex items-center gap-3 text-white font-black transition-all mb-12 md:mb-16 uppercase tracking-[0.2em] text-xs bg-serene-green hover:bg-[#2D6A4F] px-5 py-3 rounded-full shadow-sm"
+          className="group inline-flex items-center gap-2 mb-10 text-sm font-semibold text-intel-dark/70 hover:text-intel-dark transition-colors"
         >
-          <div className="w-7 h-7 rounded-full bg-white/20 group-hover:bg-white/30 flex items-center justify-center transition-all duration-300">
-            <ArrowLeft size={14} />
-          </div>
-          Back to Home
+          <ArrowLeft size={16} className="transition-transform group-hover:-translate-x-0.5" /> Back to home
         </button>
 
-        <div className="text-center mb-16 md:mb-24">
-          <FadeIn>
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-intel-dark border border-white/10 text-white text-[10px] font-bold uppercase tracking-[0.3em] mb-6 shadow-xl">
-              <Sparkles size={14} className="animate-pulse" />
-              Testing Tools & Screenings
-            </div>
-            <h1 className="text-4xl md:text-7xl font-black text-intel-dark serif mb-8 leading-tight">
-              Start your journey <br /> to <span className="italic text-serene-green">clarity.</span>
-            </h1>
-            <p className="text-intel-dark/60 max-w-2xl mx-auto text-base md:text-xl font-light leading-relaxed">
-              Explore our validated diagnostic assessment and emotional screenings. Gain insights and take control of your path.
-            </p>
-          </FadeIn>
-        </div>
-
-        {/* Results live in one place: the account dashboard */}
         <FadeIn>
-          <div className="mb-16 p-6 rounded-3xl bg-white border border-black/5 shadow-sm flex flex-col sm:flex-row items-center gap-4">
-            <History size={24} className="text-terracotta shrink-0" />
-            <p className="flex-1 text-sm text-intel-dark/70 font-medium text-center sm:text-left">
-              {user
-                ? <>Signed in as <strong className="text-intel-dark">{user.name}</strong> — every result you complete is saved to your account.</>
-                : <>Sign in to keep every result in one place and retake tests anytime. Free screenings work without an account too.</>}
+          <header className="max-w-2xl mb-10">
+            <p className="text-sm font-semibold text-[#8a6a3f] mb-3">Assessments</p>
+            <h1 className="serif text-4xl md:text-5xl leading-tight text-intel-dark">Assessments and screenings</h1>
+            <p className="mt-4 text-base md:text-lg text-intel-dark/70 leading-relaxed">
+              Validated self-checks and in-depth assessments to help you understand yourself and plan your next step.
             </p>
-            <button
-              onClick={() => navigate(user ? '/my-results' : '/login?next=/assessments')}
-              className="shrink-0 bg-intel-dark text-white px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] hover:opacity-90 flex items-center gap-2"
-            >
-              {user ? 'View My Results' : 'Sign In'} <ArrowRight size={12} />
-            </button>
-          </div>
+          </header>
         </FadeIn>
 
+        {/* Results live in one place: the account dashboard */}
+        <div className="mb-16 p-5 sm:p-6 rounded-3xl bg-white border border-black/5 flex flex-col sm:flex-row items-center gap-4">
+          <History size={22} className="text-serene-green shrink-0" />
+          <p className="flex-1 text-[15px] text-intel-dark/75 text-center sm:text-left">
+            {user
+              ? <>Signed in as <strong className="text-intel-dark">{user.name}</strong>. Every result you complete is saved to your account.</>
+              : <>Sign in to keep every result in one place and retake tests anytime. Free screenings also work without an account.</>}
+          </p>
+          <button
+            onClick={() => navigate(user ? '/my-results' : '/login?next=/assessments')}
+            className="shrink-0 inline-flex items-center gap-2 h-10 px-5 rounded-full bg-intel-dark text-white text-sm font-semibold hover:bg-black transition-colors"
+          >
+            {user ? 'View my results' : 'Sign in'} <ArrowRight size={14} />
+          </button>
+        </div>
 
         {/* Premium assessments */}
-        <div className="mb-16 md:mb-24">
-          <FadeIn>
-            <div className="flex items-center gap-3 mb-10 border-b border-black/5 pb-4">
-              <h2 className="text-2xl md:text-4xl font-black serif text-intel-dark">Premium Assessments</h2>
-              <span className="bg-terracotta text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">One-time payment</span>
-            </div>
-          </FadeIn>
-          <div className="grid md:grid-cols-2 gap-6 md:gap-10 lg:gap-12">
-            {[
-              { path: '/career-assessment', icon: <Compass size={28} />, color: 'bg-intel-dark border border-white/10', tag: 'Career mapping', title: 'Career Guidance Assessment', desc: 'Multiple intelligences, vocational interests and career personality, with a detailed PDF report.', cta: 'Explore Career Test' },
-              { path: '/intell-assessment', icon: <Layers size={28} />, color: 'bg-terracotta', tag: 'Module A + Module B', title: 'Intell Student Assessments', desc: 'How you learn, study habits, feelings, screen time and personality, plus PHQ-9 and GAD-7, in one integrated profile.', cta: 'Explore Intell Assessments' },
-            ].map((t, idx) => (
-              <FadeIn key={t.path} delay={idx * 150}>
-                <div onClick={() => navigate(t.path)} className="group cursor-pointer h-full">
-                  <SpotlightCard className="bg-[#1C1F22] border-2 border-terracotta/20 h-full p-8 md:p-12 rounded-[40px] md:rounded-[60px] shadow-2xl transition-all duration-700 hover:scale-[1.02] flex flex-col items-start text-left">
-                    <div className={`w-14 h-14 md:w-20 md:h-20 ${t.color} text-white rounded-[2rem] flex items-center justify-center mb-8 shadow-xl transition-all duration-700 group-hover:rotate-12 group-hover:scale-110`}>
-                      {t.icon}
-                    </div>
-                    <div className="flex-grow">
-                      <span className="text-[10px] md:text-xs font-black text-terracotta uppercase tracking-[0.3em] mb-3 block font-inter">{t.tag}</span>
-                      <h3 className="text-2xl md:text-4xl font-black text-white serif mb-4 group-hover:text-terracotta transition-colors">{t.title}</h3>
-                      <p className="text-white/60 font-light leading-relaxed text-sm md:text-lg mb-10 group-hover:text-white/80 transition-colors">{t.desc}</p>
-                    </div>
-                    <div className="flex items-center gap-3 text-white font-black text-xs md:text-sm uppercase tracking-widest mt-auto border-b-2 border-transparent group-hover:border-terracotta transition-all">
-                      {t.cta} <ArrowRight size={16} />
-                    </div>
-                  </SpotlightCard>
-                </div>
+        <section className="mb-16 md:mb-20" aria-labelledby="premium-heading">
+          <div className="flex flex-wrap items-baseline justify-between gap-2 mb-6 pb-4 border-b border-black/10">
+            <h2 id="premium-heading" className="serif text-2xl md:text-3xl text-intel-dark">In-depth assessments</h2>
+            <span className="text-sm text-intel-dark/55">One-time payment, PDF report included</span>
+          </div>
+          <div className="grid md:grid-cols-2 gap-5">
+            {premium.map((t, idx) => (
+              <FadeIn key={t.path} delay={idx * 80} className="h-full">
+                <button
+                  onClick={() => navigate(t.path)}
+                  className="group h-full w-full text-left flex flex-col rounded-3xl bg-intel-dark p-7 md:p-9 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(26,26,26,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta"
+                >
+                  <span className={`w-12 h-12 rounded-full flex items-center justify-center transition-transform duration-500 ease-bounce group-hover:-rotate-12 group-hover:scale-110 ${t.tile}`} aria-hidden="true">{t.icon}</span>
+                  <span className="mt-6 text-sm text-white/55">{t.tag}</span>
+                  <h3 className="serif text-2xl md:text-[1.75rem] text-white mt-1">{t.title}</h3>
+                  <p className="mt-3 text-[15px] text-white/70 leading-relaxed flex-1">{t.desc}</p>
+                  <span className="mt-7 inline-flex items-center gap-1.5 text-sm font-semibold text-terracotta">
+                    {t.cta} <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />
+                  </span>
+                </button>
               </FadeIn>
             ))}
           </div>
-        </div>
+        </section>
 
-        {/* Free Assessments Section */}
-        <div>
-          <FadeIn>
-            <div className="flex items-center gap-3 mb-10 border-b border-black/5 pb-4">
-              <h2 className="text-2xl md:text-4xl font-black serif text-intel-dark">Free Screenings</h2>
-              <span className="bg-serene-green text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">Complimentary</span>
-            </div>
-            
-            <div className="grid md:grid-cols-2 gap-6 md:gap-10 lg:gap-12">
-              {freeTests.map((test, idx) => (
-                <FadeIn key={test.id} delay={idx * 150}>
-                  <div 
-                    onClick={() => onSelectTest(test.id)}
-                    className="group cursor-pointer h-full"
-                  >
-                    <SpotlightCard className="bg-[#1C1F22] border border-white/10 h-full p-8 md:p-12 rounded-[40px] md:rounded-[60px] shadow-2xl transition-all duration-700 hover:scale-[1.02] flex flex-col items-start text-left">
-                      <div className={`w-14 h-14 md:w-20 md:h-20 ${test.color} text-white rounded-[2rem] flex items-center justify-center mb-8 shadow-xl transition-all duration-700 group-hover:rotate-12 group-hover:scale-110`}>
-                        {test.icon}
-                      </div>
-                      
-                      <div className="flex-grow">
-                        <span className="text-[10px] md:text-xs font-black text-terracotta uppercase tracking-[0.3em] mb-3 block font-inter">
-                          {test.shortTitle}
-                        </span>
-                        <h3 className="text-2xl md:text-4xl font-black text-white serif mb-4 group-hover:text-terracotta transition-colors">
-                          {test.title}
-                        </h3>
-                        <p className="text-white/60 font-light leading-relaxed text-sm md:text-lg mb-10 group-hover:text-white/80 transition-colors">
-                          {test.desc}
-                        </p>
-                      </div>
+        {/* Free screenings */}
+        <section aria-labelledby="free-heading">
+          <div className="flex flex-wrap items-baseline justify-between gap-2 mb-6 pb-4 border-b border-black/10">
+            <h2 id="free-heading" className="serif text-2xl md:text-3xl text-intel-dark">Free screenings</h2>
+            <span className="text-sm text-intel-dark/55">Free, about 5 minutes each</span>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {freeTests.map((test, idx) => (
+              <FadeIn key={test.id} delay={idx * 60} className="h-full">
+                <button
+                  onClick={() => onSelectTest(test.id)}
+                  className="group h-full w-full text-left flex flex-col rounded-[32px] bg-white border border-black/5 p-7 transition-all duration-500 ease-bounce hover:-translate-y-1.5 hover:shadow-[0_12px_32px_rgba(26,26,26,0.08)] hover:border-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-serene-green"
+                >
+                  <span className={`w-12 h-12 rounded-full flex items-center justify-center transition-transform duration-500 ease-bounce group-hover:-rotate-12 group-hover:scale-110 text-white ${test.color}`} aria-hidden="true">{test.icon}</span>
+                  <h3 className="serif text-xl text-intel-dark mt-6">{test.title}</h3>
+                  <span className="text-xs font-medium text-intel-dark/50 mt-1">{test.shortTitle}</span>
+                  <p className="mt-3 text-[15px] text-intel-dark/70 leading-relaxed flex-1">{test.desc}</p>
+                  <span className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-serene-green">
+                    Start free check <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />
+                  </span>
+                </button>
+              </FadeIn>
+            ))}
+          </div>
+        </section>
 
-                      <div className="flex items-center gap-3 text-white font-black text-xs md:text-sm uppercase tracking-widest mt-auto border-b-2 border-transparent group-hover:border-terracotta transition-all">
-                        Start Free Check <ArrowRight size={16} />
-                      </div>
-                    </SpotlightCard>
-                  </div>
-                </FadeIn>
-              ))}
-            </div>
-          </FadeIn>
-        </div>
-
-        <div className="mt-16 md:mt-24 p-8 md:p-16 bg-intel-dark rounded-[50px] md:rounded-[80px] text-white text-center relative overflow-hidden shadow-2xl">
-           <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-bl-[120px] -mr-32 -mt-32 opacity-40"></div>
-           <div className="relative z-10">
-             <h3 className="text-2xl md:text-4xl font-black serif mb-6">Need immediate support?</h3>
-             <p className="text-white/60 text-sm md:text-lg font-light max-w-xl mx-auto mb-10 leading-relaxed">
-               Self-assessments are a great first step, but speaking with a professional provides the depth you deserve.
-             </p>
-             <button 
-               onClick={() => navigate('/services/personal')}
-               className="bg-terracotta text-white px-10 py-4 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all"
-             >
-               Book a Professional Session
-             </button>
-           </div>
-        </div>
+        <section className="mt-16 md:mt-20 rounded-[28px] bg-serene-green text-white p-8 md:p-12 flex flex-col md:flex-row md:items-center gap-6 md:gap-10">
+          <div className="flex-1">
+            <h2 className="serif text-2xl md:text-3xl">Want to talk to someone?</h2>
+            <p className="mt-3 text-white/75 leading-relaxed max-w-xl">
+              Self-assessments are a good first step. A session with a counsellor gives you the depth and support you deserve.
+            </p>
+          </div>
+          <button
+            onClick={() => navigate('/services/personal')}
+            className="shrink-0 h-12 px-6 rounded-full bg-terracotta text-intel-dark font-semibold hover:bg-[#cfac80] transition-colors"
+          >
+            Book a session
+          </button>
+        </section>
       </div>
     </div>
   );

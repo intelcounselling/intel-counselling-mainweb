@@ -43,7 +43,7 @@ test('PHQ-9 self-harm item always reaches the counsellor', () => {
   assert.equal(r.requiresCounselling, true);
 });
 
-test('INTELL domains keep the below-36 rule', () => {
+test('INTEL domains keep the below-36 rule', () => {
   const qs = Array.from({ length: 12 }, (_, i) => ({ id: i + 1, options: [1, 2, 3, 4, 5].map((value) => ({ value })) }));
   const low = Object.fromEntries(qs.map((q) => [q.id, 2])); // 24 / 60
   const r = calculateScore(low, qs, [], 'EmotionalWellness');

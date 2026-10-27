@@ -19,7 +19,7 @@ interface Props {
   onClose: () => void;
 }
 
-// One of the five Intell assessments: 12 statements on a 1–5 agree scale.
+// One of the five Intel assessments: 12 statements on a 1–5 agree scale.
 // Scoring happens on the server; afterwards the result comes back from the profile.
 const IntellAssessment: React.FC<Props> = ({ testId, onClose }) => {
   const navigate = useNavigate();
@@ -66,7 +66,7 @@ const IntellAssessment: React.FC<Props> = ({ testId, onClose }) => {
 
   const shell = (children: React.ReactNode) => (
     <div className="min-h-screen bg-[#F6F7F9] pt-20 md:pt-28 pb-12 px-4 flex items-start justify-center">
-      <div className="relative bg-white w-full max-w-3xl rounded-[32px] md:rounded-[40px] shadow-xl border border-black/5 overflow-hidden">{children}</div>
+      <div className="relative bg-white w-full max-w-3xl rounded-[32px] md:rounded-[28px] shadow-xl border border-black/5 overflow-hidden">{children}</div>
     </div>
   );
 
@@ -74,7 +74,7 @@ const IntellAssessment: React.FC<Props> = ({ testId, onClose }) => {
     return shell(
       <div className="p-10 text-center">
         <p className="text-intel-dark/70 mb-6">{loadError}</p>
-        <button onClick={onClose} className="px-6 py-3 bg-intel-dark text-white rounded-xl font-black uppercase tracking-widest text-[10px]">Back</button>
+        <button onClick={onClose} className="px-6 py-3 bg-intel-dark text-white rounded-xl font-semibold text-[11px]">Back</button>
       </div>
     );
   }
@@ -90,7 +90,7 @@ const IntellAssessment: React.FC<Props> = ({ testId, onClose }) => {
           <ArrowLeft size={16} /> Back
         </button>
         <IntellIcon id={testId} size="lg" />
-        <span className="text-terracotta font-black text-xs uppercase tracking-[0.3em] mt-8 mb-3 block">{meta?.label} · Module A</span>
+        <span className="text-terracotta font-black text-xs uppercase tracking-[0.14em] mt-8 mb-3 block">{meta?.label} · Module A</span>
         <h2 className="text-3xl md:text-4xl font-black serif text-intel-dark mb-4">{def.name}</h2>
         <p className="text-intel-dark/70 mb-8 leading-relaxed">{def.description}</p>
         <div className="grid sm:grid-cols-3 gap-3 mb-10 text-sm">
@@ -99,7 +99,7 @@ const IntellAssessment: React.FC<Props> = ({ testId, onClose }) => {
           <div className="flex items-center gap-2 bg-black/[0.03] rounded-2xl p-4 text-intel-dark/70"><Shield size={18} className="text-serene-green shrink-0" /> Private to your account</div>
         </div>
         <p className="text-sm text-intel-dark/60 mb-8">There are no right or wrong answers — go with what's true for you most of the time.</p>
-        <button onClick={() => setStep(0)} className="w-full bg-terracotta text-white py-5 rounded-2xl font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-lg">
+        <button onClick={() => setStep(0)} className="w-full bg-terracotta text-intel-dark py-5 rounded-2xl font-semibold active:scale-95 transition-all shadow-lg">
           Let's begin
         </button>
       </div>
@@ -111,17 +111,20 @@ const IntellAssessment: React.FC<Props> = ({ testId, onClose }) => {
     const profile = status.profile;
     const result = profile?.tests?.find((t: any) => t.name === def.name);
     const tests = status.tests || [];
-    const done = tests.filter((t: any) => t.done).length;
-    const nextId = INTELL_ORDER.find((id) => !tests.find((t: any) => t.id === id)?.done);
+    // Module A buyers work through the five Intel tests; Module B adds PHQ-9 and GAD-7
+    const mine = INTELL_ORDER.filter((id) => status.moduleB || INTELL_META[id].module === 'A');
+    const total = mine.length;
+    const done = tests.filter((t: any) => t.done && mine.includes(t.id)).length;
+    const nextId = mine.find((id) => !tests.find((t: any) => t.id === id)?.done);
     const allDone = !nextId;
     return shell(
       <div className="p-8 md:p-14 text-center">
         <div className="flex justify-center mb-6">
           {allDone
-            ? <span className="w-20 h-20 rounded-full bg-terracotta text-white flex items-center justify-center shadow-xl"><PartyPopper size={36} /></span>
+            ? <span className="w-20 h-20 rounded-full bg-terracotta text-intel-dark flex items-center justify-center shadow-xl"><PartyPopper size={36} /></span>
             : <IntellIcon id={testId} size="lg" />}
         </div>
-        <p className="text-terracotta font-black text-xs uppercase tracking-[0.3em] mb-3">{allDone ? 'All 7 done — amazing!' : `${done} of 7 done`}</p>
+        <p className="text-terracotta font-black text-xs uppercase tracking-[0.14em] mb-3">{allDone ? `All ${total} done — amazing!` : `${done} of ${total} done`}</p>
         <h2 className="text-3xl md:text-4xl font-black serif text-intel-dark mb-6">{def.name}</h2>
 
         {result && (
@@ -132,7 +135,7 @@ const IntellAssessment: React.FC<Props> = ({ testId, onClose }) => {
                 {['Visual', 'Auditory', 'Kinesthetic'].map((d) => (
                   <div key={d} className="bg-white rounded-2xl p-3 text-center border border-black/5">
                     <p className="text-2xl font-black text-intel-dark">{result.subScores[d]}<span className="text-xs text-intel-dark/40">/20</span></p>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-intel-dark/50">{d}</p>
+                    <p className="text-[11px] font-black uppercase tracking-widest text-intel-dark/50">{d}</p>
                   </div>
                 ))}
               </div>
@@ -142,20 +145,20 @@ const IntellAssessment: React.FC<Props> = ({ testId, onClose }) => {
         )}
 
         <div className="h-2 rounded-full bg-black/5 overflow-hidden mb-8 max-w-md mx-auto">
-          <div className="h-full bg-terracotta rounded-full transition-all duration-700" style={{ width: `${(done / 7) * 100}%` }} />
+          <div className="h-full bg-terracotta rounded-full transition-all duration-700" style={{ width: `${(done / total) * 100}%` }} />
         </div>
 
         <div className="flex flex-col md:flex-row gap-3 justify-center">
           {nextId ? (
-            <button onClick={() => navigate(intellTestPath(nextId))} className="px-8 py-5 bg-terracotta text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2">
+            <button onClick={() => navigate(intellTestPath(nextId))} className="px-8 py-5 bg-terracotta text-intel-dark rounded-2xl font-semibold text-xs shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2">
               Next: {INTELL_META[nextId].label} <ArrowRight size={16} />
             </button>
           ) : (
-            <button onClick={() => navigate(INTELL_HUB)} className="px-8 py-5 bg-terracotta text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2">
+            <button onClick={() => navigate(INTELL_HUB)} className="px-8 py-5 bg-terracotta text-intel-dark rounded-2xl font-semibold text-xs shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2">
               <Brain size={16} /> See my full profile
             </button>
           )}
-          <button onClick={() => navigate(INTELL_HUB)} className="px-8 py-5 bg-white text-intel-dark border-2 border-black/10 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-black/5 transition-all">
+          <button onClick={() => navigate(INTELL_HUB)} className="px-8 py-5 bg-white text-intel-dark border-2 border-black/10 rounded-2xl font-semibold text-xs hover:bg-black/5 transition-all">
             All my assessments
           </button>
         </div>
@@ -176,7 +179,7 @@ const IntellAssessment: React.FC<Props> = ({ testId, onClose }) => {
           <div className="h-1.5 w-20 md:w-48 bg-black/5 rounded-full overflow-hidden">
             <div className={`h-full ${meta?.color || 'bg-terracotta'} transition-all duration-300`} style={{ width: `${((step + 1) / questions.length) * 100}%` }} />
           </div>
-          <span className="text-[10px] font-bold text-black/40 uppercase tracking-widest whitespace-nowrap">{step + 1} / {questions.length}</span>
+          <span className="text-[11px] font-bold text-black/40 uppercase tracking-widest whitespace-nowrap">{step + 1} / {questions.length}</span>
         </div>
         <button onClick={onClose} aria-label="Close" className="p-2 hover:bg-black/5 rounded-full transition-colors"><X size={20} /></button>
       </div>
@@ -189,7 +192,7 @@ const IntellAssessment: React.FC<Props> = ({ testId, onClose }) => {
         ) : saveError ? (
           <div className="py-10 text-center">
             <p className="text-red-600 mb-6">{saveError}</p>
-            <button onClick={() => submit(answers)} className="px-6 py-3 bg-terracotta text-white rounded-xl font-black uppercase tracking-widest text-[10px]">Try again</button>
+            <button onClick={() => submit(answers)} className="px-6 py-3 bg-terracotta text-intel-dark rounded-xl font-semibold text-[11px]">Try again</button>
           </div>
         ) : (
           <>

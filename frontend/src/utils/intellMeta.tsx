@@ -1,6 +1,6 @@
 import { Lightbulb, BookOpen, Heart, Smartphone, Sparkles, CloudSun, Wind, type LucideIcon } from 'lucide-react';
 
-// Intell Student Assessments: one purchase unlocks Module A (5 Intell tests) and
+// Intel Student Assessments: one purchase unlocks Module A (5 Intel tests) and
 // Module B (those + PHQ-9 and GAD-7). The backend owns questions and scoring
 // (backend/src/intell.js); this is just how each test looks on the site.
 export interface IntellMeta {
@@ -11,20 +11,22 @@ export interface IntellMeta {
   module: 'A' | 'B';
 }
 
+// Tile colours are earthy tones picked to sit on the site's cream background
+// (stock Tailwind amber/sky/violet read as off-brand next to brass and green).
 export const INTELL_META: Record<string, IntellMeta> = {
-  intell_lp: { label: 'How you learn', icon: Lightbulb, color: 'bg-amber-500', blurb: 'Do you learn best by seeing, hearing or doing?', module: 'A' },
-  intell_sb: { label: 'Study habits', icon: BookOpen, color: 'bg-sky-600', blurb: 'Focus, planning and how consistently you study.', module: 'A' },
-  intell_ew: { label: 'Feelings & stress', icon: Heart, color: 'bg-rose-500', blurb: 'Your mood, stress level and how you cope.', module: 'A' },
-  intell_iu: { label: 'Screen time', icon: Smartphone, color: 'bg-violet-600', blurb: 'How phones, games and social media fit into your day.', module: 'A' },
-  intell_pd: { label: 'Personality', icon: Sparkles, color: 'bg-emerald-600', blurb: 'Confidence, responsibility and getting along with others.', module: 'A' },
-  phq9: { label: 'Mood check (PHQ-9)', icon: CloudSun, color: 'bg-terracotta', blurb: 'A standard screening for low mood over the last two weeks.', module: 'B' },
+  intell_lp: { label: 'How you learn', icon: Lightbulb, color: 'bg-[#B8894F]', blurb: 'Do you learn best by seeing, hearing or doing?', module: 'A' },
+  intell_sb: { label: 'Study habits', icon: BookOpen, color: 'bg-[#3E5C76]', blurb: 'Focus, planning and how consistently you study.', module: 'A' },
+  intell_ew: { label: 'Feelings & stress', icon: Heart, color: 'bg-[#B4676E]', blurb: 'Your mood, stress level and how you cope.', module: 'A' },
+  intell_iu: { label: 'Screen time', icon: Smartphone, color: 'bg-[#6E5675]', blurb: 'How phones, games and social media fit into your day.', module: 'A' },
+  intell_pd: { label: 'Personality', icon: Sparkles, color: 'bg-[#5E7F67]', blurb: 'Confidence, responsibility and getting along with others.', module: 'A' },
+  phq9: { label: 'Mood check (PHQ-9)', icon: CloudSun, color: 'bg-[#9C5B47]', blurb: 'A standard screening for low mood over the last two weeks.', module: 'B' },
   gad7: { label: 'Worry check (GAD-7)', icon: Wind, color: 'bg-[#2D6A4F]', blurb: 'A standard screening for worry and nervousness.', module: 'B' },
 };
 
 export const INTELL_ORDER = Object.keys(INTELL_META);
 export const isIntellTest = (id?: string | null) => !!id && /^intell_/.test(id);
 
-// Where each test runs: the Intell ones in their own runner, PHQ-9/GAD-7 in the
+// Where each test runs: the Intel ones in their own runner, PHQ-9/GAD-7 in the
 // site's existing screening flow. ?from=intell brings the user back to the hub.
 export const intellTestPath = (id: string) => `/assessments/${id}?from=intell`;
 
@@ -37,7 +39,7 @@ export function IntellIcon({ id, size = 'md' }: { id: string; size?: 'sm' | 'md'
   const box = size === 'lg' ? 'w-16 h-16 rounded-3xl' : size === 'sm' ? 'w-9 h-9 rounded-xl' : 'w-12 h-12 rounded-2xl';
   const px = size === 'lg' ? 30 : size === 'sm' ? 16 : 22;
   return (
-    <span className={`${box} ${m.color} text-white inline-flex items-center justify-center shrink-0 shadow-lg`} aria-hidden="true">
+    <span className={`${box} ${m.color} text-white inline-flex items-center justify-center shrink-0`} aria-hidden="true">
       <Icon size={px} />
     </span>
   );

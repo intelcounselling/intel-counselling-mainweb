@@ -139,7 +139,7 @@ const SignInPage: React.FC = () => {
     <div className="min-h-screen bg-[#F7EBD3] pt-28 pb-16 px-4 flex items-center justify-center">
       <div className="bg-white w-full max-w-md p-8 md:p-10 rounded-[32px] shadow-xl border border-black/5">
         <div className="text-center mb-8">
-          <span className="text-terracotta font-black text-[10px] uppercase tracking-[0.25em] block mb-3">Your Intel Counselling account</span>
+          <span className="text-terracotta font-black text-[11px] uppercase tracking-[0.1em] block mb-3">Your Intel Counselling account</span>
           <h1 className="text-3xl font-black serif text-intel-dark mb-2">{title}</h1>
           <p className="text-sm text-intel-dark/60 font-light">
             One account for every assessment — your details and results are saved securely in one place.
@@ -149,7 +149,7 @@ const SignInPage: React.FC = () => {
         {(mode === 'login' || mode === 'register') && googleSignInEnabled && (
           <>
             <GoogleSignInButton onCredential={handleGoogle} onError={setError} />
-            <div className="flex items-center gap-3 my-6 text-[10px] font-black uppercase tracking-widest text-intel-dark/30">
+            <div className="flex items-center gap-3 my-6 text-[11px] font-black uppercase tracking-widest text-intel-dark/30">
               <span className="flex-1 h-px bg-black/10" /> or with email <span className="flex-1 h-px bg-black/10" />
             </div>
           </>
@@ -210,7 +210,7 @@ const SignInPage: React.FC = () => {
               aria-label="6-digit code"
               value={otp}
               onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-              className={`${inputClass} tracking-[0.4em] text-center`}
+              className={`${inputClass} tracking-[0.14em] text-center`}
             />
           )}
           {mode === 'verify' && (
@@ -233,7 +233,7 @@ const SignInPage: React.FC = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-intel-dark text-white py-4 rounded-xl font-black text-xs uppercase tracking-widest disabled:opacity-50 hover:bg-black/90 mt-2 flex items-center justify-center gap-2"
+            className="w-full bg-intel-dark text-white py-4 rounded-xl font-semibold text-xs disabled:opacity-50 hover:bg-black/90 mt-2 flex items-center justify-center gap-2"
           >
             {loading && <Loader2 size={14} className="animate-spin" />}
             {submitLabel}
@@ -248,7 +248,7 @@ const SignInPage: React.FC = () => {
           )}
         </form>
 
-        <p className="text-center text-[10px] font-bold uppercase tracking-[0.15em] text-intel-dark/40 flex items-center justify-center gap-1.5 mt-8">
+        <p className="text-center text-[11px] font-bold uppercase tracking-[0.08em] text-intel-dark/40 flex items-center justify-center gap-1.5 mt-8">
           <ShieldCheck size={12} className="text-serene-green" /> Your data is encrypted and private
         </p>
       </div>

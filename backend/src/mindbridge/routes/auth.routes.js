@@ -6,6 +6,7 @@ const { validateLogin, validateResetPassword, validateChangePassword, validateFo
 const authCtrl = require('../controllers/auth.controller');
 
 router.post('/login', authLimiter, validateLogin, authCtrl.login);
+router.post('/login/verify', authLimiter, authCtrl.verifyLogin);
 router.post('/refresh', authCtrl.refresh);
 router.post('/logout', authCtrl.logout);
 router.post('/reset-password', verifyToken, validateResetPassword, authCtrl.resetPassword);
@@ -14,5 +15,8 @@ router.put('/change-password', verifyToken, validateChangePassword, authCtrl.cha
 router.post('/forgot-password', authLimiter, validateForgotPassword, authCtrl.forgotPassword);
 router.post('/verify-otp', authLimiter, validateVerifyOTP, authCtrl.verifyOTP);
 router.get('/me', verifyToken, authCtrl.getMe);
+// Data-subject rights (DPDP Act)
+router.get('/my-data', verifyToken, authCtrl.getMyData);
+router.post('/deletion-request', verifyToken, authCtrl.requestDeletion);
 
 module.exports = router;

@@ -5,6 +5,7 @@ const { sendCredentialsEmail } = require('../services/email.service');
 const { generateDetailedStudentReport } = require('../services/pdf.service');
 const logger = require('../utils/logger');
 const { handleError } = require('../utils/errorHandler');
+const { STAFF_VISIBLE, isSchoolAdmin, staffResultsWhere, staffAlertsWhere } = require('../utils/privacy');
 const crypto = require('crypto');
 
 // ── Dashboard ─────────────────────────────────────────────────
@@ -135,13 +136,12 @@ async function getDashboard(req, res) {
 
 async function getSevereNoAppointment(req, res) {
   try {
-    const isSchoolAdmin = req.user.role === 'SCHOOL_ADMIN';
-    const schoolId = req.user.schoolId;
+    // Individual risk data — the counsellor's list, never a school admin's
+    if (isSchoolAdmin(req)) return res.json({ students: [] });
 
     const flaggedResults = await prisma.testResult.findMany({
       where: {
         isLow: true,
-        ...(isSchoolAdmin && { student: { schoolId } }),
       },
       orderBy: { takenAt: 'desc' },
       distinct: ['studentId'],
@@ -324,11 +324,12 @@ async function getSchoolStudents(req, res) {
         orderBy: { lastName: 'asc' },
         include: {
           testResults: {
+            where: staffResultsWhere(req),
             take: 1,
             orderBy: { takenAt: 'desc' },
             include: { test: { select: { name: true } } },
           },
-          _count: { select: { alerts: true } },
+          _count: { select: { alerts: { where: staffAlertsWhere(req) } } },
           class: true,
         },
       }),
@@ -1067,7 +1068,7 @@ async function downloadStudentPDFReport(req, res) {
         include: { school: true },
       }),
       prisma.testResult.findMany({
-        where: { studentId: id },
+        where: { studentId: id, ...STAFF_VISIBLE },
         orderBy: { takenAt: 'desc' },
         include: { test: { select: { name: true, category: true, questions: true } } },
       }),
@@ -1257,8 +1258,9 @@ async function getStudentsForAppointment(req, res) {
       select: {
         id: true, firstName: true, lastName: true, grade: true, email: true,
         school: { select: { id: true, name: true } },
-        alerts: { where: { status: 'UNREAD' }, select: { id: true, severity: true } },
+        alerts: { where: { status: 'UNREAD', ...staffAlertsWhere(req) }, select: { id: true, severity: true } },
         testResults: {
+          where: staffResultsWhere(req),
           take: 3,
           orderBy: { takenAt: 'desc' },
           select: {
@@ -1293,12 +1295,13 @@ async function getStudentTestHistory(req, res) {
         id: true, firstName: true, lastName: true, grade: true, email: true,
         school: { select: { id: true, name: true } },
         alerts: {
-          where: { status: 'UNREAD' },
+          where: { status: 'UNREAD', ...staffAlertsWhere(req) },
           select: { id: true, severity: true, firedAt: true },
           orderBy: { firedAt: 'desc' },
           take: 5,
         },
         testResults: {
+          where: staffResultsWhere(req),
           orderBy: { takenAt: 'desc' },
           include: { test: { select: { name: true, category: true } } },
         },
@@ -1318,6 +1321,39 @@ async function getStudentTestHistory(req, res) {
   }
 }
 
+// ── Parent / guardian consent (DPDP Act) ──────────────────────
+// The school collects signed consent forms offline; an admin records that it holds
+// them. Students without a recorded consent can't save assessments.
+
+// GET /admin/schools/:id/guardian-consent
+async function getGuardianConsentStatus(req, res) {
+  try {
+    const where = { schoolId: req.params.id, role: 'STUDENT', isActive: true };
+    const [total, consented] = await Promise.all([
+      prisma.user.count({ where }),
+      prisma.user.count({ where: { ...where, guardianConsentAt: { not: null } } }),
+    ]);
+    res.json({ total, consented });
+  } catch (err) {
+    handleError(res, err, 'getGuardianConsentStatus');
+  }
+}
+
+// POST /admin/schools/:id/guardian-consent { studentIds?: string[] } — all students without it when omitted
+async function recordGuardianConsent(req, res) {
+  try {
+    const ids = Array.isArray(req.body?.studentIds) ? req.body.studentIds.filter((x) => typeof x === 'string') : null;
+    const updated = await prisma.user.updateMany({
+      where: { schoolId: req.params.id, role: 'STUDENT', guardianConsentAt: null, ...(ids && { id: { in: ids } }) },
+      data: { guardianConsentAt: new Date(), guardianConsentBy: req.user.id },
+    });
+    logger.info(`Guardian consent recorded for ${updated.count} students in school ${req.params.id} by ${req.user.id}`);
+    res.json({ recorded: updated.count });
+  } catch (err) {
+    handleError(res, err, 'recordGuardianConsent');
+  }
+}
+
 // ── Helper ────────────────────────────────────────────────────
 
 function generateAccessCode() {
@@ -1330,6 +1366,8 @@ function generateAccessCode() {
 }
 
 module.exports = {
+  getGuardianConsentStatus,
+  recordGuardianConsent,
   getDashboard,
   createSchool,
   getSchools,

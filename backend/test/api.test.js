@@ -11,7 +11,9 @@ import path from 'path';
 // Env must be set before importing app modules
 process.env.ENCRYPTION_KEY = 'test-encryption-key';
 process.env.AUTH_TOKEN_SECRET = 'test-token-secret';
-process.env.CASHFREE_SECRET_KEY = 'test-cashfree-secret';
+process.env.RAZORPAY_KEY_ID = 'rzp_test_key';
+process.env.RAZORPAY_KEY_SECRET = 'test-razorpay-secret';
+process.env.RAZORPAY_WEBHOOK_SECRET = 'test-razorpay-webhook-secret';
 delete process.env.BREVO_API_KEY; // never send real email from tests
 delete process.env.DATABASE_URL;  // tests always run against the SQLite driver
 const TMP_DB = path.join(os.tmpdir(), `intel-test-${Date.now()}-${Math.random().toString(36).slice(2)}.sqlite`);
@@ -276,22 +278,84 @@ test('inquiry email validates input; load-answers rejects array ids', async () =
   assert.equal((await get('/load-answers?id=a&id=b')).status, 400);
 });
 
-test('webhook rejects stale timestamps (replay window)', async () => {
+// Stubs only api.razorpay.com; the test client's own requests still hit the server.
+function mockRazorpay(routes) {
+  const realFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = (url, opts = {}) => {
+    const u = String(url);
+    if (!u.startsWith('https://api.razorpay.com/')) return realFetch(url, opts);
+    const path = u.replace('https://api.razorpay.com/v1', '');
+    calls.push({ method: opts.method || 'GET', path, body: opts.body ? JSON.parse(opts.body) : null });
+    const hit = routes[`${opts.method || 'GET'} ${path}`];
+    return Promise.resolve(new Response(JSON.stringify(hit ? hit() : { error: { description: 'not mocked' } }), {
+      status: hit ? 200 : 404, headers: { 'Content-Type': 'application/json' },
+    }));
+  };
+  return { calls, restore: () => { globalThis.fetch = realFetch; } };
+}
+
+const checkoutSig = (rzpOrderId, paymentId) =>
+  crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET).update(`${rzpOrderId}|${paymentId}`).digest('hex');
+
+test('razorpay checkout: server-priced order, signature + payment check before PAID', async () => {
+  const rzp = mockRazorpay({
+    'POST /orders': () => ({ id: 'order_T1', amount: 160000, currency: 'INR', status: 'created' }),
+    'GET /payments/pay_wrong_amount': () => ({ id: 'pay_wrong_amount', order_id: 'order_T1', amount: 100, currency: 'INR', status: 'authorized' }),
+    'GET /payments/pay_ok': () => ({ id: 'pay_ok', order_id: 'order_T1', amount: 160000, currency: 'INR', status: 'captured' }),
+  });
+  try {
+    const created = await post('/create-payment-order', { serviceId: 'session_online', serviceName: 'Session', customerEmail: EMAIL });
+    assert.equal(created.status, 200);
+    const order = await created.json();
+    assert.match(order.orderId, /^ORDER_[a-f0-9]+$/);
+    assert.equal(order.razorpayOrderId, 'order_T1');
+    assert.equal(order.keyId, process.env.RAZORPAY_KEY_ID);
+    // Amount comes from server pricing (₹1600 → 160000 paise), never from the client
+    assert.equal(rzp.calls[0].body.amount, 160000);
+    assert.equal(rzp.calls[0].body.receipt, order.orderId);
+    assert.equal((await db.getOrder(order.orderId)).gateway_order_id, 'order_T1');
+
+    const verify = (paymentId, signature) => post('/verify-payment', {
+      orderId: order.orderId, razorpay_order_id: 'order_T1', razorpay_payment_id: paymentId, razorpay_signature: signature,
+    });
+
+    // Forged signature → rejected, nothing fetched
+    assert.equal((await verify('pay_ok', 'ab'.repeat(32))).status, 400);
+    // Valid signature but the payment is for the wrong amount → not paid, not captured
+    const wrong = await (await verify('pay_wrong_amount', checkoutSig('order_T1', 'pay_wrong_amount'))).json();
+    assert.equal(wrong.paid, false);
+    assert.ok(!rzp.calls.some((c) => c.path.endsWith('/capture')), 'mismatched payment is never captured');
+    assert.equal((await db.getOrder(order.orderId)).status, 'CREATED');
+    // Valid signature + captured payment for the right amount → PAID
+    const ok = await (await verify('pay_ok', checkoutSig('order_T1', 'pay_ok'))).json();
+    assert.equal(ok.paid, true);
+    assert.equal((await db.getOrder(order.orderId)).status, 'PAID');
+    // Status-only poll reports it too
+    assert.equal((await (await post('/verify-payment', { orderId: order.orderId })).json()).paid, true);
+  } finally {
+    rzp.restore();
+  }
+});
+
+test('razorpay checkout captures an authorised payment', async () => {
   const orderId = 'ORDER_' + crypto.randomBytes(8).toString('hex');
-  await db.createOrder(orderId, 'session_online', 1500);
-  const payload = JSON.stringify({
-    type: 'PAYMENT_SUCCESS_WEBHOOK',
-    data: { order: { order_id: orderId, order_amount: 1500 }, payment: { payment_status: 'SUCCESS' } },
+  await db.createOrder(orderId, 'session_inperson', 2000);
+  await db.setOrderGatewayId(orderId, 'order_T2');
+  const rzp = mockRazorpay({
+    'GET /payments/pay_auth': () => ({ id: 'pay_auth', order_id: 'order_T2', amount: 200000, currency: 'INR', status: 'authorized' }),
+    'POST /payments/pay_auth/capture': () => ({ id: 'pay_auth', status: 'captured' }),
   });
-  const ts = String(Date.now() - 10 * 60 * 1000);
-  const sig = crypto.createHmac('sha256', process.env.CASHFREE_SECRET_KEY).update(ts + payload).digest('base64');
-  const res = await fetch(`${base}/api/cashfree-webhook`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-webhook-timestamp': ts, 'x-webhook-signature': sig },
-    body: payload,
-  });
-  assert.equal(res.status, 401);
-  assert.equal((await db.getOrder(orderId)).status, 'CREATED');
+  try {
+    const res = await (await post('/verify-payment', {
+      orderId, razorpay_order_id: 'order_T2', razorpay_payment_id: 'pay_auth', razorpay_signature: checkoutSig('order_T2', 'pay_auth'),
+    })).json();
+    assert.equal(res.paid, true);
+    assert.deepEqual(rzp.calls.find((c) => c.path.endsWith('/capture')).body, { amount: 200000, currency: 'INR' });
+    assert.equal((await db.getOrder(orderId)).status, 'PAID');
+  } finally {
+    rzp.restore();
+  }
 });
 
 test('OTP attempts are spent atomically (parallel guesses cannot exceed the budget)', async () => {
@@ -330,30 +394,32 @@ test('verify-payment validates order id format', async () => {
   assert.equal((await post('/verify-payment', { orderId: 'nonsense' })).status, 400);
 });
 
-test('cashfree webhook rejects bad signatures and accepts valid ones', async () => {
+test('razorpay webhook rejects bad signatures and settles a valid payment.captured', async () => {
   const orderId = 'ORDER_' + crypto.randomBytes(8).toString('hex');
   await db.createOrder(orderId, 'session_online', 1500);
+  await db.setOrderGatewayId(orderId, 'order_W1');
 
-  const payload = JSON.stringify({
-    type: 'PAYMENT_SUCCESS_WEBHOOK',
-    data: { order: { order_id: orderId, order_amount: 1500 }, payment: { payment_status: 'SUCCESS' } },
+  const event = (amount) => JSON.stringify({
+    event: 'payment.captured',
+    payload: { payment: { entity: { id: 'pay_w1', order_id: 'order_W1', amount, currency: 'INR', status: 'captured' } } },
   });
-  const ts = String(Date.now());
-  const sig = crypto.createHmac('sha256', process.env.CASHFREE_SECRET_KEY).update(ts + payload).digest('base64');
-
-  const badSig = await fetch(`${base}/api/cashfree-webhook`, {
+  const send = (body, signature) => fetch(`${base}/api/razorpay-webhook`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-webhook-timestamp': ts, 'x-webhook-signature': 'AAAA' },
-    body: payload,
+    headers: { 'Content-Type': 'application/json', 'x-razorpay-signature': signature },
+    body,
   });
-  assert.equal(badSig.status, 401);
+  const sign = (body) => crypto.createHmac('sha256', process.env.RAZORPAY_WEBHOOK_SECRET).update(body).digest('hex');
 
-  const good = await fetch(`${base}/api/cashfree-webhook`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-webhook-timestamp': ts, 'x-webhook-signature': sig },
-    body: payload,
-  });
-  assert.equal(good.status, 200);
+  assert.equal((await send(event(150000), 'ab'.repeat(32))).status, 401);
+  assert.equal((await db.getOrder(orderId)).status, 'CREATED');
+
+  // Correctly signed but the wrong amount: acknowledged, not paid
+  const wrong = event(100);
+  assert.equal((await send(wrong, sign(wrong))).status, 200);
+  assert.equal((await db.getOrder(orderId)).status, 'CREATED');
+
+  const good = event(150000);
+  assert.equal((await send(good, sign(good))).status, 200);
   assert.equal((await db.getOrder(orderId)).status, 'PAID');
 });
 
@@ -369,7 +435,8 @@ test('profile: intake is saved encrypted on the account and reused for results',
   assert.equal((await put({ phone: '9000000000', age: 'abc', gender: 'Other', occupation: 'Student' })).status, 400);
   assert.equal((await put({ phone: '9000000000' })).status, 400, 'required fields enforced');
 
-  const saved = await put({ phone: '9000000000', age: 22, gender: 'Other', occupation: 'Student', reason: 'curious' });
+  assert.equal((await put({ phone: '9000000000', age: 22, gender: 'Other', occupation: 'Student' })).status, 400, 'consent to the notice is required');
+  const saved = await put({ phone: '9000000000', age: 22, gender: 'Other', occupation: 'Student', reason: 'curious', consent: true });
   assert.equal(saved.status, 200);
   assert.equal((await saved.json()).firstTime, true);
 
@@ -447,7 +514,7 @@ test('intell assessments: one account-linked payment unlocks all 7 tests, the pr
   assert.equal(st.profile, null);
   assert.equal((await post('/save-answers', { answers: '4'.repeat(12), testId: 'intell_sb' }, auth)).status, 402);
   assert.equal((await get('/intell/report', auth)).status, 402);
-  assert.equal((await post('/create-cashfree-session', { serviceId: 'intell_assessment' })).status, 401, 'buying needs an account');
+  assert.equal((await post('/create-payment-order', { serviceId: 'intell_assessment' })).status, 401, 'buying needs an account');
 
   // The order belongs to the buyer; only a verified payment unlocks it
   const orderId = 'ORDER_' + crypto.randomBytes(8).toString('hex');
@@ -455,7 +522,7 @@ test('intell assessments: one account-linked payment unlocks all 7 tests, the pr
   assert.equal((await (await get('/intell/status', auth)).json()).entitled, false);
   await db.markOrderPaid(orderId);
   assert.equal((await (await get('/intell/status', auth)).json()).entitled, true);
-  assert.equal((await post('/create-cashfree-session', { serviceId: 'intell_assessment' }, auth)).status, 409, 'no second charge');
+  assert.equal((await post('/create-payment-order', { serviceId: 'intell_assessment' }, auth)).status, 409, 'no second charge');
 
   // Every question must be answered with an allowed value
   assert.equal((await post('/save-answers', { answers: '4'.repeat(11), testId: 'intell_sb' }, auth)).status, 400);
@@ -467,8 +534,24 @@ test('intell assessments: one account-linked payment unlocks all 7 tests, the pr
   assert.equal((await post('/save-answers', { answers: '0'.repeat(9), testId: 'phq9' }, auth)).status, 200);
   assert.equal((await post('/save-answers', { answers: '0'.repeat(7), testId: 'gad7' }, auth)).status, 200);
 
+  // Module A only: the profile covers the five Intel tests (PHQ-9/GAD-7 stay free screenings)
   st = await (await get('/intell/status', auth)).json();
   assert.ok(st.tests.every((t) => t.done));
+  assert.equal(st.moduleB, false);
+  assert.equal(st.profile.module, 'A');
+  assert.equal(st.profile.tests.length, 5);
+  assert.equal(st.prices.a, 250);
+  assert.equal(st.prices.b, 300);
+  assert.equal(st.prices.upgrade, 50, 'owners of Module A pay only the difference for B');
+
+  // Module B: the full battery and integrated profile
+  const orderB = 'ORDER_' + crypto.randomBytes(8).toString('hex');
+  await db.createOrder(orderB, 'intell_module_b', 50, me);
+  await db.markOrderPaid(orderB);
+  st = await (await get('/intell/status', auth)).json();
+  assert.equal(st.moduleB, true);
+  assert.equal(st.prices.upgrade, null);
+  assert.equal(st.profile.module, 'B');
   assert.equal(st.profile.complete, true);
   assert.equal(st.profile.tests.length, 7);
 
@@ -483,4 +566,77 @@ test('intell report buffer (booking attachment) is a real PDF', async () => {
   const buf = await reportBuffer({ name: 'Test Client', email: 'c@example.com' }, [{ testId: 'phq9', ...r }]);
   assert.equal(buf.subarray(0, 4).toString(), '%PDF');
   assert.ok(buf.length > 10000);
+});
+
+test('intel pricing: Module A 250, Module B 300 (or 50 for A owners), family package 500', async () => {
+  const { getPrices } = await import('../src/pricing.js');
+  const { intellPriceFor, INTELL_SERVICE_ID, INTELL_MODULE_B_ID } = await import('../src/intell.js');
+  const p = getPrices();
+  assert.equal(p.intell_assessment, 250);
+  assert.equal(p.intell_module_b, 300);
+  assert.equal(p.family_package, 500);
+  assert.equal(intellPriceFor(INTELL_MODULE_B_ID, { a: false, b: false }, p), 300);
+  assert.equal(intellPriceFor(INTELL_MODULE_B_ID, { a: true, b: false }, p), 50);
+  assert.equal(intellPriceFor(INTELL_SERVICE_ID, { a: false, b: false }, p), 250);
+  // the family package is sold only inside the school portal
+  assert.equal((await post('/create-payment-order', { serviceId: 'family_package' })).status, 400);
+});
+
+test('under-18 accounts: nothing is saved until a parent confirms consent by email code', async () => {
+  const email = 'teen@example.com';
+  await post('/register', { name: 'Teen User', email, password: PASSWORD });
+  await db.updateUserOTP(email, hashOtp('111222'), new Date(Date.now() + 600000).toISOString(), OTP_PURPOSE.VERIFY_EMAIL);
+  const { token: t } = await (await post('/verify-email', { email, otp: '111222' })).json();
+  const auth = { Authorization: `Bearer ${t}` };
+  const me = (await db.getUserByEmail(email)).id;
+  const put = (body) => fetch(`${base}/api/profile`, { method: 'PUT', headers: { 'Content-Type': 'application/json', ...auth }, body: JSON.stringify(body) });
+
+  const saved = await (await put({ phone: '9000000001', age: 15, gender: 'Female', occupation: 'Student', consent: true })).json();
+  assert.equal(saved.guardianRequired, true);
+  assert.equal((await post('/save-answers', { answers: '000000000', testId: 'phq9' }, auth)).status, 403, 'minor blocked before parent consent');
+
+  assert.equal((await post('/guardian-consent/start', { guardianName: 'Parent', guardianEmail: email }, auth)).status, 400, "parent's own email required");
+  assert.equal((await post('/guardian-consent/start', { guardianName: 'Parent', guardianEmail: 'parent@example.com' }, auth)).status, 200);
+  assert.equal((await post('/guardian-consent/verify', { otp: '000000' }, auth)).status, 400, 'wrong code rejected');
+
+  // Read the real code's hash out of the encrypted profile and confirm with a matching code
+  const { readProfile } = await import('../src/profile.js');
+  const prof = readProfile(await db.getAccountById(me));
+  assert.ok(prof.guardianPending.otpHash && !('otp' in prof.guardianPending), 'only the hash is stored');
+  const { setUserProfile } = db;
+  const { encryptProfile } = await import('../src/profile.js');
+  prof.guardianPending.otpHash = hashOtp('424242');
+  const enc = encryptProfile(prof);
+  await setUserProfile(me, 'Teen User', '9000000001', enc.encrypted, enc.iv);
+  assert.equal((await post('/guardian-consent/verify', { otp: '424242' }, auth)).status, 200);
+
+  const after = await (await get('/profile', auth)).json();
+  assert.equal(after.guardianRequired, false);
+  assert.equal(after.profile.guardian.email, 'parent@example.com');
+  assert.ok(!('guardianPending' in after.profile));
+  assert.equal((await post('/save-answers', { answers: '000000000', testId: 'phq9' }, auth)).status, 200, 'saved after consent');
+
+  const kinds = (await db.getConsents(me)).map((c) => c.kind);
+  assert.deepEqual(kinds, ['assessment_processing', 'guardian_consent']);
+});
+
+test('data rights: a person can download everything and delete their account', async () => {
+  const email = 'erase.me@example.com';
+  await post('/register', { name: 'Erase Me', email, password: PASSWORD });
+  await db.updateUserOTP(email, hashOtp('333444'), new Date(Date.now() + 600000).toISOString(), OTP_PURPOSE.VERIFY_EMAIL);
+  const { token: t } = await (await post('/verify-email', { email, otp: '333444' })).json();
+  const auth = { Authorization: `Bearer ${t}` };
+  await post('/save-answers', { answers: '000000000', testId: 'phq9' }, auth);
+
+  assert.equal((await get('/my-data')).status, 401);
+  const dump = await (await get('/my-data', auth)).json();
+  assert.equal(dump.account.email, email);
+  assert.equal(dump.results.length, 1);
+  assert.equal(dump.results[0].answers, '000000000', 'answers are decrypted for the owner');
+
+  const del = (body) => fetch(`${base}/api/account`, { method: 'DELETE', headers: { 'Content-Type': 'application/json', ...auth }, body: JSON.stringify(body) });
+  assert.equal((await del({})).status, 400, 'confirmation phrase required');
+  assert.equal((await del({ confirm: 'DELETE MY ACCOUNT' })).status, 200);
+  assert.equal(await db.getUserByEmail(email), null);
+  assert.equal((await get('/my-data', auth)).status, 401, 'old session no longer works');
 });

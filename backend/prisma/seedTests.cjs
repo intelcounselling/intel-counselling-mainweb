@@ -1,5 +1,5 @@
 // prisma/seedTests.cjs
-// INTELL STUDENT SUCCESS ASSESSMENT™ — 5 Domains
+// INTEL STUDENT SUCCESS ASSESSMENT™ — 5 Domains
 // Scale: 1 = Strongly Disagree, 2 = Disagree, 3 = Neutral, 4 = Agree, 5 = Strongly Agree
 // Reverse Scoring: reversed = (maxVal + 1) - value  → 1→5, 2→4, 3→3, 4→2, 5→1
 
@@ -166,7 +166,7 @@ const tests = [
 
 async function main() {
   prisma = new (require('@prisma/client').PrismaClient)();
-  console.log('Seeding INTELL Student Success Assessment tests...');
+  console.log('Seeding INTEL Student Success Assessment tests...');
 
   for (const testData of tests) {
     const existingList = await prisma.test.findMany({ 
@@ -200,7 +200,7 @@ async function main() {
   console.log('Seeding complete.');
 }
 
-// Importable (tests read the INTELL definitions); only seeds when run directly.
+// Importable (tests read the INTEL definitions); only seeds when run directly.
 module.exports = { tests };
 
 if (require.main === module) {

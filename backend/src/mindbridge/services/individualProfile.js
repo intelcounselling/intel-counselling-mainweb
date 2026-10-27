@@ -121,7 +121,7 @@ function buildProfile(results, moduleKey = 'B') {
   const strengths = tests.filter((t) => t.level === 'ok' && t.category !== 'LearningPattern').map((t) => `${t.name}: ${t.note}`);
   if (byCat.LearningPattern) strengths.unshift(`Learning style — ${byCat.LearningPattern.note}`);
 
-  // ── Counselling rule across the four Intell domains, plus the clinical bands ──
+  // ── Counselling rule across the four Intel domains, plus the clinical bands ──
   const domainScores = Object.fromEntries(INTELL_DOMAINS.filter((c) => byCat[c]).map((c) => [c, byCat[c].score]));
   const rule = evaluateCounselling(domainScores);
   const phq = byCat.Depression;

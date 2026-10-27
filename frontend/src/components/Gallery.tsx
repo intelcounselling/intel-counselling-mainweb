@@ -87,20 +87,13 @@ const Gallery: React.FC = () => {
   const gap = 16;
 
   return (
-    <section id="gallery" className="bg-[#1A1A1A] py-14 sm:py-20 md:py-24 scroll-mt-20 overflow-hidden select-none">
+    <section id="gallery" className="bg-[#1A1A1A] py-12 md:py-16 scroll-mt-20 overflow-hidden select-none">
       <div>
         {/* Header */}
-        <div className="text-center px-4 sm:px-6 mb-10 sm:mb-14">
-          <h2 className="text-3xl sm:text-4xl md:text-6xl font-black serif text-[#F4EFE6] mb-3 sm:mb-4 tracking-tight">
-            Gallery
-          </h2>
-          <div className="flex items-center justify-center gap-3 sm:gap-4">
-            <span className="h-px w-8 sm:w-12 bg-white/10" />
-            <p className="text-[9px] sm:text-[10px] md:text-xs text-white/40 font-bold tracking-[0.3em] sm:tracking-[0.4em] uppercase">
-              Healing Spaces · Our Clinic
-            </p>
-            <span className="h-px w-8 sm:w-12 bg-white/10" />
-          </div>
+        <div className="max-w-6xl mx-auto px-5 sm:px-8 mb-10 sm:mb-12">
+          <p className="text-sm font-semibold text-terracotta mb-3">Gallery</p>
+          <h2 className="serif text-3xl md:text-[2.75rem] leading-tight text-[#F4EFE6]">Moments from our work</h2>
+          <p className="mt-4 text-base md:text-lg text-white/60">Drag or scroll to browse. Select a photo to enlarge it.</p>
         </div>
 
         {/* Scroll strip */}
@@ -156,7 +149,7 @@ const Gallery: React.FC = () => {
                     <div className="absolute inset-0 bg-black/0 group-hover/tile:bg-black/15
                                     transition-colors duration-400 flex items-center justify-center">
                       <span className="opacity-0 group-hover/tile:opacity-100 transition-opacity duration-300
-                                       text-white/80 text-[10px] font-semibold tracking-widest uppercase">
+                                       text-white/80 text-[11px] font-semibold tracking-widest uppercase">
                         View
                       </span>
                     </div>
@@ -165,13 +158,6 @@ const Gallery: React.FC = () => {
               })}
             </div>
           </div>
-        </div>
-
-        {/* Quote */}
-        <div className="mt-8 sm:mt-12 text-center px-6">
-          <p className="text-white/20 font-serif italic text-sm sm:text-base md:text-lg max-w-2xl mx-auto leading-relaxed">
-            "Environment is the silent counselor. Every corner is designed to bring you closer to clarity."
-          </p>
         </div>
       </div>
 
@@ -204,7 +190,7 @@ const Gallery: React.FC = () => {
               alt="Gallery expanded"
               className="max-w-full max-h-full object-contain rounded-xl shadow-2xl"
             />
-            <div className="absolute -bottom-7 left-1/2 -translate-x-1/2 text-white/35 text-[10px] font-bold tracking-[0.3em] uppercase">
+            <div className="absolute -bottom-7 left-1/2 -translate-x-1/2 text-white/35 text-[11px] font-bold tracking-[0.14em] uppercase">
               {String(images.findIndex(img => img.id === selectedImage.id) + 1).padStart(2, '0')} / {images.length}
             </div>
           </div>

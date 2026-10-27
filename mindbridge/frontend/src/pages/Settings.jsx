@@ -284,7 +284,58 @@ export default function Settings() {
         </Card>
         )}
 
+        <DataRightsCard />
       </div>
     </div>
   );
 }
+// Data-subject rights (DPDP Act): a copy of your data, and asking for deletion
+function DataRightsCard() {
+  const { success, error: toastError } = useToast();
+  const [busy, setBusy] = useState(null);
+
+  const download = async () => {
+    setBusy('download');
+    try {
+      const res = await api.get('/auth/my-data', { responseType: 'blob' });
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'intel-counselling-my-data.json';
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch {
+      toastError('Could not prepare your data. Please try again.');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const requestDeletion = async () => {
+    if (!window.confirm('Ask Intel Counselling to delete your account and all your data? This cannot be undone once done.')) return;
+    setBusy('delete');
+    try {
+      await api.post('/auth/deletion-request');
+      success('Request sent. We will delete your account and confirm by email.');
+    } catch {
+      toastError('Could not send the request. Please try again.');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <Card>
+      <div className="flex items-center gap-3 mb-2">
+        <div className="w-9 h-9 rounded-lg bg-primary-50 flex items-center justify-center"><Shield className="w-4 h-4 text-primary-700" /></div>
+        <h3 className="text-base font-semibold text-surface-900">Your data</h3>
+      </div>
+      <p className="text-sm text-surface-500 mb-4">Get a copy of everything we hold about you, or ask us to delete your account and data.</p>
+      <div className="flex flex-wrap gap-3">
+        <Button variant="outline" loading={busy === 'download'} onClick={download}>Download my data</Button>
+        <Button variant="danger" loading={busy === 'delete'} onClick={requestDeletion}>Request account deletion</Button>
+      </div>
+    </Card>
+  );
+}
+

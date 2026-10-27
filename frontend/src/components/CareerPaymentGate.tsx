@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Loader2, Sparkles, Brain, Target, UserCheck, PhoneCall, Check, Monitor, MapPin, RotateCcw, BadgeCheck } from 'lucide-react';
 import { apiClient } from '../utils/api';
 import { usePricing, formatPrice } from '../utils/pricing';
+import { payWithRazorpay, PaymentCancelledError } from '../utils/payments';
 
 interface CareerPaymentGateProps {
   // The signed-in account (the page guarantees one) — used for checkout details
@@ -9,27 +10,6 @@ interface CareerPaymentGateProps {
   onSuccess: () => void;
   onClose: () => void;
 }
-
-const loadCashfreeScript = () => {
-  return new Promise((resolve) => {
-    const src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
-    if ((window as any).Cashfree) {
-      resolve(true);
-      return;
-    }
-    const existing = document.querySelector(`script[src="${src}"]`) as HTMLScriptElement | null;
-    if (existing) {
-      existing.addEventListener('load', () => resolve(true));
-      existing.addEventListener('error', () => resolve(false));
-      return;
-    }
-    const script = document.createElement('script');
-    script.src = src;
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
-};
 
 const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ customer, onSuccess, onClose }) => {
   const { demoMode, prices } = usePricing();
@@ -78,89 +58,35 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ customer, onSucce
     setIsProcessing(true);
     setError(null);
 
-    const isLoaded = await loadCashfreeScript();
-    if (!isLoaded) {
-      setError("Failed to load Cashfree script. Please check your internet connection.");
-      setIsProcessing(false);
-      return;
-    }
-
     try {
       const serviceId = selectedPackage === 'assessment_only' ? 'career_assessment' : 'career_assessment_plus';
       const serviceName = selectedPackage === 'assessment_only'
         ? 'Career Guidance Assessment (Assessment Only)'
         : 'Career Guidance Assessment (Assessment + Result Explanation)';
 
-      // Create session on server side
-      const data = await apiClient.post<any>('/api/create-cashfree-session', {
-        serviceId: serviceId,
-        serviceName: serviceName,
-        customerName: customer.name,
-        customerEmail: customer.email,
-        customerPhone: customer.phone || '9999999999'
+      // Resolves only after the server has verified the payment with Razorpay
+      const orderId = await payWithRazorpay({
+        serviceId,
+        serviceName,
+        customer: { name: customer.name, email: customer.email, phone: customer.phone },
       });
 
-      // Initialize Cashfree
-      const cashfree = await (window as any).Cashfree({
-        mode: "production", // Using production mode as configured in backend
-      });
-
-      let checkoutOptions = {
-        paymentSessionId: data.paymentSessionId,
-        redirectTarget: "_modal",
-      };
-
-      const orderId = data.orderId;
-
-      cashfree.checkout(checkoutOptions).then(async (result: any) => {
-        if (result.error) {
-          setError(result.error.message || "Payment transaction failed.");
-          setIsProcessing(false);
-          return;
-        }
-
-        if (result.redirect) {
-          console.log("Payment redirecting...");
-        }
-
-        // Never trust the client-side checkout result alone — confirm the
-        // order status with the server before unlocking the assessment.
-        try {
-          const verifyData = await apiClient.post<any>('/api/verify-payment', { orderId });
-
-          if (verifyData.paid === true) {
-            // Persist the verified order id so the assessment save can link the
-            // result to this payment server-side (single-use).
-            localStorage.setItem('career_order_id', orderId);
-            // Success! Save selected appointment slot to localStorage
-            if (selectedPackage === 'assessment_explanation') {
-              localStorage.setItem('career_booked_session_mode', sessionMode);
-              localStorage.setItem('career_booked_date', date);
-              localStorage.setItem('career_booked_time', time);
-            } else {
-              localStorage.removeItem('career_booked_session_mode');
-              localStorage.removeItem('career_booked_date');
-              localStorage.removeItem('career_booked_time');
-            }
-            setIsProcessing(false);
-            onSuccess();
-          } else {
-            setIsProcessing(false);
-            setError("Payment was not completed or is pending verification. Please try again or contact us if you were charged.");
-          }
-        } catch (verifyErr) {
-          console.error("Payment verification failed:", verifyErr);
-          setIsProcessing(false);
-          setError("Payment was not completed or is pending verification. Please try again or contact us if you were charged.");
-        }
-      }).catch((err: any) => {
-        setError(err.message || "Payment encountered an error.");
-        setIsProcessing(false);
-      });
-
+      // Persist the verified order id so the assessment save can link the
+      // result to this payment server-side (single-use).
+      localStorage.setItem('career_order_id', orderId);
+      if (selectedPackage === 'assessment_explanation') {
+        localStorage.setItem('career_booked_session_mode', sessionMode);
+        localStorage.setItem('career_booked_date', date);
+        localStorage.setItem('career_booked_time', time);
+      } else {
+        localStorage.removeItem('career_booked_session_mode');
+        localStorage.removeItem('career_booked_date');
+        localStorage.removeItem('career_booked_time');
+      }
+      onSuccess();
     } catch (err: any) {
-      console.error(err);
-      setError(err.message || "Something went wrong initializing checkout.");
+      if (!(err instanceof PaymentCancelledError)) setError(err?.message || 'The payment could not be completed.');
+    } finally {
       setIsProcessing(false);
     }
   };
@@ -185,7 +111,7 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ customer, onSucce
 
   return (
     <div className="min-h-screen bg-[#F6F7F9] pt-20 md:pt-28 pb-12 px-4 flex items-center justify-center">
-      <div className="relative bg-white w-full max-w-4xl rounded-[40px] shadow-xl border border-black/5 overflow-hidden flex flex-col lg:flex-row">
+      <div className="relative bg-white w-full max-w-4xl rounded-[28px] shadow-xl border border-black/5 overflow-hidden flex flex-col lg:flex-row">
         
         {/* Left: Value Proposition */}
         <div className="flex-1 p-8 md:p-12 lg:p-16 bg-intel-dark text-white relative">
@@ -199,7 +125,7 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ customer, onSucce
             &larr; Back
           </button>
 
-          <span className="text-terracotta font-black text-xs uppercase tracking-[0.25em] mb-4 block">Premium Suite</span>
+          <span className="text-terracotta font-black text-xs uppercase tracking-[0.1em] mb-4 block">Premium Suite</span>
           <h2 className="text-3xl md:text-5xl font-black serif !text-white leading-tight mb-8">
             Complete Career <br/>Guidance Portal.
           </h2>
@@ -223,7 +149,7 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ customer, onSucce
                   <h4 className="font-bold text-sm text-white flex items-center gap-2">
                     {inc.title}
                     {inc.special && (
-                      <span className="bg-serene-green text-white text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full">Included</span>
+                      <span className="bg-serene-green text-white text-[11px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full">Included</span>
                     )}
                   </h4>
                   <p className="text-white/60 text-xs mt-1 leading-relaxed">{inc.desc}</p>
@@ -238,7 +164,7 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ customer, onSucce
             <>
               <div>
                 {accessLoading ? (
-                  <div className="flex items-center justify-center gap-2 py-6 text-intel-dark/40 text-[10px] font-black uppercase tracking-widest">
+                  <div className="flex items-center justify-center gap-2 py-6 text-intel-dark/40 text-[11px] font-semibold">
                     <Loader2 size={12} className="animate-spin" /> Checking your account...
                   </div>
                 ) : (
@@ -247,14 +173,14 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ customer, onSucce
                       <div className="p-5 rounded-2xl bg-serene-green/10 border border-serene-green/30 mb-6">
                         <div className="flex items-center gap-2 mb-2">
                           <BadgeCheck size={14} className="text-serene-green" />
-                          <span className="text-[10px] font-black uppercase tracking-widest text-serene-green">Access Active</span>
+                          <span className="text-[11px] font-black uppercase tracking-widest text-serene-green">Access Active</span>
                         </div>
                         <p className="text-xs text-intel-dark/70 font-medium leading-relaxed mb-4">
                           You already own the Career Guidance Assessment. Retake it anytime — no payment needed.
                         </p>
                         <button
                           onClick={handleRetake}
-                          className="w-full bg-serene-green text-white py-4 rounded-xl font-black uppercase tracking-widest text-[10px] hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-md"
+                          className="w-full bg-serene-green text-white py-4 rounded-xl font-semibold text-[11px] hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-md"
                         >
                           <RotateCcw size={12} /> Retake Test — Free
                         </button>
@@ -265,7 +191,7 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ customer, onSucce
                       <button
                         type="button"
                         onClick={() => setPackagesOverride(true)}
-                        className="text-[10px] text-terracotta hover:underline font-bold"
+                        className="text-[11px] text-terracotta hover:underline font-bold"
                       >
                         Want the + Result Explanation add-on? Choose a package
                       </button>
@@ -274,7 +200,7 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ customer, onSucce
                 )}
 
                 {showPackages && (
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-terracotta/10 border border-terracotta/20 text-terracotta text-[10px] font-bold uppercase tracking-wider mb-8">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-terracotta/10 border border-terracotta/20 text-terracotta text-[11px] font-bold uppercase tracking-wider mb-8">
                   <Sparkles size={12} />
                   Select Package
                 </div>
@@ -302,7 +228,7 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ customer, onSucce
                         <span className="font-bold text-xs text-intel-dark">Assessment Only</span>
                         <span className="font-black text-sm text-terracotta">₹{assessmentPrice}</span>
                       </div>
-                      <p className="text-[10px] text-intel-dark/60 leading-relaxed font-medium">Interest Test + Aptitude Test + Intelligence Test + Score Report (PDF)</p>
+                      <p className="text-[11px] text-intel-dark/60 leading-relaxed font-medium">Interest Test + Aptitude Test + Intelligence Test + Score Report (PDF)</p>
                     </button>
 
                     <button 
@@ -318,21 +244,21 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ customer, onSucce
                         <span className="font-bold text-xs text-intel-dark">Assessment + Result Explanation</span>
                         <span className="font-black text-sm text-terracotta">₹{plusPrice}</span>
                       </div>
-                      <p className="text-[10px] text-intel-dark/60 leading-relaxed font-medium">Three tests + Detailed Report + 30–45 min interpretation session</p>
+                      <p className="text-[11px] text-intel-dark/60 leading-relaxed font-medium">Three tests + Detailed Report + 30–45 min interpretation session</p>
                     </button>
                   </div>
 
                   {selectedPackage === 'assessment_explanation' && (
                     <div className="space-y-4 pt-2 border-t border-black/5 animate-in fade-in duration-300">
                       <div className="space-y-1">
-                        <label className="text-[10px] font-black uppercase tracking-wider text-intel-dark/40">Select Format</label>
+                        <label className="text-sm font-semibold text-intel-dark/40">Select Format</label>
                         <div className="grid grid-cols-2 gap-2">
                           <button 
                             type="button"
                             onClick={() => setSessionMode('online')}
                             className={`py-3 px-4 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-2 ${
                               sessionMode === 'online' 
-                                ? 'border-terracotta bg-terracotta text-white shadow-md' 
+                                ? 'border-terracotta bg-terracotta text-intel-dark shadow-md' 
                                 : 'border-black/5 bg-white text-intel-dark/80 hover:border-black/20'
                             }`}
                           >
@@ -343,7 +269,7 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ customer, onSucce
                             onClick={() => setSessionMode('inperson')}
                             className={`py-3 px-4 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-2 ${
                               sessionMode === 'inperson' 
-                                ? 'border-terracotta bg-terracotta text-white shadow-md' 
+                                ? 'border-terracotta bg-terracotta text-intel-dark shadow-md' 
                                 : 'border-black/5 bg-white text-intel-dark/80 hover:border-black/20'
                             }`}
                           >
@@ -354,7 +280,7 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ customer, onSucce
 
                       {sessionMode === 'inperson' && (
                         <div className="p-3 bg-white border border-black/5 rounded-2xl space-y-2">
-                          <div className="flex items-center gap-1.5 text-intel-dark/80 font-bold text-[9px] uppercase tracking-wider">
+                          <div className="flex items-center gap-1.5 text-intel-dark/80 font-bold text-[11px] uppercase tracking-wider">
                             <MapPin size={12} className="text-terracotta" />
                             <span>Clinic Location: Ayappakkam, Chennai</span>
                           </div>
@@ -373,7 +299,7 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ customer, onSucce
 
                       <div className="grid grid-cols-2 gap-2">
                         <div className="space-y-1">
-                          <label className="text-[10px] font-black uppercase tracking-wider text-intel-dark/40">Select Date</label>
+                          <label className="text-sm font-semibold text-intel-dark/40">Select Date</label>
                           <input 
                             type="date" 
                             min={today}
@@ -386,7 +312,7 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ customer, onSucce
                           />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[10px] font-black uppercase tracking-wider text-intel-dark/40">Select Slot</label>
+                          <label className="text-sm font-semibold text-intel-dark/40">Select Slot</label>
                           <select 
                             disabled={!date}
                             value={time}
@@ -410,7 +336,7 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ customer, onSucce
                         ₹{selectedPackage === 'assessment_only' ? assessmentPrice : plusPrice}
                       </span>
                       {demoMode && (
-                        <span className="ml-2 align-middle bg-amber-100 text-amber-700 text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-full border border-amber-200">
+                        <span className="ml-2 align-middle bg-amber-100 text-amber-700 text-[11px] font-black uppercase tracking-widest px-2 py-1 rounded-full border border-amber-200">
                           Demo
                         </span>
                       )}
@@ -431,7 +357,7 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ customer, onSucce
                 <button
                   onClick={handlePayment}
                   disabled={isProcessing || (selectedPackage === 'assessment_explanation' && (!sessionMode || !date || !time))}
-                  className="w-full bg-terracotta text-white py-6 rounded-3xl font-black uppercase tracking-widest text-sm hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:scale-100"
+                  className="w-full bg-terracotta text-intel-dark py-6 rounded-3xl font-semibold text-sm active:scale-[0.98] transition-all shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:scale-100"
                 >
                   {isProcessing ? (
                     <>
@@ -443,9 +369,9 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ customer, onSucce
                   )}
                 </button>
 
-                <div className="flex items-center justify-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-intel-dark/40">
+                <div className="flex items-center justify-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-intel-dark/40">
                   <ShieldCheck size={14} className="text-serene-green shrink-0" />
-                  Secured Checkout via Cashfree
+                  Secure checkout via Razorpay
                 </div>
               </div>
               )}

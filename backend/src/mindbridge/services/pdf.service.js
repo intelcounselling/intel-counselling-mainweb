@@ -43,7 +43,7 @@ function getSeverityColor(severity) {
 const TONE_HEX = { Green: '#16a34a', Yellow: '#ca8a04', Orange: '#ea580c', Red: '#dc2626' };
 const isLearning = (r) => r.test?.category === 'LearningPattern';
 
-// INTELL domains use the Green / Yellow / Orange / Red bands (by score);
+// INTEL domains use the Green / Yellow / Orange / Red bands (by score);
 // clinical screenings use their severity wording.
 function resultColor(result) {
   if (INTELL_DOMAINS.includes(result.test?.category) && typeof result.score === 'number') {
@@ -242,7 +242,7 @@ function responsesSection(doc, result) {
   });
 }
 
-// ── Integrated profile (Intell assessments bought on the main site) ──────────────────────
+// ── Integrated profile (Intel assessments bought on the main site) ──────────────────────
 
 const LEVEL_HEX = { ok: '#16a34a', watch: '#ca8a04', concern: '#ea580c', high: '#dc2626' };
 const REC_HEX = { none: '#16a34a', monitor: '#ca8a04', counselling: '#ea580c', referral: '#dc2626' };

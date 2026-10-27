@@ -67,7 +67,7 @@ class ErrorBoundary extends React.Component<Props, State> {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <button
                 onClick={this.handleReset}
-                className="w-full sm:w-auto bg-[#D65A31] hover:bg-[#C24B24] text-white px-8 py-4 rounded-xl font-bold text-sm transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 shadow-md"
+                className="w-full sm:w-auto bg-[#D65A31] hover:bg-[#C24B24] text-white px-8 py-4 rounded-xl font-bold text-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-md"
               >
                 <RefreshCw size={16} />
                 Try Again
