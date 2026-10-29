@@ -84,7 +84,7 @@ const MyResultsPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F6F7F9] flex items-center justify-center">
+      <div className="min-h-screen bg-[#F7EBD3] flex items-center justify-center">
         <Loader2 size={32} className="animate-spin text-terracotta" />
       </div>
     );

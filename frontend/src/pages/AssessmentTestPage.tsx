@@ -6,6 +6,7 @@ import AssessmentRegistration from '../components/AssessmentRegistration';
 import CareerPaymentGate from '../components/CareerPaymentGate';
 import IntellAssessment from '../components/IntellAssessment';
 import GuardianConsent from '../components/GuardianConsent';
+import { AssessmentPage } from '../components/AssessmentUI';
 import { isIntellTest, INTELL_HUB } from '../utils/intellMeta';
 import { CLINICAL_CONFIGS } from '../components/ClinicalQuestions';
 import { apiClient } from '../utils/api';
@@ -86,9 +87,9 @@ const AssessmentTestPage: React.FC = () => {
   }
 
   const spinner = (
-    <div className="min-h-screen bg-[#F6F7F9] flex items-center justify-center">
-      <div className="w-8 h-8 border-4 border-terracotta border-t-transparent rounded-full animate-spin"></div>
-    </div>
+    <AssessmentPage align="center">
+      <div className="w-10 h-10 border-4 border-terracotta border-t-transparent rounded-full animate-spin" role="status" aria-label="Loading"></div>
+    </AssessmentPage>
   );
 
   if (user && (profileComplete === null || (isCareer && !paidChecked) || (isIntell && intellAccess === null))) return spinner;
@@ -130,7 +131,7 @@ const AssessmentTestPage: React.FC = () => {
   return (
     <div className="relative min-h-screen">
       {user && (
-        <div className="fixed bottom-4 left-4 z-[999] hidden md:flex items-center gap-2 text-[11px] font-black uppercase tracking-wider text-intel-dark/60 bg-white/95 backdrop-blur-md px-4 py-2.5 rounded-full border border-black/5 shadow-md print:hidden">
+        <div className="fixed bottom-4 left-4 z-[999] hidden md:flex items-center gap-2 text-xs font-semibold text-intel-dark/65 bg-white/95 backdrop-blur-md px-4 py-2.5 rounded-full border border-black/5 shadow-md print:hidden">
           <span>Signed in as <strong className="text-intel-dark">{user.name}</strong></span>
           <span className="opacity-40">|</span>
           <Link to="/my-results" className="text-terracotta hover:opacity-75 transition-opacity">My Results</Link>

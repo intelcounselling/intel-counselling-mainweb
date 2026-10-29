@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { User, Mail, Phone, Calendar, ArrowRight, Loader2, Sparkles, ShieldCheck, Heart } from 'lucide-react';
+import { User, Mail, Phone, Calendar, ArrowRight, ArrowLeft, Loader2, Sparkles, ShieldCheck, Heart } from 'lucide-react';
 import { apiClient } from '../utils/api';
 import { setAuthSession, getAuthToken } from '../utils/auth';
+import { AssessmentPage, StackedCard, BackPill, BTN_PRIMARY, FIELD, FIELD_LABEL } from './AssessmentUI';
 
 interface AssessmentRegistrationProps {
   // Shown when the intake gates a test; omitted on the standalone /profile page
@@ -81,199 +82,132 @@ const AssessmentRegistration: React.FC<AssessmentRegistrationProps> = ({ testTit
 
   if (!loaded) {
     return (
-      <div className="min-h-screen bg-[#F6F7F9] flex items-center justify-center">
+      <AssessmentPage align="center">
         <Loader2 size={32} className="animate-spin text-terracotta" />
-      </div>
+      </AssessmentPage>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F6F7F9] pt-20 md:pt-28 pb-12 px-4 flex items-center justify-center">
-      <div className="relative bg-white w-full max-w-2xl p-6 md:p-12 rounded-[28px] shadow-xl border border-black/5 animate-in fade-in duration-500">
-        
-        {/* Back Button */}
-        <button 
-          onClick={onClose} 
-          className="absolute left-6 top-6 md:left-8 md:top-8 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-black/40 hover:text-black/80 transition-colors"
-        >
-          &larr; Back
-        </button>
+    <AssessmentPage align="center">
+      <StackedCard maxW="max-w-2xl" className="as-pop">
+        <div className="p-6 md:p-12">
+          <BackPill onClick={onClose}><ArrowLeft size={16} /> Back</BackPill>
 
-        {/* Header Section */}
-        <div className="text-center mt-6 mb-10">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-intel-dark/5 border border-black/5 text-terracotta text-[11px] font-bold uppercase tracking-[0.1em] mb-4">
-            <Sparkles size={12} />
-            Basic Details
-          </div>
-          <h2 className="text-3xl md:text-4xl font-black serif text-intel-dark mb-4">
-            Client Information
-          </h2>
-          <p className="text-intel-dark/60 max-w-md mx-auto text-sm md:text-base font-light leading-relaxed">
-            {testTitle
-              ? <>Please provide your basic details before we begin the <strong>{testTitle}</strong>. You only need to do this once.</>
-              : <>These details are saved securely on your account and used for every assessment.</>}
-          </p>
-        </div>
-
-        {/* Registration Form */}
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid md:grid-cols-2 gap-6">
-            
-            {/* Full Name */}
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm font-semibold opacity-40 ml-2">
-                <User size={12} /> Full Name
-              </label>
-              <input 
-                required
-                type="text" 
-                placeholder="Full name"
-                className="w-full bg-[#F4EFE6]/30 border border-black/5 rounded-2xl px-5 py-3.5 text-base outline-none focus:border-terracotta focus:bg-white focus:ring-4 focus:ring-terracotta/10 transition-all text-intel-dark font-medium"
-                value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
-              />
+          {/* Header */}
+          <div className="text-center mt-6 mb-10">
+            <div className="as-bob inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-lavender text-intel-dark/80 text-[12px] font-semibold mb-4">
+              <Sparkles size={13} />
+              Basic details
             </div>
-
-            {/* Email Address */}
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm font-semibold opacity-40 ml-2">
-                <Mail size={12} /> Email Address
-              </label>
-              <input 
-                readOnly
-                type="email" 
-                title="Your account email"
-                className="w-full bg-black/5 border border-black/5 rounded-2xl px-5 py-3.5 text-base outline-none text-intel-dark/60 font-medium cursor-not-allowed"
-                value={formData.email}
-              />
-            </div>
-
-            {/* Phone Number */}
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm font-semibold opacity-40 ml-2">
-                <Phone size={12} /> Phone Number
-              </label>
-              <input 
-                required
-                type="tel" 
-                placeholder="Phone number"
-                className="w-full bg-[#F4EFE6]/30 border border-black/5 rounded-2xl px-5 py-3.5 text-base outline-none focus:border-terracotta focus:bg-white focus:ring-4 focus:ring-terracotta/10 transition-all text-intel-dark font-medium"
-                value={formData.phone}
-                onChange={(e) => setFormData({...formData, phone: e.target.value})}
-              />
-            </div>
-
-            {/* Age */}
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm font-semibold opacity-40 ml-2">
-                <Calendar size={12} /> Age
-              </label>
-              <input 
-                required
-                type="number" 
-                min="10"
-                max="100"
-                placeholder="Your age"
-                className="w-full bg-[#F4EFE6]/30 border border-black/5 rounded-2xl px-5 py-3.5 text-base outline-none focus:border-terracotta focus:bg-white focus:ring-4 focus:ring-terracotta/10 transition-all text-intel-dark font-medium"
-                value={formData.age}
-                onChange={(e) => setFormData({...formData, age: e.target.value})}
-              />
-            </div>
-
-            {/* Gender */}
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm font-semibold opacity-40 ml-2">
-                Gender
-              </label>
-              <select 
-                required
-                className="w-full bg-[#F4EFE6]/30 border border-black/5 rounded-2xl px-5 py-3.5 text-base outline-none focus:border-terracotta focus:bg-white focus:ring-4 focus:ring-terracotta/10 transition-all text-intel-dark font-medium cursor-pointer"
-                value={formData.gender}
-                onChange={(e) => setFormData({...formData, gender: e.target.value})}
-              >
-                <option value="">Select Gender...</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Non-Binary">Non-Binary</option>
-                <option value="Prefer not to say">Prefer not to say</option>
-              </select>
-            </div>
-
-            {/* Education / Occupation */}
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm font-semibold opacity-40 ml-2">
-                Education / Occupation
-              </label>
-              <select 
-                required
-                className="w-full bg-[#F4EFE6]/30 border border-black/5 rounded-2xl px-5 py-3.5 text-base outline-none focus:border-terracotta focus:bg-white focus:ring-4 focus:ring-terracotta/10 transition-all text-intel-dark font-medium cursor-pointer"
-                value={formData.occupation}
-                onChange={(e) => setFormData({...formData, occupation: e.target.value})}
-              >
-                <option value="">Select Status...</option>
-                <option value="Student">Student</option>
-                <option value="Working Professional">Working Professional</option>
-                <option value="Self-employed">Self-employed</option>
-                <option value="Homemaker">Homemaker</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Reason for Assessment */}
-          <div className="space-y-2">
-            <label className="flex items-center gap-2 text-sm font-semibold opacity-40 ml-2">
-              <Heart size={12} /> Primary Concerns / Reason for Assessment (Optional)
-            </label>
-            <textarea 
-              rows={3}
-              placeholder="E.g., mapping out future career streams, feeling overwhelmed by studies/work, sleep difficulties, general self-understanding..."
-              className="w-full bg-[#F4EFE6]/30 border border-black/5 rounded-2xl px-5 py-3.5 text-base outline-none focus:border-terracotta focus:bg-white focus:ring-4 focus:ring-terracotta/10 transition-all text-intel-dark font-medium resize-none"
-              value={formData.reason}
-              onChange={(e) => setFormData({...formData, reason: e.target.value})}
-            ></textarea>
-          </div>
-
-          {/* Privacy & Consent */}
-          <div className="p-4 bg-serene-green/5 border border-serene-green/10 rounded-2xl">
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input 
-                required
-                type="checkbox" 
-                className="w-5 h-5 mt-0.5 rounded border-black/10 text-serene-green focus:ring-serene-green shrink-0 cursor-pointer"
-                checked={formData.consent}
-                onChange={(e) => setFormData({...formData, consent: e.target.checked})}
-              />
-              <span className="text-xs text-intel-dark/70 font-semibold leading-relaxed">
-                I agree to Intel Counselling storing these details and my assessment answers (encrypted) to give me my results and reports, and to share them with my counsellor only when I choose to (for example when I book a session). Our payment, email and video-call providers process data for us under contract; we never sell it. If I am under 18, a parent or guardian will also need to agree. I can download or delete my data at any time. See the <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline">Privacy Policy</a>.
-              </span>
-            </label>
-          </div>
-
-          {/* Error Message */}
-          {error && (
-            <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl border border-red-100 text-sm font-medium">
-              {error}
-            </div>
-          )}
-
-          {/* Submit Action */}
-          <div className="pt-2 flex flex-col sm:flex-row items-center gap-6">
-            <button 
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full sm:flex-1 bg-terracotta text-intel-dark px-12 py-6 rounded-3xl font-semibold text-base hover:opacity-90 active:scale-[0.98] transition-all shadow-xl flex items-center justify-center gap-3 group disabled:opacity-50 disabled:scale-100"
-            >
-              {isSubmitting ? 'Saving...' : testTitle ? 'Save & Start' : 'Save Details'} 
-              {!isSubmitting && <ArrowRight size={22} className="group-hover:translate-x-1 transition-transform" />}
-            </button>
-            <p className="text-[11px] font-bold opacity-40 uppercase tracking-[0.08em] flex items-center gap-1.5">
-              <ShieldCheck size={14} className="text-serene-green" /> Strictly Confidential
+            <h2 className="serif text-3xl md:text-4xl text-intel-dark mb-4 leading-tight">
+              Client <span className="italic text-serene-green">information</span>
+            </h2>
+            <p className="text-intel-dark/60 max-w-md mx-auto text-sm md:text-base leading-relaxed">
+              {testTitle
+                ? <>Please provide your basic details before we begin the <strong>{testTitle}</strong>. You only need to do this once.</>
+                : <>These details are saved securely on your account and used for every assessment.</>}
             </p>
           </div>
-        </form>
-      </div>
-    </div>
+
+          {/* Registration form */}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid md:grid-cols-2 gap-5">
+
+              <div>
+                <label htmlFor="reg-name" className={FIELD_LABEL}><User size={14} /> Full name</label>
+                <input id="reg-name" required type="text" placeholder="Full name" className={FIELD}
+                  value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+              </div>
+
+              <div>
+                <label htmlFor="reg-email" className={FIELD_LABEL}><Mail size={14} /> Email address</label>
+                <input id="reg-email" readOnly type="email" title="Your account email"
+                  className="w-full bg-black/[0.04] border-2 border-transparent rounded-2xl px-5 py-3.5 text-base outline-none text-intel-dark/55 font-medium cursor-not-allowed"
+                  value={formData.email} />
+              </div>
+
+              <div>
+                <label htmlFor="reg-phone" className={FIELD_LABEL}><Phone size={14} /> Phone number</label>
+                <input id="reg-phone" required type="tel" placeholder="Phone number" className={FIELD}
+                  value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+              </div>
+
+              <div>
+                <label htmlFor="reg-age" className={FIELD_LABEL}><Calendar size={14} /> Age</label>
+                <input id="reg-age" required type="number" min="10" max="100" placeholder="Your age" className={FIELD}
+                  value={formData.age} onChange={(e) => setFormData({ ...formData, age: e.target.value })} />
+              </div>
+
+              <div>
+                <label htmlFor="reg-gender" className={FIELD_LABEL}>Gender</label>
+                <select id="reg-gender" required className={`${FIELD} cursor-pointer`}
+                  value={formData.gender} onChange={(e) => setFormData({ ...formData, gender: e.target.value })}>
+                  <option value="">Select gender...</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Non-Binary">Non-Binary</option>
+                  <option value="Prefer not to say">Prefer not to say</option>
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="reg-occ" className={FIELD_LABEL}>Education / occupation</label>
+                <select id="reg-occ" required className={`${FIELD} cursor-pointer`}
+                  value={formData.occupation} onChange={(e) => setFormData({ ...formData, occupation: e.target.value })}>
+                  <option value="">Select status...</option>
+                  <option value="Student">Student</option>
+                  <option value="Working Professional">Working Professional</option>
+                  <option value="Self-employed">Self-employed</option>
+                  <option value="Homemaker">Homemaker</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="reg-reason" className={FIELD_LABEL}><Heart size={14} /> Primary concerns / reason for assessment (optional)</label>
+              <textarea id="reg-reason" rows={3}
+                placeholder="E.g., mapping out future career streams, feeling overwhelmed by studies/work, sleep difficulties, general self-understanding..."
+                className={`${FIELD} resize-none`}
+                value={formData.reason} onChange={(e) => setFormData({ ...formData, reason: e.target.value })}></textarea>
+            </div>
+
+            {/* Privacy & consent */}
+            <div className="p-5 bg-sage/70 rounded-3xl">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  required
+                  type="checkbox"
+                  className="w-5 h-5 mt-0.5 rounded accent-[#1C3F39] shrink-0 cursor-pointer"
+                  checked={formData.consent}
+                  onChange={(e) => setFormData({ ...formData, consent: e.target.checked })}
+                />
+                <span className="text-xs text-intel-dark/75 font-medium leading-relaxed">
+                  I agree to Intel Counselling storing these details and my assessment answers (encrypted) to give me my results and reports, and to share them with my counsellor only when I choose to (for example when I book a session). Our payment, email and video-call providers process data for us under contract; we never sell it. If I am under 18, a parent or guardian will also need to agree. I can download or delete my data at any time. See the <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline">Privacy Policy</a>.
+                </span>
+              </label>
+            </div>
+
+            {error && (
+              <div role="alert" className="bg-[#F9D9D4] text-red-800 px-4 py-3 rounded-2xl text-sm font-medium">
+                {error}
+              </div>
+            )}
+
+            <div className="pt-2 flex flex-col sm:flex-row items-center gap-5">
+              <button type="submit" disabled={isSubmitting} className={`${BTN_PRIMARY} w-full sm:flex-1 group`}>
+                {isSubmitting ? 'Saving...' : testTitle ? 'Save & start' : 'Save details'}
+                {!isSubmitting && <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />}
+              </button>
+              <p className="inline-flex items-center gap-1.5 rounded-full bg-black/[0.04] px-4 py-2 text-[12px] font-semibold text-intel-dark/55 whitespace-nowrap">
+                <ShieldCheck size={14} className="text-serene-green" /> Strictly confidential
+              </p>
+            </div>
+          </form>
+        </div>
+      </StackedCard>
+    </AssessmentPage>
   );
 };
 

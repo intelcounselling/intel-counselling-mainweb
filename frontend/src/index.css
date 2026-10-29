@@ -190,3 +190,21 @@ html {
         animation: none !important;
     }
 }
+
+/* Assessments: gentle bobbing glows, pop-in for each question, a confetti burst on results */
+@keyframes asBob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -8px; } }
+.as-bob { animation: asBob 6s ease-in-out infinite; }
+.as-bob-alt { animation: asBob 7.5s ease-in-out infinite reverse; }
+@keyframes asPop { from { opacity: 0; transform: translateY(14px) scale(0.985); } to { opacity: 1; transform: none; } }
+.as-pop { animation: asPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+@keyframes asConfetti {
+    0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.2); }
+    20%  { opacity: 1; }
+    100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1); }
+}
+.as-confetti { animation: asConfetti 1.3s cubic-bezier(0.2, 0.8, 0.3, 1) both; }
+@keyframes asHop { 0% { transform: scale(0.4) rotate(-18deg); opacity: 0; } 60% { transform: scale(1.12) rotate(5deg); opacity: 1; } 100% { transform: none; } }
+.as-hop { animation: asHop 0.8s 0.1s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+    .as-bob, .as-bob-alt, .as-pop, .as-confetti, .as-hop { animation: none; }
+}

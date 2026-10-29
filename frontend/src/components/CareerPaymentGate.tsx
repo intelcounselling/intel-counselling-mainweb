@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Loader2, Sparkles, Brain, Target, UserCheck, PhoneCall, Check, Monitor, MapPin, RotateCcw, BadgeCheck } from 'lucide-react';
+import { AssessmentPage } from './AssessmentUI';
 import { apiClient } from '../utils/api';
 import { usePricing, formatPrice } from '../utils/pricing';
 import { payWithRazorpay, PaymentCancelledError } from '../utils/payments';
@@ -110,8 +111,8 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ customer, onSucce
   ];
 
   return (
-    <div className="min-h-screen bg-[#F6F7F9] pt-20 md:pt-28 pb-12 px-4 flex items-center justify-center">
-      <div className="relative bg-white w-full max-w-4xl rounded-[28px] shadow-xl border border-black/5 overflow-hidden flex flex-col lg:flex-row">
+    <AssessmentPage align="center">
+      <div className="relative bg-white w-full max-w-4xl rounded-[36px] shadow-[0_20px_50px_rgba(26,26,26,0.15)] border border-black/5 overflow-hidden flex flex-col lg:flex-row as-pop">
         
         {/* Left: Value Proposition */}
         <div className="flex-1 p-8 md:p-12 lg:p-16 bg-intel-dark text-white relative">
@@ -120,7 +121,7 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ customer, onSucce
           
           <button 
             onClick={onClose} 
-            className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-white/40 hover:text-white/80 transition-colors mb-10"
+            className="inline-flex items-center gap-2 rounded-full bg-white/10 hover:bg-white/15 px-4 py-2 text-sm font-semibold text-white/70 hover:text-white transition-colors mb-10"
           >
             &larr; Back
           </button>
@@ -218,9 +219,9 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ customer, onSucce
                         setDate('');
                         setTime('');
                       }}
-                      className={`w-full p-4 rounded-2xl border text-left transition-all flex flex-col gap-1.5 ${
+                      className={`w-full p-4 rounded-3xl border-2 text-left transition-all duration-300 ease-bounce flex flex-col gap-1.5 ${
                         selectedPackage === 'assessment_only' 
-                          ? 'border-terracotta bg-terracotta/5 shadow-sm' 
+                          ? 'border-terracotta bg-peach shadow-[0_4px_0_rgba(193,155,108,0.5)] -translate-y-0.5' 
                           : 'border-black/5 bg-white hover:border-black/20'
                       }`}
                     >
@@ -234,9 +235,9 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ customer, onSucce
                     <button 
                       type="button"
                       onClick={() => setSelectedPackage('assessment_explanation')}
-                      className={`w-full p-4 rounded-2xl border text-left transition-all flex flex-col gap-1.5 ${
+                      className={`w-full p-4 rounded-3xl border-2 text-left transition-all duration-300 ease-bounce flex flex-col gap-1.5 ${
                         selectedPackage === 'assessment_explanation' 
-                          ? 'border-terracotta bg-terracotta/5 shadow-sm' 
+                          ? 'border-terracotta bg-peach shadow-[0_4px_0_rgba(193,155,108,0.5)] -translate-y-0.5' 
                           : 'border-black/5 bg-white hover:border-black/20'
                       }`}
                     >
@@ -349,7 +350,7 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ customer, onSucce
               {showPackages && (
               <div className="space-y-4">
                 {error && (
-                  <div className="text-red-600 text-xs bg-red-50 border border-red-100 p-3 rounded-xl font-medium">
+                  <div role="alert" className="text-red-800 text-xs bg-[#F9D9D4] p-3 rounded-2xl font-medium">
                     {error}
                   </div>
                 )}
@@ -357,7 +358,7 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ customer, onSucce
                 <button
                   onClick={handlePayment}
                   disabled={isProcessing || (selectedPackage === 'assessment_explanation' && (!sessionMode || !date || !time))}
-                  className="w-full bg-terracotta text-intel-dark py-6 rounded-3xl font-semibold text-sm active:scale-[0.98] transition-all shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:scale-100"
+                  className="w-full bg-terracotta text-intel-dark h-14 rounded-full font-semibold text-base shadow-[0_8px_24px_rgba(26,26,26,0.18)] hover:bg-[#cfac80] flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {isProcessing ? (
                     <>
@@ -379,7 +380,7 @@ const CareerPaymentGate: React.FC<CareerPaymentGateProps> = ({ customer, onSucce
         </div>
 
       </div>
-    </div>
+    </AssessmentPage>
   );
 };
 
