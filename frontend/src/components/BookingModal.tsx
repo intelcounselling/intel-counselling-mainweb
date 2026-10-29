@@ -490,8 +490,8 @@ const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
       <span className="pointer-events-none absolute inset-0 rounded-[32px] bg-peach rotate-[2.5deg] translate-x-2 translate-y-2" aria-hidden="true" />
       <span className="pointer-events-none absolute inset-0 rounded-[32px] bg-sage -rotate-[2deg] -translate-x-1 translate-y-1" aria-hidden="true" />
 
-      <div className="relative w-full bg-[#1F1E1B] rounded-[32px] shadow-[0_24px_60px_rgba(26,26,26,0.3)] overflow-hidden border border-white/10 animate-in fade-in slide-in-from-bottom-8 duration-500 max-h-[90vh] flex flex-col">
-        <div className="relative p-6 md:p-10 overflow-y-auto overflow-x-hidden flex-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="relative w-full bg-[#1F1E1B] rounded-[32px] shadow-[0_24px_60px_rgba(26,26,26,0.3)] overflow-hidden border border-white/10 animate-in fade-in slide-in-from-bottom-8 duration-500">
+        <div className="relative p-6 md:p-10 overflow-x-hidden">
           {step < 10 && (
             <button
               type="button"
