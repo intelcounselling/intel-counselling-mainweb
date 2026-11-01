@@ -208,3 +208,20 @@ html {
 @media (prefers-reduced-motion: reduce) {
     .as-bob, .as-bob-alt, .as-pop, .as-confetti, .as-hop { animation: none; }
 }
+
+/* RollingWords: letters drop in with a bounce, the old word hops away */
+@keyframes rwIn {
+    0%   { opacity: 0; transform: translateY(0.7em) scale(0.6) rotate(-8deg); }
+    55%  { opacity: 1; transform: translateY(-0.18em) scale(1.12) rotate(3deg); }
+    78%  { transform: translateY(0.05em) scale(0.97) rotate(-1deg); }
+    100% { opacity: 1; transform: none; }
+}
+@keyframes rwOut {
+    0%   { opacity: 1; transform: none; }
+    100% { opacity: 0; transform: translateY(-0.6em) scale(0.7) rotate(6deg); }
+}
+.rw-in  { animation: rwIn 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) backwards; }
+.rw-out { animation: rwOut 0.35s ease-in forwards; }
+.rw-cell .rw-letter { transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.rw-cell:hover .rw-letter:hover { transform: translateY(-0.12em) rotate(-4deg); }
+@media (prefers-reduced-motion: reduce) { .rw-in, .rw-out { animation: none; } }

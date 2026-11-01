@@ -1,6 +1,10 @@
 import React from 'react';
 import { User, GraduationCap, Briefcase, ArrowRight } from 'lucide-react';
 import FadeIn from './FadeIn';
+import RollingWords from './RollingWords';
+
+// Words the heading rolls through: individuals, students, organisations
+const ROLLING = ['growth', 'wellbeing', 'journey', 'studies', 'team', 'mind'];
 import { ViewType } from './ServiceDetail';
 
 interface ServicesProps {
@@ -39,7 +43,10 @@ const Services: React.FC<ServicesProps> = ({ onSelectService }) => (
     <FadeIn>
       <div className="max-w-2xl">
         <p className="text-sm font-semibold text-[#8a6a3f] mb-3">Services</p>
-        <h2 className="serif text-3xl md:text-[2.75rem] leading-tight text-intel-dark">Care tailored to your journey</h2>
+        <h2 className="serif text-3xl md:text-[2.75rem] leading-tight text-intel-dark">
+          Tailored for your{' '}
+          <RollingWords words={ROLLING} underline className="italic text-serene-green" />
+        </h2>
         <p className="mt-4 text-base md:text-lg text-intel-dark/65 leading-relaxed">
           Specialised care pathways for the emotional and practical needs of individuals, students and organisations.
         </p>

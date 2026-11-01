@@ -3,6 +3,10 @@ import { ChevronDown, Mail } from 'lucide-react';
 import { CLINIC } from '../utils/site';
 import { LazyImage } from './ui/LazyImage';
 import FadeIn from './FadeIn';
+import { TiltCard } from '@/components/unlumen-ui/tilt-card';
+
+// Card colour that fills in from the cursor on hover, per person
+const CIRCLES = ['bg-peach', 'bg-sage'];
 
 interface Founder {
   name: string;
@@ -63,40 +67,46 @@ const Founders: React.FC = () => {
           const isOpen = open === idx;
           return (
             <FadeIn key={f.name} delay={idx * 100}>
-              <article className="bg-[#1F1E1B] rounded-[32px] border border-white/10 p-6 sm:p-8 shadow-[0_12px_30px_rgba(26,26,26,0.18)] transition-all duration-500 ease-bounce hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(26,26,26,0.3)]">
-                <div className="flex items-center gap-5">
+              <TiltCard
+                tone="charcoal"
+                rounded="rounded-[32px]"
+                titleAs="h3"
+                title={f.name}
+                description={f.title}
+                circleClassName={CIRCLES[idx % CIRCLES.length]}
+                circleSize={1100}
+                contentClassName="p-6 sm:p-8"
+                tiltProps={{ rotationFactor: isOpen ? 0 : 8 }}
+                icon={
                   <div className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 p-1 bg-peach rounded-[44%_56%_52%_48%/50%_44%_56%_50%]"><div className="w-full h-full overflow-hidden rounded-[44%_56%_52%_48%/50%_44%_56%_50%]">
                     <LazyImage src={f.img} alt={f.name} className="w-full h-full object-cover" /></div>
                   </div>
-                  <div className="min-w-0">
-                    <h3 className="serif text-xl sm:text-2xl text-[#F4EFE6] leading-tight">{f.name}</h3>
-                    <p className="mt-1 text-sm text-white/60">{f.title}</p>
-                    <p className="mt-2 text-xs font-semibold text-terracotta">{f.badge}</p>
-                  </div>
-                </div>
+                }
+              >
+                <p className="text-xs font-semibold text-terracotta group-data-[circle=on]:text-[#8a6a3f] transition-colors duration-300">{f.badge}</p>
 
-                <p className="mt-6 text-[15px] text-white/70 leading-relaxed">{f.desc}</p>
+                <p className="mt-4 text-[15px] text-white/70 group-data-[circle=on]:text-intel-dark/80 leading-relaxed transition-colors duration-300">{f.desc}</p>
 
                 <ul className="mt-5 flex flex-wrap gap-2" aria-label={f.specialtiesLabel}>
                   {f.specialties.map((s) => (
-                    <li key={s} className="text-xs font-medium text-white/80 bg-white/10 rounded-full px-3 py-1.5">{s}</li>
+                    <li key={s} className="text-xs font-medium text-white/80 bg-white/10 group-data-[circle=on]:text-intel-dark group-data-[circle=on]:bg-black/10 rounded-full px-3 py-1.5 transition-colors duration-300">{s}</li>
                   ))}
                 </ul>
 
                 {isOpen && (
-                  <div className="mt-6 pt-6 border-t border-white/10 space-y-5">
-                    <p className="text-[15px] text-white/70 leading-relaxed">{f.detailedBio}</p>
-                    <blockquote className="border-l-2 border-terracotta pl-4 serif italic text-white/80 leading-relaxed">
+                  <div className="mt-6 pt-6 border-t border-white/10 group-data-[circle=on]:border-black/10 space-y-5 transition-colors duration-300">
+                    <p className="text-[15px] text-white/70 group-data-[circle=on]:text-intel-dark/80 leading-relaxed transition-colors duration-300">{f.detailedBio}</p>
+                    <blockquote className="border-l-2 border-terracotta pl-4 serif italic text-white/80 group-data-[circle=on]:text-intel-dark/80 leading-relaxed transition-colors duration-300">
                       “{f.philosophy}”
                     </blockquote>
                   </div>
                 )}
 
-                <div className="mt-6 pt-5 border-t border-white/10 flex items-center justify-between">
+                <div className="mt-6 pt-5 border-t border-white/10 group-data-[circle=on]:border-black/10 flex items-center justify-between transition-colors duration-300">
                   <button
                     onClick={() => setOpen(isOpen ? null : idx)}
                     aria-expanded={isOpen}
-                    className="inline-flex items-center gap-1.5 text-sm font-semibold text-terracotta hover:text-[#d9b98d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta rounded"
+                    className="inline-flex items-center gap-1.5 text-sm font-semibold text-terracotta group-data-[circle=on]:text-[#8a6a3f] hover:text-[#d9b98d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta rounded transition-colors duration-300"
                   >
                     {isOpen ? 'Show less' : 'Read full profile'}
                     <ChevronDown size={16} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
@@ -104,12 +114,12 @@ const Founders: React.FC = () => {
                   <a
                     href={CLINIC.emailHref}
                     aria-label={`Email Intel Counselling about ${f.name}`}
-                    className="inline-flex items-center gap-1.5 text-sm text-white/55 hover:text-white"
+                    className="inline-flex items-center gap-1.5 text-sm text-white/55 group-data-[circle=on]:text-intel-dark/60 hover:text-white transition-colors duration-300"
                   >
                     <Mail size={15} /> Contact
                   </a>
                 </div>
-              </article>
+              </TiltCard>
             </FadeIn>
           );
         })}
